@@ -9,7 +9,7 @@
   <div class="card">
     <h2>Tải lên file Excel hoặc CSV</h2>
     <p>File phải có các cột: <code>ma_hoso, lop, stt, ho_ten, ngay_sinh, ghi_chu</code></p>
-    <a href="/static/students_template.xlsx" class="btn btn-secondary" download>📄 Tải file mẫu</a>
+    <a href="{{ url_for('download_template') }}" class="btn btn-secondary">📄 Tải file mẫu</a>
     <div class="upload-area" id="drop-area">
       <input type="file" id="import-file" accept=".xlsx,.xls,.csv" hidden>
       <label for="import-file" class="upload-label">

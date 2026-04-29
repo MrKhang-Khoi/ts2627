@@ -408,6 +408,41 @@ def api_export_excel():
     return send_file(buf, as_attachment=True, download_name=fname,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+@app.route('/download-template')
+@login_required
+@admin_required
+def download_template():
+    """Tạo và tải file Excel mẫu để import danh sách học sinh"""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Danh sách học sinh"
+    from openpyxl.styles import Font, PatternFill, Alignment
+    # Header
+    headers = ['ma_hoso', 'lop', 'stt', 'ho_ten', 'ngay_sinh', 'ghi_chu']
+    header_labels = ['Mã hồ sơ', 'Lớp', 'STT', 'Họ tên', 'Ngày sinh', 'Ghi chú']
+    for col, (key, label) in enumerate(zip(headers, header_labels), 1):
+        cell = ws.cell(row=1, column=col, value=key)
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = PatternFill('solid', fgColor='1565C0')
+        cell.alignment = Alignment(horizontal='center')
+        ws.column_dimensions[cell.column_letter].width = 18
+        ws.cell(row=2, column=col, value=label).font = Font(italic=True, color='555555')
+    # Dữ liệu mẫu
+    samples = [
+        ['9B1_001', '9B1', 1, 'Nguyễn Văn An', '12/05/2011', ''],
+        ['9B1_002', '9B1', 2, 'Trần Thị Bình', '03/07/2011', ''],
+        ['9B2_001', '9B2', 1, 'Lê Minh Châu',  '25/09/2011', ''],
+    ]
+    for i, row in enumerate(samples, 3):
+        for j, val in enumerate(row, 1):
+            ws.cell(row=i, column=j, value=val)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, as_attachment=True,
+                     download_name='danh_sach_hoc_sinh_mau.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 @app.route('/api/download-student-zip/<int:student_id>')
 @login_required
 def api_download_student_zip(student_id):
