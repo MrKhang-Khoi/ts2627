@@ -67,7 +67,7 @@ def index():
 @app.route('/class/<class_name>')
 def student_list(class_name):
     conn = get_db()
-    students = conn.execute("SELECT * FROM students WHERE lop=? ORDER BY stt", (class_name,)).fetchall()
+    students = conn.execute("SELECT * FROM students WHERE lop=? ORDER BY CAST(stt AS INTEGER)", (class_name,)).fetchall()
     conn.close()
     students = enrich_students(students)
     return render_template('student_list.html', students=students, class_name=class_name,
@@ -138,7 +138,7 @@ def teacher_dashboard():
         selected = assigned
     students = []
     if selected:
-        rows = conn.execute("SELECT * FROM students WHERE lop=? ORDER BY stt", (selected,)).fetchall()
+        rows = conn.execute("SELECT * FROM students WHERE lop=? ORDER BY CAST(stt AS INTEGER)", (selected,)).fetchall()
         students = enrich_students(rows)
     conn.close()
     stats = compute_stats(students)
@@ -159,7 +159,7 @@ def admin_dashboard():
     if selected and selected != 'ALL':
         query += " WHERE lop=?"
         params.append(selected)
-    query += " ORDER BY lop, stt"
+    query += " ORDER BY lop, CAST(stt AS INTEGER)"
     students = enrich_students(conn.execute(query, params).fetchall())
     if filter_status:
         students = [s for s in students if s['status_overall'] == filter_status]
@@ -549,7 +549,18 @@ def api_import_students():
             headers = [str(c.value).strip() if c.value else '' for c in next(ws.iter_rows())]
             for row in ws.iter_rows(min_row=2, values_only=True):
                 if any(v for v in row):
-                    rows_data.append(dict(zip(headers, [str(v).strip() if v is not None else '' for v in row])))
+                    def _cell_str(v):
+                        if v is None:
+                            return ''
+                        # openpyxl trả ngày dưới dạng datetime
+                        try:
+                            from datetime import datetime as _dt
+                            if isinstance(v, _dt):
+                                return v.strftime('%d/%m/%Y')
+                        except Exception:
+                            pass
+                        return str(v).strip()
+                    rows_data.append(dict(zip(headers, [_cell_str(v) for v in row])))
         elif ext == 'csv':
             import csv, io as _io
             content = file.read().decode('utf-8-sig')
@@ -566,9 +577,25 @@ def api_import_students():
     for i, r in enumerate(rows_data, 2):
         ma_hoso = r.get('ma_hoso', '').strip()
         lop = r.get('lop', '').strip()
-        stt = r.get('stt', '').strip()
+        # STT: Excel có thể đọc thành "1.0" hay " 1" — chuẩn hóa thành số nguyên
+        stt_raw = r.get('stt', '').strip()
+        try:
+            stt = str(int(float(stt_raw))) if stt_raw else ''
+        except (ValueError, TypeError):
+            stt = stt_raw
         ho_ten = r.get('ho_ten', '').strip()
-        ngay_sinh = r.get('ngay_sinh', '').strip()
+        # Ngày sinh: openpyxl có thể trả về datetime object, chuẩn hóa thành dd/mm/yyyy
+        ngay_sinh_raw = r.get('ngay_sinh', '').strip()
+        if ngay_sinh_raw:
+            # Nếu openpyxl đối chiếu thành dạng "2011-04-05 00:00:00" hoặc "2011-04-05"
+            import re as _re
+            m = _re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})', ngay_sinh_raw)
+            if m:
+                ngay_sinh = f"{m.group(3).zfill(2)}/{m.group(2).zfill(2)}/{m.group(1)}"
+            else:
+                ngay_sinh = ngay_sinh_raw
+        else:
+            ngay_sinh = ''
         if not all([ma_hoso, lop, ho_ten]):
             errors.append(f"Dòng {i}: thiếu thông tin bắt buộc.")
             continue
