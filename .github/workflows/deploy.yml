@@ -1,0 +1,26 @@
+name: Auto Deploy to PythonAnywhere
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH vào PythonAnywhere và git pull
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ssh.pythonanywhere.com
+          username: ${{ secrets.PA_USERNAME }}
+          password: ${{ secrets.PA_PASSWORD }}
+          script: |
+            cd ~/hoso_lop10_app
+            git pull origin main
+
+      - name: Reload Web App qua PythonAnywhere API
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
+            "https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USERNAME }}/webapps/${{ secrets.PA_USERNAME }}.pythonanywhere.com/reload/"
+          echo " Web app đã được reload!"
