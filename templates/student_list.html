@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Lớp {{ class_name }} - Danh Sách Học Sinh{% endblock %}
+
 {% block content %}
 <div class="container">
   <div class="page-header">
@@ -9,7 +10,7 @@
   </div>
 
   <div class="search-bar-wrap">
-    <input type="text" id="search-input" class="search-input" placeholder="🔍 Tìm theo tên hoặc số thứ tự...">
+    <input type="text" id="sl-search" class="search-input" placeholder="🔍 Tìm theo tên hoặc số thứ tự...">
     <div class="filter-tabs">
       <button class="filter-tab active" data-filter="all">Tất cả</button>
       <button class="filter-tab" data-filter="DU_HO_SO_CHINH_THUC">Đủ hồ sơ</button>
@@ -31,7 +32,6 @@
         <span class="status-badge status-{{ s.status_overall }}">
           {{ OVERALL_LABELS.get(s.status_overall, s.status_overall) }}
         </span>
-        {# Giáo viên/admin đi thẳng, học sinh phải xác minh CCCD #}
         {% if session.get('role') in ['teacher', 'admin'] %}
         <a href="{{ url_for('student_profile', student_id=s.id) }}" class="btn-view-profile">
           Xem hồ sơ →
@@ -44,9 +44,7 @@
       </div>
     </div>
     {% else %}
-    <div class="empty-state">
-      <p>Chưa có học sinh trong lớp này.</p>
-    </div>
+    <div class="empty-state"><p>Chưa có học sinh trong lớp này.</p></div>
     {% endfor %}
   </div>
 </div>
@@ -54,30 +52,31 @@
 {# === MODAL XÁC MINH CCCD === #}
 <div id="verify-modal" class="verify-overlay hidden" onclick="handleOverlayClick(event)">
   <div class="verify-box">
-
     <div class="verify-lock-ring">
       <span class="verify-lock-emoji">🔒</span>
     </div>
-
     <div class="verify-title">Xác minh danh tính</div>
-    <div class="verify-subtitle" id="verify-student-name">Đang tải...</div>
+    <div class="verify-subtitle" id="verify-student-name">...</div>
 
     <div class="verify-hint-box">
       <span class="verify-hint-icon">💡</span>
       <div>
         <div class="verify-hint-label">Gợi ý mã bảo mật:</div>
-        <div class="verify-hint-text">Số <strong>CCCD / Căn cước công dân</strong> của em<br>
-          <em>(ghi trên mặt trước thẻ CCCD)</em>
+        <div class="verify-hint-text">
+          Số <strong>CCCD / Căn cước công dân</strong> của em<br>
+          <em>(12 số ghi trên mặt trước thẻ CCCD)</em>
         </div>
       </div>
     </div>
 
     <div class="verify-input-wrap">
-      <label class="verify-input-label">Nhập mã bảo mật (số CCCD):</label>
+      <label class="verify-input-label">Nhập mã bảo mật (12 số CCCD):</label>
       <input type="text" id="verify-code" class="verify-input"
-             placeholder="Ví dụ: 064311001234"
-             inputmode="numeric" autocomplete="off" maxlength="20"
+             placeholder="Nhập đúng 12 số CCCD"
+             inputmode="numeric" autocomplete="off" maxlength="12"
+             oninput="onVerifyInput(this)"
              onkeydown="if(event.key==='Enter')submitVerify()">
+      <div id="verify-len-hint" class="verify-len-hint"></div>
     </div>
 
     <div id="verify-error" class="verify-error hidden"></div>
@@ -92,48 +91,73 @@
     </div>
   </div>
 </div>
+{% endblock %}
 
 {% block scripts %}
 <script>
-const searchInput = document.getElementById('search-input');
-const items = document.querySelectorAll('.student-item');
-const filterTabs = document.querySelectorAll('.filter-tab');
-let activeFilter = 'all';
+// ===== TÌM KIẾM / LỌC =====
+(function() {
+  const searchEl = document.getElementById('sl-search');
+  const studentItems = document.querySelectorAll('.student-item');
+  const tabs = document.querySelectorAll('.filter-tab');
+  let activeFilter = 'all';
 
-function applyFilter() {
-  const q = searchInput.value.toLowerCase();
-  items.forEach(item => {
-    const name = item.dataset.name || '';
-    const stt = item.dataset.stt || '';
-    const status = item.dataset.status || '';
-    const matchSearch = !q || name.includes(q) || stt.includes(q);
-    const matchFilter = activeFilter === 'all' || status === activeFilter;
-    item.style.display = matchSearch && matchFilter ? '' : 'none';
+  function applyFilter() {
+    const q = searchEl.value.toLowerCase();
+    studentItems.forEach(item => {
+      const name = item.dataset.name || '';
+      const stt  = item.dataset.stt  || '';
+      const st   = item.dataset.status || '';
+      const okSearch = !q || name.includes(q) || stt.includes(q);
+      const okFilter = activeFilter === 'all' || st === activeFilter;
+      item.style.display = okSearch && okFilter ? '' : 'none';
+    });
+  }
+
+  searchEl.addEventListener('input', applyFilter);
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeFilter = tab.dataset.filter;
+      applyFilter();
+    });
   });
-}
-searchInput.addEventListener('input', applyFilter);
-filterTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    filterTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    activeFilter = tab.dataset.filter;
-    applyFilter();
-  });
-});
+})();
 
 // ===== XÁC MINH CCCD =====
 let _verifyStudentId = null;
+
+function onVerifyInput(input) {
+  // Chỉ cho phép nhập số
+  input.value = input.value.replace(/\D/g, '');
+  const len = input.value.length;
+  const hint = document.getElementById('verify-len-hint');
+  if (len === 0) {
+    hint.textContent = '';
+    hint.className = 'verify-len-hint';
+  } else if (len < 12) {
+    hint.textContent = `⚠️ Cần nhập thêm ${12 - len} số nữa (đang có ${len}/12 số)`;
+    hint.className = 'verify-len-hint warn';
+  } else if (len === 12) {
+    hint.textContent = '✅ Đủ 12 số, nhấn Xác nhận';
+    hint.className = 'verify-len-hint ok';
+  }
+}
 
 function openVerify(studentId, name) {
   _verifyStudentId = studentId;
   document.getElementById('verify-student-name').textContent = name;
   document.getElementById('verify-code').value = '';
+  document.getElementById('verify-len-hint').textContent = '';
+  document.getElementById('verify-len-hint').className = 'verify-len-hint';
   document.getElementById('verify-error').classList.add('hidden');
-  document.getElementById('verify-error').textContent = '';
-  document.getElementById('verify-submit').disabled = false;
-  document.getElementById('verify-submit').textContent = '🔓 Xác nhận';
+  const btn = document.getElementById('verify-submit');
+  btn.disabled = false;
+  btn.textContent = '🔓 Xác nhận';
+  btn.style.background = '';
   document.getElementById('verify-modal').classList.remove('hidden');
-  setTimeout(() => document.getElementById('verify-code').focus(), 100);
+  setTimeout(() => document.getElementById('verify-code').focus(), 150);
 }
 
 function closeVerify() {
@@ -146,11 +170,19 @@ function handleOverlayClick(e) {
 }
 
 function submitVerify() {
-  const code = document.getElementById('verify-code').value.trim();
-  if (!code) {
-    showVerifyError('Vui lòng nhập mã CCCD của em.');
-    return;
+  const raw = document.getElementById('verify-code').value.replace(/\D/g, '');
+
+  // Validate client-side: đúng 12 số
+  if (raw.length === 0) {
+    showVerifyError('Vui lòng nhập số CCCD của em.'); return;
   }
+  if (raw.length < 12) {
+    showVerifyError(`Số CCCD phải có đúng 12 chữ số (em đã nhập ${raw.length} số).`); return;
+  }
+  if (raw.length > 12) {
+    showVerifyError(`Số CCCD chỉ có 12 chữ số (em đã nhập ${raw.length} số).`); return;
+  }
+
   const btn = document.getElementById('verify-submit');
   btn.disabled = true;
   btn.textContent = '⏳ Đang kiểm tra...';
@@ -159,21 +191,21 @@ function submitVerify() {
   fetch('/api/verify-student-code', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({student_id: _verifyStudentId, code: code})
+    body: JSON.stringify({student_id: _verifyStudentId, code: raw})
   })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) {
+  .then(r => r.json().then(d => ({ok: r.ok, data: d})))
+  .then(({ok, data}) => {
+    if (ok && data.success) {
       btn.textContent = '✅ Xác minh thành công!';
-      btn.style.background = '#2e7d32';
-      setTimeout(() => { window.location.href = d.redirect; }, 600);
+      btn.style.background = 'linear-gradient(135deg,#2e7d32,#1b5e20)';
+      setTimeout(() => { window.location.href = data.redirect; }, 600);
     } else {
-      showVerifyError(d.error || 'Mã không đúng.');
+      showVerifyError(data.error || 'Mã không đúng. Kiểm tra lại số CCCD.');
       btn.disabled = false;
       btn.textContent = '🔓 Xác nhận';
-      // Rung hộp thoại
-      document.querySelector('.verify-box').classList.add('shake');
-      setTimeout(() => document.querySelector('.verify-box').classList.remove('shake'), 500);
+      const box = document.querySelector('.verify-box');
+      box.classList.add('shake');
+      setTimeout(() => box.classList.remove('shake'), 500);
     }
   })
   .catch(() => {
@@ -189,19 +221,15 @@ function showVerifyError(msg) {
   el.classList.remove('hidden');
 }
 
-// Tự động mở modal nếu URL có ?verify=<id>
+// Tự động mở modal nếu redirect từ ?verify=<id>
 (function() {
   const params = new URLSearchParams(window.location.search);
   const vid = params.get('verify');
-  if (vid) {
-    // Tìm học sinh tương ứng và mở modal
-    const btn = document.querySelector(`button[onclick*="openVerify(${vid},"]`);
-    if (btn) {
-      const match = btn.getAttribute('onclick').match(/openVerify\((\d+),\s*'([^']+)'\)/);
-      if (match) openVerify(parseInt(match[1]), match[2]);
-    }
-  }
+  if (!vid) return;
+  const btn = document.querySelector(`button[onclick*="openVerify(${vid},"]`);
+  if (!btn) return;
+  const m = btn.getAttribute('onclick').match(/openVerify\((\d+),\s*'([^']+)'\)/);
+  if (m) openVerify(parseInt(m[1]), m[2]);
 })();
 </script>
-{% endblock %}
 {% endblock %}

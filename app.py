@@ -118,9 +118,11 @@ def api_verify_student_code():
     conn.close()
     if not row:
         return jsonify({'error': 'Không tìm thấy học sinh.'}), 404
-    # So sánh mã nhập với ma_hoso (= số CCCD trong file Excel)
-    if code == str(row['ma_hoso']).strip():
-        # Lưu danh sách học sinh đã xác minh vào session
+    # Normalize: chuẩn hoá về 12 chữ số để xử lý trường hợp
+    # Excel lưu CCCD là số (mất số 0 đầu, ví dụ: 064311001234 → 64311001234)
+    code_norm    = code.zfill(12)
+    db_norm      = str(row['ma_hoso']).strip().replace(' ', '').zfill(12)
+    if code_norm == db_norm:
         verified = session.get('verified_students', [])
         sid = int(student_id)
         if sid not in verified:
@@ -131,7 +133,8 @@ def api_verify_student_code():
         return jsonify({'success': True,
                         'redirect': url_for('student_profile', student_id=student_id)})
     else:
-        add_log(None, 'VERIFY_FAIL', student_id, None, f"Sai mã: {row['ho_ten']}")
+        add_log(None, 'VERIFY_FAIL', student_id, None,
+                f"Sai mã: {row['ho_ten']} | nhập={code_norm} | db={db_norm}")
         return jsonify({'error': 'Mã bảo mật không đúng. Kiểm tra lại số CCCD của em.'}), 401
 
 
