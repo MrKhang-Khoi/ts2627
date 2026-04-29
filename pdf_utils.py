@@ -13,80 +13,75 @@ BACKUP_FOLDER = os.path.join(_BASE, 'backups')
 
 ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
 
-def merge_multiple_pdfs(file_objects, dest_path, backup_dir=None, doc_type='FILE', max_mb=20):
-    """Nhận danh sách file objects, kiểm tra, nối thành một PDF duy nhất"""
+
+# ===== HELPER: lấy bytes từ local path HOẶC Google Drive =====
+
+def _get_bytes(file_path):
+    """
+    Lấy bytes của file từ local path hoặc Google Drive.
+    Returns (bytes, error).
+    """
+    if not file_path:
+        return None, 'file_path trống'
+    try:
+        import drive_utils
+        if drive_utils.is_drive(file_path):
+            return drive_utils.download_bytes(file_path)
+    except ImportError:
+        pass
+    # Local file
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as f:
+            return f.read(), None
+    return None, f'File không tồn tại: {file_path}'
+
+
+def _save_or_upload(pdf_bytes, dest_path, student, doc_type):
+    """
+    Lưu PDF bytes vào local path HOẶC upload lên Drive.
+    Returns (file_path, error).
+    """
+    try:
+        import drive_utils
+        if drive_utils.DRIVE_MODE:
+            return drive_utils.upload(pdf_bytes, student, doc_type)
+    except ImportError:
+        pass
+    # Local
+    try:
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        with open(dest_path, 'wb') as f:
+            f.write(pdf_bytes)
+        return dest_path, None
+    except Exception as e:
+        return None, f'Lỗi lưu file: {str(e)}'
+
+
+# ===== MERGE MULTIPLE FILES (trả về bytes) =====
+
+def merge_to_bytes(file_objects, max_mb=5):
+    """
+    Nhận danh sách Werkzeug FileStorage, merge thành PDF bytes.
+    Dùng cho upload-multi (CCCD 2 mặt...).
+    Returns (pdf_bytes, page_count, error).
+    """
     if not file_objects:
-        return None, 'Chưa chọn file nào.'
+        return None, 0, 'Chưa chọn file nào.'
     writer = PdfWriter()
     for f in file_objects:
-        # Kiểm tra dung lượng
-        f.seek(0, 2)
-        size = f.tell()
-        f.seek(0)
+        f.seek(0, 2); size = f.tell(); f.seek(0)
         if size == 0:
-            return None, f'File "{f.filename}" rỗng.'
+            return None, 0, f'File "{getattr(f,"filename","?")}" rỗng.'
         if size > max_mb * 1024 * 1024:
-            return None, f'File "{f.filename}" quá lớn (tối đa {max_mb}MB).'
-        ext = (f.filename or '').rsplit('.', 1)[-1].lower()
+            return None, 0, f'File "{getattr(f,"filename","?")}" quá lớn (tối đa {max_mb}MB).'
+        ext = (getattr(f, 'filename', '') or '').rsplit('.', 1)[-1].lower()
         if ext not in ALLOWED_EXTENSIONS:
-            return None, f'File "{f.filename}" không hợp lệ. Chỉ nhận PDF, JPG, PNG.'
+            return None, 0, f'File "{getattr(f,"filename","?")}" không hợp lệ.'
         try:
             if ext == 'pdf':
                 reader = PdfReader(f)
                 if len(reader.pages) == 0:
-                    return None, f'File PDF "{f.filename}" không có trang nào.'
-                for page in reader.pages:
-                    writer.add_page(page)
-            else:
-                # Chuyển ảnh sang PDF rồi thêm vào
-                from PIL import Image
-                img = Image.open(f)
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                tmp = io.BytesIO()
-                img.save(tmp, 'PDF', resolution=150)
-                tmp.seek(0)
-                reader = PdfReader(tmp)
-                for page in reader.pages:
-                    writer.add_page(page)
-        except Exception as e:
-            return None, f'Lỗi đọc file "{f.filename}": {str(e)}'
-    # Backup file cũ nếu có
-    if backup_dir and os.path.exists(dest_path):
-        os.makedirs(backup_dir, exist_ok=True)
-        ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
-        shutil.copy2(dest_path, os.path.join(backup_dir, f"backup_{doc_type}_{ts}.pdf"))
-    try:
-        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        with open(dest_path, 'wb') as out:
-            writer.write(out)
-        return dest_path, None
-    except Exception as e:
-        return None, f'Lỗi lưu file: {str(e)}'
-def append_to_existing_pdf(existing_path, new_file_objects, dest_path, backup_dir=None, max_mb=20):
-    """Thêm trang mới vào PDF đã có. Nếu chưa có thì tạo mới."""
-    writer = PdfWriter()
-    # Bước 1: Đọc nội dung file hiện có (nếu có)
-    if existing_path and os.path.exists(existing_path):
-        try:
-            reader = PdfReader(existing_path)
-            for page in reader.pages:
-                writer.add_page(page)
-        except Exception as e:
-            return None, f'Lỗi đọc file hiện tại: {str(e)}'
-    # Bước 2: Gộp file mới vào sau
-    for f in new_file_objects:
-        f.seek(0, 2); size = f.tell(); f.seek(0)
-        if size == 0:
-            return None, f'File "{getattr(f, "filename", "?")}"\ rỗng.'
-        if size > max_mb * 1024 * 1024:
-            return None, f'File quá lớn (tối đa {max_mb}MB).'
-        ext = (getattr(f, 'filename', '') or '').rsplit('.', 1)[-1].lower()
-        if ext not in ALLOWED_EXTENSIONS:
-            return None, f'File không hợp lệ. Chỉ nhận PDF, JPG, PNG.'
-        try:
-            if ext == 'pdf':
-                reader = PdfReader(f)
+                    return None, 0, f'PDF "{getattr(f,"filename","?")}" không có trang.'
                 for page in reader.pages:
                     writer.add_page(page)
             else:
@@ -100,10 +95,97 @@ def append_to_existing_pdf(existing_path, new_file_objects, dest_path, backup_di
                 for page in PdfReader(tmp).pages:
                     writer.add_page(page)
         except Exception as e:
-            return None, f'Lỗi đọc file: {str(e)}'
+            return None, 0, f'Lỗi đọc file "{getattr(f,"filename","?")}": {str(e)}'
     if len(writer.pages) == 0:
-        return None, 'Không có trang nào được tạo.'
+        return None, 0, 'Không có trang nào được tạo.'
+    buf = io.BytesIO()
+    writer.write(buf)
+    return buf.getvalue(), len(writer.pages), None
+
+
+def merge_multiple_pdfs(file_objects, dest_path, backup_dir=None, doc_type='FILE', max_mb=20):
+    """
+    Backward-compatible wrapper — dùng merge_to_bytes rồi lưu vào disk.
+    Không dùng trong Drive mode (các route sẽ gọi merge_to_bytes trực tiếp).
+    """
+    pdf_bytes, _, err = merge_to_bytes(file_objects, max_mb)
+    if err:
+        return None, err
     # Backup file cũ
+    if backup_dir and os.path.exists(dest_path):
+        os.makedirs(backup_dir, exist_ok=True)
+        ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+        shutil.copy2(dest_path, os.path.join(backup_dir, f'backup_{doc_type}_{ts}.pdf'))
+    try:
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        with open(dest_path, 'wb') as out:
+            out.write(pdf_bytes)
+        return dest_path, None
+    except Exception as e:
+        return None, f'Lỗi lưu file: {str(e)}'
+
+
+# ===== APPEND TO EXISTING PDF =====
+
+def append_bytes(existing_bytes_or_none, new_file_objects, max_mb=5):
+    """
+    Thêm các file mới vào cuối existing PDF bytes.
+    Returns (pdf_bytes, page_count, error).
+    """
+    writer = PdfWriter()
+    # Đọc file hiện tại (nếu có)
+    if existing_bytes_or_none:
+        try:
+            reader = PdfReader(io.BytesIO(existing_bytes_or_none))
+            for page in reader.pages:
+                writer.add_page(page)
+        except Exception as e:
+            return None, 0, f'Lỗi đọc file hiện tại: {str(e)}'
+    # Thêm file mới
+    for f in new_file_objects:
+        f.seek(0, 2); size = f.tell(); f.seek(0)
+        if size == 0:
+            return None, 0, f'File "{getattr(f,"filename","?")}" rỗng.'
+        if size > max_mb * 1024 * 1024:
+            return None, 0, f'File quá lớn (tối đa {max_mb}MB).'
+        ext = (getattr(f, 'filename', '') or '').rsplit('.', 1)[-1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            return None, 0, f'File "{getattr(f,"filename","?")}" không hợp lệ.'
+        try:
+            if ext == 'pdf':
+                for page in PdfReader(f).pages:
+                    writer.add_page(page)
+            else:
+                from PIL import Image
+                img = Image.open(f)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                tmp = io.BytesIO()
+                img.save(tmp, 'PDF', resolution=150)
+                tmp.seek(0)
+                for page in PdfReader(tmp).pages:
+                    writer.add_page(page)
+        except Exception as e:
+            return None, 0, f'Lỗi đọc file: {str(e)}'
+    if len(writer.pages) == 0:
+        return None, 0, 'Không có trang nào được tạo.'
+    buf = io.BytesIO()
+    writer.write(buf)
+    return buf.getvalue(), len(writer.pages), None
+
+
+def append_to_existing_pdf(existing_path, new_file_objects, dest_path, backup_dir=None, max_mb=20):
+    """
+    Backward-compatible — đọc existing từ disk, gọi append_bytes, lưu vào disk.
+    Không dùng trong Drive mode.
+    """
+    existing_bytes = None
+    if existing_path and os.path.exists(existing_path):
+        with open(existing_path, 'rb') as f:
+            existing_bytes = f.read()
+    pdf_bytes, page_count, err = append_bytes(existing_bytes, new_file_objects, max_mb)
+    if err:
+        return None, 0, err
     if backup_dir and os.path.exists(dest_path):
         os.makedirs(backup_dir, exist_ok=True)
         ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
@@ -111,45 +193,70 @@ def append_to_existing_pdf(existing_path, new_file_objects, dest_path, backup_di
     try:
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         with open(dest_path, 'wb') as out:
-            writer.write(out)
-        return dest_path, len(writer.pages), None
+            out.write(pdf_bytes)
+        return dest_path, page_count, None
     except Exception as e:
         return None, 0, f'Lỗi lưu file: {str(e)}'
 
 
+# ===== MERGE TRANSCRIPTS (học bạ hoàn chỉnh) =====
+
 def merge_transcripts(student_folder, ma_hoso, doc_map):
-    """Nối học bạ 6-8 và học bạ 9 thành học bạ hoàn chỉnh"""
+    """
+    Nối học bạ 6-8 và học bạ 9 thành học bạ hoàn chỉnh.
+    Hỗ trợ cả local path và Drive file.
+    """
     path_6_8 = doc_map.get('HOCBA_6_8', {}).get('file_path')
-    path_9 = doc_map.get('HOCBA_9', {}).get('file_path')
+    path_9   = doc_map.get('HOCBA_9',   {}).get('file_path')
 
     errors = []
-    if not path_6_8 or not os.path.exists(path_6_8):
-        errors.append('Thiếu file HOCBA_6_8.pdf')
-    if not path_9 or not os.path.exists(path_9):
-        errors.append('Thiếu file HOCBA_9.pdf')
+    bytes_6_8, err = _get_bytes(path_6_8) if path_6_8 else (None, 'Thiếu file HOCBA_6_8')
+    if err: errors.append(err)
+    bytes_9, err   = _get_bytes(path_9)   if path_9   else (None, 'Thiếu file HOCBA_9')
+    if err: errors.append(err)
+
     if errors:
         return None, '; '.join(errors)
 
+    try:
+        writer = PdfWriter()
+        for b in [bytes_6_8, bytes_9]:
+            reader = PdfReader(io.BytesIO(b))
+            for page in reader.pages:
+                writer.add_page(page)
+        buf = io.BytesIO()
+        writer.write(buf)
+        merged_bytes = buf.getvalue()
+    except Exception as e:
+        return None, f'Lỗi khi nối PDF: {str(e)}'
+
+    # Lưu vào Drive hoặc local
+    try:
+        import drive_utils
+        if drive_utils.DRIVE_MODE:
+            # Tạo student dict giả từ doc_map context
+            # Cần lop và ho_ten_khong_dau — lấy từ folder path
+            parts = student_folder.replace('\\', '/').split('/')
+            lop_guess = parts[-2] if len(parts) >= 2 else 'UNKNOWN'
+            # Upload HOCBA.pdf
+            fake_student = {'lop': lop_guess, 'ma_hoso': ma_hoso, 'ho_ten_khong_dau': parts[-1].replace(ma_hoso + '_', '')}
+            return drive_utils.upload(merged_bytes, fake_student, 'HOCBA')
+    except ImportError:
+        pass
+
+    # Local
     dest = os.path.join(student_folder, 'HOCBA.pdf')
-    # Backup file cũ
     if os.path.exists(dest):
-        import shutil
         ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
         bk_dir = os.path.join(BACKUP_FOLDER, ma_hoso)
         os.makedirs(bk_dir, exist_ok=True)
-        shutil.copy2(dest, os.path.join(bk_dir, f"backup_HOCBA_{ts}.pdf"))
+        shutil.copy2(dest, os.path.join(bk_dir, f'backup_HOCBA_{ts}.pdf'))
+    with open(dest, 'wb') as f:
+        f.write(merged_bytes)
+    return dest, None
 
-    try:
-        writer = PdfWriter()
-        for path in [path_6_8, path_9]:
-            reader = PdfReader(path)
-            for page in reader.pages:
-                writer.add_page(page)
-        with open(dest, 'wb') as f:
-            writer.write(f)
-        return dest, None
-    except Exception as e:
-        return None, f'Lỗi khi nối PDF: {str(e)}'
+
+# ===== EXPORT EXCEL =====
 
 def export_excel(students_data, class_name=None):
     """Xuất danh sách hồ sơ ra Excel"""
@@ -209,37 +316,51 @@ def export_excel(students_data, class_name=None):
     buf.seek(0)
     return buf
 
+
+# ===== ZIP CREATION (hỗ trợ cả Drive và local) =====
+
 def _get_hocba_path(doc_map):
-    """Lấy đường dẫn học bạ: ưu tiên HOCBA (học bạ đã nối), fallback HOCBA_6_8"""
+    """Lấy đường dẫn học bạ: ưu tiên HOCBA hoàn chỉnh, fallback HOCBA_6_8."""
     fp = doc_map.get('HOCBA', {}).get('file_path')
-    if fp and os.path.exists(fp):
+    if fp:
         return fp, 'HOCBA'
     fp = doc_map.get('HOCBA_6_8', {}).get('file_path')
-    if fp and os.path.exists(fp):
+    if fp:
         return fp, 'HOCBA_6_8'
     return None, None
 
+
+def _add_to_zip(zf, file_path, arcname):
+    """Thêm file vào ZIP — hỗ trợ cả local và Drive."""
+    if not file_path:
+        return
+    b, err = _get_bytes(file_path)
+    if err or not b:
+        return  # Bỏ qua file lỗi, không crash ZIP
+    zf.writestr(arcname, b)
+
+
 def create_student_zip(student, doc_map):
-    """Tạo ZIP hồ sơ của một học sinh với đúng thứ tự nộp"""
+    """Tạo ZIP hồ sơ của một học sinh với đúng thứ tự nộp."""
     buf = io.BytesIO()
     hocba_path, _ = _get_hocba_path(doc_map)
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         ordered = [
-            (doc_map.get('GIAYKHAISINH',{}).get('file_path'), '01_GiayKhaiSinh.pdf'),
-            (doc_map.get('CNTN_THCS',   {}).get('file_path'), '02_ChungNhanTotNghiep.pdf'),
+            (doc_map.get('GIAYKHAISINH', {}).get('file_path'), '01_GiayKhaiSinh.pdf'),
+            (doc_map.get('CNTN_THCS',    {}).get('file_path'), '02_ChungNhanTotNghiep.pdf'),
             (hocba_path,                                        '03_HocBa.pdf'),
-            (doc_map.get('CCCD',        {}).get('file_path'), '04_CCCD.pdf'),
-            (doc_map.get('ANH_THE',     {}).get('file_path'), '05_AnhThe.pdf'),
-            (doc_map.get('UU_TIEN',     {}).get('file_path'), '06_UuTien.pdf'),
+            (doc_map.get('CCCD',         {}).get('file_path'), '04_CCCD.pdf'),
+            (doc_map.get('ANH_THE',      {}).get('file_path'), '05_AnhThe.pdf'),
+            (doc_map.get('UU_TIEN',      {}).get('file_path'), '06_UuTien.pdf'),
         ]
         for fp, fname in ordered:
-            if fp and os.path.exists(fp):
-                zf.write(fp, fname)
+            _add_to_zip(zf, fp, fname)
     buf.seek(0)
     return buf
 
+
 def create_class_zip(class_name, students_data):
-    """Tạo ZIP hồ sơ cả lớp với đúng thứ tự"""
+    """Tạo ZIP hồ sơ cả lớp với đúng thứ tự."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for s in students_data:
@@ -247,21 +368,21 @@ def create_class_zip(class_name, students_data):
             docs = s.get('docs', {})
             hocba_path, _ = _get_hocba_path(docs)
             ordered = [
-                (docs.get('GIAYKHAISINH',{}).get('file_path'), '01_GiayKhaiSinh.pdf'),
-                (docs.get('CNTN_THCS',   {}).get('file_path'), '02_ChungNhanTotNghiep.pdf'),
+                (docs.get('GIAYKHAISINH', {}).get('file_path'), '01_GiayKhaiSinh.pdf'),
+                (docs.get('CNTN_THCS',    {}).get('file_path'), '02_ChungNhanTotNghiep.pdf'),
                 (hocba_path,                                     '03_HocBa.pdf'),
-                (docs.get('CCCD',        {}).get('file_path'), '04_CCCD.pdf'),
-                (docs.get('ANH_THE',     {}).get('file_path'), '05_AnhThe.pdf'),
-                (docs.get('UU_TIEN',     {}).get('file_path'), '06_UuTien.pdf'),
+                (docs.get('CCCD',         {}).get('file_path'), '04_CCCD.pdf'),
+                (docs.get('ANH_THE',      {}).get('file_path'), '05_AnhThe.pdf'),
+                (docs.get('UU_TIEN',      {}).get('file_path'), '06_UuTien.pdf'),
             ]
             for fp, fname in ordered:
-                if fp and os.path.exists(fp):
-                    zf.write(fp, f"{class_name}/{folder_name}/{fname}")
+                _add_to_zip(zf, fp, f"{class_name}/{folder_name}/{fname}")
     buf.seek(0)
     return buf
 
+
 def create_all_zip(all_students):
-    """Tạo ZIP toàn khối với đúng thứ tự"""
+    """Tạo ZIP toàn khối với đúng thứ tự."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for s in all_students:
@@ -269,15 +390,14 @@ def create_all_zip(all_students):
             docs = s.get('docs', {})
             hocba_path, _ = _get_hocba_path(docs)
             ordered = [
-                (docs.get('GIAYKHAISINH',{}).get('file_path'), '01_GiayKhaiSinh.pdf'),
-                (docs.get('CNTN_THCS',   {}).get('file_path'), '02_ChungNhanTotNghiep.pdf'),
+                (docs.get('GIAYKHAISINH', {}).get('file_path'), '01_GiayKhaiSinh.pdf'),
+                (docs.get('CNTN_THCS',    {}).get('file_path'), '02_ChungNhanTotNghiep.pdf'),
                 (hocba_path,                                     '03_HocBa.pdf'),
-                (docs.get('CCCD',        {}).get('file_path'), '04_CCCD.pdf'),
-                (docs.get('ANH_THE',     {}).get('file_path'), '05_AnhThe.pdf'),
-                (docs.get('UU_TIEN',     {}).get('file_path'), '06_UuTien.pdf'),
+                (docs.get('CCCD',         {}).get('file_path'), '04_CCCD.pdf'),
+                (docs.get('ANH_THE',      {}).get('file_path'), '05_AnhThe.pdf'),
+                (docs.get('UU_TIEN',      {}).get('file_path'), '06_UuTien.pdf'),
             ]
             for fp, fname in ordered:
-                if fp and os.path.exists(fp):
-                    zf.write(fp, f"{s['lop']}/{folder_name}/{fname}")
+                _add_to_zip(zf, fp, f"{s['lop']}/{folder_name}/{fname}")
     buf.seek(0)
     return buf

@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-import os, io, openpyxl
+import os, io, shutil, openpyxl
 from datetime import datetime
 from database import get_db, init_db, add_log, get_setting, set_setting, update_overall_status
 from file_utils import (to_ascii, get_student_folder, save_uploaded_file, delete_file_to_backup,
@@ -290,22 +290,43 @@ def api_append_hocba(student_id):
         student, doc_map = get_student_with_docs(student_id)
         if not student:
             return jsonify({'error': 'Không tìm thấy học sinh.'}), 404
-        # Kiểm tra khóa
         existing = doc_map.get('HOCBA_6_8', {})
         if existing.get('locked') and existing.get('status') == 'DAT':
             return jsonify({'error': 'Học bạ đã được xác nhận Đạt. Liên hệ giáo viên để mở khóa.'}), 403
         files = request.files.getlist('files')
-        if not files or len(files) == 0:
+        if not files:
             return jsonify({'error': 'Chưa chọn file nào.'}), 400
-        max_mb = int(get_setting('max_file_size_mb', '20'))
-        folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
-        dest = os.path.join(folder, 'HOCBA_6_8.pdf')
-        bk_dir = os.path.join(os.environ.get('DATA_DIR', os.path.dirname(__file__)), 'backups', student['ma_hoso'])
-        existing_path = existing.get('file_path') if existing.get('file_path') and os.path.exists(existing.get('file_path', '')) else None
-        result = append_to_existing_pdf(existing_path, files, dest, bk_dir, max_mb)
-        if result[2]:  # error message at index 2
-            return jsonify({'error': result[2]}), 400
-        dest_path, page_count, _ = result
+        max_mb = int(get_setting('max_file_size_mb', '5'))
+
+        # Lấy bytes của file hiện tại (local hoặc Drive)
+        from pdf_utils import append_bytes
+        existing_bytes = None
+        existing_path = existing.get('file_path')
+        if existing_path:
+            from pdf_utils import _get_bytes
+            existing_bytes, _ = _get_bytes(existing_path)
+
+        pdf_bytes, page_count, err = append_bytes(existing_bytes, files, max_mb)
+        if err:
+            return jsonify({'error': err}), 400
+
+        # Lưu vào Drive hoặc local
+        import drive_utils
+        if drive_utils.DRIVE_MODE:
+            dest_path, err = drive_utils.upload(pdf_bytes, dict(student), 'HOCBA_6_8')
+            if err:
+                return jsonify({'error': err}), 500
+        else:
+            folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
+            dest_path = os.path.join(folder, 'HOCBA_6_8.pdf')
+            bk_dir = os.path.join(os.environ.get('DATA_DIR', os.path.dirname(__file__)), 'backups', student['ma_hoso'])
+            if existing_path and os.path.exists(existing_path):
+                os.makedirs(bk_dir, exist_ok=True)
+                ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+                shutil.copy2(existing_path, os.path.join(bk_dir, f'backup_HOCBA_6_8_{ts}.pdf'))
+            with open(dest_path, 'wb') as f:
+                f.write(pdf_bytes)
+
         conn = get_db()
         now = datetime.now().isoformat()
         conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type='HOCBA_6_8'", (student_id,))
@@ -327,7 +348,7 @@ def api_append_hocba(student_id):
 
 @app.route('/api/upload-multi/<int:student_id>/<doc_type>', methods=['POST'])
 def api_upload_multi(student_id, doc_type):
-    """Upload nhiều file cùng lúc, gộp thành 1 PDF (dành cho CCCD 2 mặt, v.v.)"""
+    """Upload nhiều file cùng lúc, gộp thành 1 PDF (CCCD 2 mặt, v.v.)"""
     doc_type = doc_type.upper()
     if doc_type not in MULTI_FILE_DOCS:
         return jsonify({'error': f'Loại tài liệu {doc_type} không hỗ trợ multi-upload.'}), 400
@@ -340,21 +361,29 @@ def api_upload_multi(student_id, doc_type):
     files = request.files.getlist('files')
     if not files:
         return jsonify({'error': 'Chưa chọn file nào.'}), 400
-    max_mb = int(get_setting('max_file_size_mb', '20'))
-    folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
-    dest = os.path.join(folder, f'{doc_type}.pdf')
-    bk_dir = os.path.join(os.environ.get('DATA_DIR', os.path.dirname(__file__)), 'backups', student['ma_hoso'])
-    # Sử dụng merge_multiple_pdfs để tạo PDF mới (THAY THẾ file cũ, không cộng dồn)
-    from pdf_utils import merge_multiple_pdfs
-    dest_path, err = merge_multiple_pdfs(files, dest, backup_dir=bk_dir, doc_type=doc_type, max_mb=max_mb)
+    max_mb = int(get_setting('max_file_size_mb', '5'))
+
+    from pdf_utils import merge_to_bytes
+    pdf_bytes, page_count, err = merge_to_bytes(files, max_mb)
     if err:
         return jsonify({'error': err}), 400
-    page_count = 0
-    try:
-        from pypdf import PdfReader
-        page_count = len(PdfReader(dest_path).pages)
-    except Exception:
-        pass
+
+    import drive_utils
+    if drive_utils.DRIVE_MODE:
+        dest_path, err = drive_utils.upload(pdf_bytes, dict(student), doc_type)
+        if err:
+            return jsonify({'error': err}), 500
+    else:
+        folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
+        dest_path = os.path.join(folder, f'{doc_type}.pdf')
+        bk_dir = os.path.join(os.environ.get('DATA_DIR', os.path.dirname(__file__)), 'backups', student['ma_hoso'])
+        if os.path.exists(dest_path):
+            os.makedirs(bk_dir, exist_ok=True)
+            ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+            shutil.copy2(dest_path, os.path.join(bk_dir, f'backup_{doc_type}_{ts}.pdf'))
+        with open(dest_path, 'wb') as f:
+            f.write(pdf_bytes)
+
     conn = get_db()
     now = datetime.now().isoformat()
     conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type=?", (student_id, doc_type))
@@ -979,11 +1008,16 @@ def api_add_student():
 
 @app.route('/view-file/<int:student_id>/<doc_type>')
 def view_file(student_id, doc_type):
-    """Xem file PDF — không yêu cầu đăng nhập để học sinh tự xem được"""
+    """Xem file PDF — redirect sang Drive URL nếu là Drive file."""
     student, doc_map = get_student_with_docs(student_id)
     doc = doc_map.get(doc_type.upper(), {})
-    fp = doc.get('file_path')
-    if not fp or not os.path.exists(fp):
+    fp  = doc.get('file_path')
+    if not fp:
+        return '<p style="font-family:sans-serif;padding:20px">❌ File chưa được nộp. Vui lòng nộp lại.</p>', 404
+    import drive_utils
+    if drive_utils.is_drive(fp):
+        return redirect(drive_utils.view_url(fp))
+    if not os.path.exists(fp):
         return '<p style="font-family:sans-serif;padding:20px">❌ File không tồn tại. Vui lòng nộp lại.</p>', 404
     return send_file(fp, mimetype='application/pdf')
 

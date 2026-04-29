@@ -91,14 +91,22 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_uploaded_file(file, student, doc_type, max_mb=None):
-    """Lưu file upload, trả về (file_path, error_msg)"""
+    """
+    Lưu file upload.
+    - Nếu DRIVE_MODE bật → upload lên Google Drive, trả 'drive:FILE_ID'
+    - Nếu không         → lưu vào disk local (hành vi cũ)
+    Returns (file_path, error)
+    """
+    import drive_utils
+
     if max_mb is None:
         max_mb = MAX_FILE_SIZE_MB
     if not file or file.filename == '':
         return None, 'Không có file nào được chọn.'
     if not allowed_file(file.filename):
         return None, 'File không hợp lệ. Vui lòng chọn file PDF, JPG hoặc PNG.'
-    # Kiểm tra kích thước (đọc vào bộ nhớ tạm)
+
+    # Kiểm tra kích thước
     file.seek(0, 2)
     size = file.tell()
     file.seek(0)
@@ -108,36 +116,58 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
         return None, 'File rỗng, vui lòng chọn lại.'
 
     ext = file.filename.rsplit('.', 1)[1].lower()
+
+    # Đổi thành PDF bytes trong bộ nhớ
+    if ext == 'pdf':
+        file_bytes = file.read()
+    else:
+        try:
+            from PIL import Image
+            import io as _io
+            img = Image.open(file)
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            buf = _io.BytesIO()
+            img.save(buf, 'PDF', resolution=150)
+            file_bytes = buf.getvalue()
+        except Exception as e:
+            return None, f'Không thể chuyển ảnh sang PDF: {str(e)}'
+
+    # === DRIVE MODE ===
+    if drive_utils.DRIVE_MODE:
+        return drive_utils.upload(file_bytes, student, doc_type)
+
+    # === LOCAL MODE ===
     folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
-    dest_path = os.path.join(folder, f"{doc_type}.pdf")
+    dest_path = os.path.join(folder, f'{doc_type}.pdf')
 
     # Backup file cũ nếu tồn tại
     if os.path.exists(dest_path):
         ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
         bk_dir = os.path.join(BACKUP_FOLDER, student['ma_hoso'])
         os.makedirs(bk_dir, exist_ok=True)
-        shutil.copy2(dest_path, os.path.join(bk_dir, f"backup_{doc_type}_{ts}.pdf"))
+        shutil.copy2(dest_path, os.path.join(bk_dir, f'backup_{doc_type}_{ts}.pdf'))
 
-    if ext == 'pdf':
-        file.save(dest_path)
-    else:
-        # Chuyển ảnh sang PDF bằng Pillow
-        try:
-            from PIL import Image
-            img = Image.open(file)
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            img.save(dest_path, 'PDF', resolution=150)
-        except Exception as e:
-            return None, f'Không thể chuyển ảnh sang PDF: {str(e)}'
-
+    with open(dest_path, 'wb') as f:
+        f.write(file_bytes)
     return dest_path, None
 
 def delete_file_to_backup(file_path, ma_hoso, doc_type):
-    """Chuyển file vào backup thay vì xóa vĩnh viễn"""
+    """
+    Xóa file hồ sơ.
+    - Drive file → chuyển vào Trash trên Drive
+    - Local file → di chuyển vào thư mục backups/ (không xóa vĩnh viễn)
+    """
+    import drive_utils
+
+    if drive_utils.is_drive(file_path):
+        drive_utils.delete(file_path)
+        return
+
+    # Local backup
     if not file_path or not os.path.exists(file_path):
         return
     ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
     bk_dir = os.path.join(BACKUP_FOLDER, ma_hoso)
     os.makedirs(bk_dir, exist_ok=True)
-    shutil.move(file_path, os.path.join(bk_dir, f"backup_{doc_type}_{ts}.pdf"))
+    shutil.move(file_path, os.path.join(bk_dir, f'backup_{doc_type}_{ts}.pdf'))
