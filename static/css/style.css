@@ -97,6 +97,38 @@
 /* ===== UTILITY ===== */
 .hidden { display: none !important; }
 
+/* ===== TEACHER DASHBOARD: hành động học sinh ===== */
+.btn-add-student {
+  padding: 8px 16px; background: #2e7d32; color: white; border: none;
+  border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.btn-add-student:hover { background: #1b5e20; }
+.btn-edit-row {
+  padding: 4px 10px; background: #F57F17; color: white; border: none;
+  border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.btn-edit-row:hover { background: #E65100; }
+.btn-delete-row {
+  padding: 4px 10px; background: #c62828; color: white; border: none;
+  border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.btn-delete-row:hover { background: #7f0000; }
+.actions-cell { white-space: nowrap; display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+
+/* Modal dùng chung */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center; z-index: 700; padding: 16px;
+}
+.modal-overlay.hidden { display: none !important; }
+.modal-box {
+  background: white; border-radius: var(--radius); padding: 28px; width: 100%; max-width: 440px;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.28); max-height: 90vh; overflow-y: auto;
+}
+.modal-title { font-size: 17px; font-weight: 800; color: var(--primary); margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+
+
 /* ===== DOCUMENT TABLE (như giao diện hệ thống chính thức) ===== */
 .file-input-hidden { display: none; }
 .doc-table-wrap { margin-top: 16px; border: 1px solid #e0e0e0; border-radius: var(--radius); overflow: hidden; }

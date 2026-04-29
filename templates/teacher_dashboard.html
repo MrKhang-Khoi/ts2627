@@ -27,13 +27,14 @@
     <a href="/api/export-excel?class={{ selected_class }}" class="btn btn-excel">📥 Xuất Excel</a>
     <a href="/api/download-class-zip/{{ selected_class }}" class="btn btn-zip">📦 Tải ZIP lớp</a>
     <button class="btn btn-merge" onclick="mergeClass('{{ selected_class }}')">🔗 Nối học bạ cả lớp</button>
+    <button class="btn btn-add-student" onclick="openAddModal()">➕ Thêm học sinh</button>
   </div>
 
   <div class="table-wrap">
     <table class="data-table" id="teacher-table">
       <thead>
         <tr>
-          <th>STT</th><th>Họ tên</th>
+          <th>Lớp</th><th>STT</th><th>Họ tên</th>
           {% for dt in DOC_TYPES %}<th>{{ DOC_LABELS.get(dt,'') }}</th>{% endfor %}
           <th>Trạng thái</th><th>Thao tác</th>
         </tr>
@@ -41,6 +42,7 @@
       <tbody>
         {% for s in students %}
         <tr data-name="{{ s.ho_ten|lower }}">
+          <td class="center">{{ s.lop }}</td>
           <td class="center">{{ s.stt }}</td>
           <td class="name-cell"><strong>{{ s.ho_ten }}</strong></td>
           {% for dt in DOC_TYPES %}
@@ -49,14 +51,15 @@
             <td class="center">
               <span class="file-badge file-status-{{ status }}" title="{{ STATUS_LABELS.get(status,status) }}">
                 {% if status == 'DAT' %}✅{% elif status == 'CHUA_NOP' %}—{% elif status == 'DA_NOP_CHO_KIEM_TRA' %}🕐{% elif status in ['FILE_MO','SAI_FILE','THIEU_TRANG','CAN_NOP_LAI'] %}⚠️{% else %}?{% endif %}
-                {{ STATUS_LABELS.get(status,status) }}
               </span>
             </td>
           {% endfor %}
           <td><span class="status-badge status-{{ s.status_overall }}">{{ OVERALL_LABELS.get(s.status_overall,s.status_overall) }}</span></td>
-          <td>
+          <td class="actions-cell">
             <button class="btn btn-sm btn-primary" onclick="openCheckPanel({{ s.id }}, '{{ s.ho_ten }}')">Kiểm tra</button>
             <a href="{{ url_for('student_profile', student_id=s.id) }}" class="btn btn-sm btn-secondary">Xem</a>
+            <button class="btn btn-sm btn-edit-row" onclick="openEditModal({{ s.id }}, '{{ s.ho_ten|e }}', '{{ s.ngay_sinh|default('') }}', '{{ s.lop }}', '{{ s.stt }}', '{{ s.note|default('')|e }}')">✏️ Sửa</button>
+            <button class="btn btn-sm btn-delete-row" onclick="deleteStudent({{ s.id }}, '{{ s.ho_ten|e }}')">🗑 Xóa</button>
           </td>
         </tr>
         {% endfor %}
@@ -76,8 +79,68 @@
 </div>
 <div id="panel-overlay" class="panel-overlay hidden" onclick="closeCheckPanel()"></div>
 
+<!-- Modal Thêm học sinh -->
+<div id="add-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-title">➕ Thêm học sinh thủ công</div>
+    <div class="form-group">
+      <label>Họ tên <span style="color:#e53935">*</span></label>
+      <input type="text" id="add-hoten" class="form-control" placeholder="Nguyễn Văn An">
+    </div>
+    <div class="form-group">
+      <label>Lớp <span style="color:#e53935">*</span></label>
+      <input type="text" id="add-lop" class="form-control" placeholder="9B1" value="{{ selected_class }}">
+    </div>
+    <div class="form-group">
+      <label>STT</label>
+      <input type="number" id="add-stt" class="form-control" placeholder="1" value="1" min="1">
+    </div>
+    <div class="form-group">
+      <label>Ngày sinh</label>
+      <input type="text" id="add-ngaysinh" class="form-control" placeholder="15/08/2010">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeAddModal()">Hủy</button>
+      <button class="btn btn-primary" id="add-save-btn" onclick="saveNewStudent()">➕ Thêm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Sửa học sinh -->
+<div id="edit-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Sửa thông tin học sinh</div>
+    <input type="hidden" id="edit-id">
+    <div class="form-group">
+      <label>Họ tên <span style="color:#e53935">*</span></label>
+      <input type="text" id="edit-hoten" class="form-control">
+    </div>
+    <div class="form-group">
+      <label>Ngày sinh</label>
+      <input type="text" id="edit-ngaysinh" class="form-control" placeholder="dd/mm/yyyy">
+    </div>
+    <div class="form-group">
+      <label>Lớp</label>
+      <input type="text" id="edit-lop" class="form-control">
+    </div>
+    <div class="form-group">
+      <label>STT</label>
+      <input type="number" id="edit-stt" class="form-control">
+    </div>
+    <div class="form-group">
+      <label>Ghi chú</label>
+      <input type="text" id="edit-ghichu" class="form-control">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+      <button class="btn btn-primary" id="edit-save-btn" onclick="saveEdit()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
 {% block scripts %}
 <script>
+// ===== TÌM KIẾM =====
 document.getElementById('search-teacher').addEventListener('input', function() {
   const q = this.value.toLowerCase();
   document.querySelectorAll('#teacher-table tbody tr').forEach(row => {
@@ -85,6 +148,7 @@ document.getElementById('search-teacher').addEventListener('input', function() {
   });
 });
 
+// ===== NỐI HỌC BẠ LỚP =====
 function mergeClass(cls) {
   if (!confirm('Nối học bạ cho toàn bộ lớp ' + cls + '?')) return;
   fetch('/api/merge-transcript-class/' + cls, {method:'POST'})
@@ -97,6 +161,75 @@ function mergeClass(cls) {
     });
 }
 
+// ===== XÓA HỌC SINH =====
+function deleteStudent(id, name) {
+  showModal('Xóa học sinh "' + name + '"?\nThao tác này không thể hoàn tác!', () => {
+    fetch('/api/delete-student', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({student_id: id})})
+    .then(r => r.json()).then(d => {
+      if (d.success) { showToast(d.message, 'success'); setTimeout(() => location.reload(), 1000); }
+      else showToast(d.error || 'Lỗi xóa.', 'error');
+    }).catch(() => showToast('Lỗi kết nối.', 'error'));
+  });
+}
+
+// ===== THÊM HỌC SINH =====
+function openAddModal() {
+  document.getElementById('add-hoten').value = '';
+  document.getElementById('add-ngaysinh').value = '';
+  document.getElementById('add-stt').value = '1';
+  document.getElementById('add-modal').classList.remove('hidden');
+}
+function closeAddModal() { document.getElementById('add-modal').classList.add('hidden'); }
+function saveNewStudent() {
+  const btn = document.getElementById('add-save-btn');
+  const ho_ten = document.getElementById('add-hoten').value.trim();
+  const lop = document.getElementById('add-lop').value.trim();
+  const stt = document.getElementById('add-stt').value.trim();
+  const ngay_sinh = document.getElementById('add-ngaysinh').value.trim();
+  if (!ho_ten || !lop) { showToast('Vui lòng nhập đủ họ tên và lớp.', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Đang lưu...';
+  fetch('/api/add-student', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ho_ten, lop, stt, ngay_sinh})})
+  .then(r => r.json()).then(d => {
+    if (d.success) { showToast(d.message, 'success'); setTimeout(() => location.reload(), 1000); }
+    else { showToast(d.error || 'Lỗi.', 'error'); btn.disabled = false; btn.textContent = '➕ Thêm'; }
+  }).catch(() => { showToast('Lỗi kết nối.', 'error'); btn.disabled = false; btn.textContent = '➕ Thêm'; });
+}
+
+// ===== SỬA HỌC SINH =====
+function openEditModal(id, ten, ngaysinh, lop, stt, ghichu) {
+  document.getElementById('edit-id').value = id;
+  document.getElementById('edit-hoten').value = ten;
+  document.getElementById('edit-ngaysinh').value = ngaysinh;
+  document.getElementById('edit-lop').value = lop;
+  document.getElementById('edit-stt').value = stt;
+  document.getElementById('edit-ghichu').value = ghichu || '';
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+function saveEdit() {
+  const btn = document.getElementById('edit-save-btn');
+  const id = document.getElementById('edit-id').value;
+  const ho_ten = document.getElementById('edit-hoten').value.trim();
+  const ngay_sinh = document.getElementById('edit-ngaysinh').value.trim();
+  const lop = document.getElementById('edit-lop').value.trim();
+  const stt = document.getElementById('edit-stt').value.trim();
+  const ghi_chu = document.getElementById('edit-ghichu').value.trim();
+  if (!ho_ten) { showToast('Họ tên không được trống.', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Đang lưu...';
+  fetch('/api/edit-student', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({student_id: id, ho_ten, ngay_sinh, lop, stt, ghi_chu})})
+  .then(r => r.json()).then(d => {
+    if (d.success) { showToast(d.message, 'success'); setTimeout(() => location.reload(), 1000); }
+    else { showToast(d.error || 'Lỗi lưu.', 'error'); btn.disabled = false; btn.textContent = '💾 Lưu'; }
+  }).catch(() => { showToast('Lỗi kết nối.', 'error'); btn.disabled = false; btn.textContent = '💾 Lưu'; });
+}
+
+// ===== KIỂM TRA FILE =====
 let currentStudentId = null;
 const DOC_LABELS = {{ DOC_LABELS | tojson }};
 const DOC_TYPES = {{ DOC_TYPES | tojson }};
@@ -111,12 +244,10 @@ function openCheckPanel(studentId, name) {
     renderCheckPanel(d.docs, studentId);
   });
 }
-
 function closeCheckPanel() {
   document.getElementById('check-panel').classList.add('hidden');
   document.getElementById('panel-overlay').classList.add('hidden');
 }
-
 function renderCheckPanel(docs, studentId) {
   let html = '';
   DOC_TYPES.forEach(dt => {
@@ -163,7 +294,6 @@ function checkFile(studentId, docType) {
       else showToast(d.error, 'error');
     });
 }
-
 function unlockFile(studentId, docType) {
   if (!confirm('Mở khóa để học sinh nộp lại?')) return;
   fetch('/api/unlock-file', {method:'POST', headers:{'Content-Type':'application/json'},
@@ -173,7 +303,6 @@ function unlockFile(studentId, docType) {
       else showToast(d.error, 'error');
     });
 }
-
 function mergeOne(studentId) {
   fetch('/api/merge-transcript/' + studentId, {method:'POST'})
     .then(r => r.json()).then(d => {

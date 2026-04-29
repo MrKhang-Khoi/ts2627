@@ -687,6 +687,63 @@ def api_edit_student():
         return jsonify({'error': f'Lỗi cập nhật: {str(e)}'}), 500
     return jsonify({'success': True, 'message': 'Đã cập nhật thông tin học sinh.'})
 
+@app.route('/api/delete-student', methods=['POST'])
+@login_required
+def api_delete_student():
+    """Xóa học sinh và toàn bộ file đi kèm (chỉ teacher/admin)."""
+    if session.get('role') not in ('teacher', 'admin'):
+        return jsonify({'error': 'Bạn không có quyền xóa học sinh.'}), 403
+    data = request.get_json(force=True) or {}
+    student_id = data.get('student_id')
+    if not student_id:
+        return jsonify({'error': 'Thiếu student_id.'}), 400
+    conn = get_db()
+    row = conn.execute("SELECT * FROM students WHERE id=?", (student_id,)).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({'error': 'Không tìm thấy học sinh.'}), 404
+    # Xóa document records + backup file_path (tuỳ chọn – chỉ xóa record, giữ file)
+    conn.execute("DELETE FROM documents WHERE student_id=?", (student_id,))
+    conn.execute("DELETE FROM students WHERE id=?", (student_id,))
+    conn.commit()
+    conn.close()
+    add_log(session.get('user_id'), 'DELETE_STUDENT', student_id, None,
+            f"Xóa HS: {row['ho_ten']} - Lớp {row['lop']}")
+    return jsonify({'success': True, 'message': f"Đã xóa học sinh {row['ho_ten']}."})
+
+@app.route('/api/add-student', methods=['POST'])
+@login_required
+def api_add_student():
+    """Thêm học sinh thủ công (chỉ teacher/admin)."""
+    if session.get('role') not in ('teacher', 'admin'):
+        return jsonify({'error': 'Bạn không có quyền thêm học sinh.'}), 403
+    data = request.get_json(force=True) or {}
+    ho_ten = (data.get('ho_ten') or '').strip()
+    lop = (data.get('lop') or '').strip()
+    stt = (data.get('stt') or '1').strip()
+    ngay_sinh = (data.get('ngay_sinh') or '').strip()
+    if not ho_ten or not lop:
+        return jsonify({'error': 'Họ tên và lớp không được để trống.'}), 400
+    ho_ten_khong_dau = to_ascii(ho_ten)
+    now = datetime.now().isoformat()
+    # Tạo mã hồ sơ tự động: LOP_STT_HOTENKD
+    ma_hoso = f"{to_ascii(lop)}_{stt}_{ho_ten_khong_dau}"[:60]
+    try:
+        conn = get_db()
+        conn.execute("""INSERT INTO students
+                        (ma_hoso,lop,stt,ho_ten,ho_ten_khong_dau,ngay_sinh,status_overall,created_at,updated_at)
+                        VALUES (?,?,?,?,?,?,?,?,?)""",
+                     (ma_hoso, lop, stt, ho_ten, ho_ten_khong_dau, ngay_sinh,
+                      'CHUA_NOP', now, now))
+        conn.commit()
+        new_id = conn.execute("SELECT id FROM students WHERE ma_hoso=?", (ma_hoso,)).fetchone()['id']
+        conn.close()
+        add_log(session.get('user_id'), 'ADD_STUDENT', new_id, None,
+                f"Thêm HS: {ho_ten} - Lớp {lop}")
+        return jsonify({'success': True, 'message': f"Đã thêm học sinh {ho_ten}.", 'id': new_id})
+    except Exception as e:
+        return jsonify({'error': f'Lỗi: {str(e)}'}), 500
+
 @app.route('/view-file/<int:student_id>/<doc_type>')
 def view_file(student_id, doc_type):
     """Xem file PDF — không yêu cầu đăng nhập để học sinh tự xem được"""
