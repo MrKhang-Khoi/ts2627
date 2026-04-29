@@ -598,6 +598,71 @@ def api_change_password():
     conn.close()
     return jsonify({'success': True})
 
+@app.route('/api/delete-file', methods=['POST'])
+def api_delete_file():
+    """Xóa file đã nộp (chuyển vào backup). Học sinh tự xóa khi chưa bị khóa."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Dữ liệu không hợp lệ.'}), 400
+    student_id = data.get('student_id')
+    doc_type = (data.get('doc_type') or '').upper()
+    if not student_id or not doc_type:
+        return jsonify({'error': 'Thiếu thông tin.'}), 400
+    student, doc_map = get_student_with_docs(student_id)
+    if not student:
+        return jsonify({'error': 'Không tìm thấy học sinh.'}), 404
+    doc = doc_map.get(doc_type)
+    if not doc:
+        return jsonify({'error': 'Không có file để xóa.'}), 404
+    # Không cho phép xóa nếu đã bị khóa (DAT + locked)
+    if doc.get('status') == 'DAT' and doc.get('locked'):
+        return jsonify({'error': 'File đã được giáo viên xác nhận, không thể xóa.'}), 403
+    try:
+        fp = doc.get('file_path')
+        if fp:
+            delete_file_to_backup(fp, student['ma_hoso'], doc_type)
+        conn = get_db()
+        conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type=?", (student_id, doc_type))
+        conn.commit()
+        conn.close()
+        update_overall_status(student_id)
+        add_log(student_id, f"Học sinh tự xóa file {doc_type}")
+    except Exception as e:
+        return jsonify({'error': f'Lỗi khi xóa: {str(e)}'}), 500
+    return jsonify({'success': True, 'message': f'Đã xóa {doc_type}. Có thể nộp lại.'})
+
+@app.route('/api/edit-student', methods=['POST'])
+@login_required
+def api_edit_student():
+    """Chỉnh sửa thông tin học sinh. Giáo viên/admin được phép."""
+    data = request.get_json()
+    student_id = data.get('student_id')
+    if not student_id:
+        return jsonify({'error': 'Thiếu student_id.'}), 400
+    # Kiểm tra quyền: chỉ teacher/admin mới được sửa
+    if session.get('role') not in ('teacher', 'admin'):
+        return jsonify({'error': 'Bạn không có quyền chỉnh sửa.'}), 403
+    ho_ten = (data.get('ho_ten') or '').strip()
+    ngay_sinh = (data.get('ngay_sinh') or '').strip()
+    lop = (data.get('lop') or '').strip()
+    stt = (data.get('stt') or '').strip()
+    ghi_chu = (data.get('ghi_chu') or '').strip()
+    if not ho_ten:
+        return jsonify({'error': 'Họ tên không được để trống.'}), 400
+    ho_ten_khong_dau = to_ascii(ho_ten)
+    try:
+        conn = get_db()
+        conn.execute("""UPDATE students SET ho_ten=?, ho_ten_khong_dau=?, ngay_sinh=?,
+                        lop=?, stt=?, ghi_chu=?, updated_at=? WHERE id=?""",
+                     (ho_ten, ho_ten_khong_dau, ngay_sinh, lop, stt, ghi_chu,
+                      datetime.now().isoformat(), student_id))
+        conn.commit()
+        conn.close()
+        add_log(student_id, f"GV sửa thông tin: {ho_ten}")
+    except Exception as e:
+        return jsonify({'error': f'Lỗi cập nhật: {str(e)}'}), 500
+    return jsonify({'success': True, 'message': 'Đã cập nhật thông tin học sinh.'})
+
 @app.route('/view-file/<int:student_id>/<doc_type>')
 def view_file(student_id, doc_type):
     """Xem file PDF — không yêu cầu đăng nhập để học sinh tự xem được"""

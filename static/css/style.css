@@ -94,6 +94,28 @@
 }
 .btn-merge-big:hover { background: var(--primary-light); transform: scale(1.03); }
 
+/* ===== UTILITY ===== */
+.hidden { display: none !important; }
+
+/* Edit modal */
+.edit-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center; z-index: 600;
+}
+.edit-modal-overlay.hidden { display: none !important; }
+.edit-modal-box {
+  background: white; border-radius: var(--radius); padding: 32px; width: 90%; max-width: 480px;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.25);
+}
+.edit-modal-title { font-size: 20px; font-weight: 800; color: var(--primary); margin-bottom: 20px; }
+.edit-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.btn-edit-student {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; background: var(--warning-light); color: var(--warning);
+  border: 1.5px solid #FFB300; border-radius: var(--radius-sm); font-size: 13px;
+  font-weight: 700; cursor: pointer; transition: var(--transition);
+}
+.btn-edit-student:hover { background: var(--warning); color: white; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }

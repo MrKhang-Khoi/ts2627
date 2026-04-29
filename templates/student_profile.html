@@ -17,6 +17,13 @@
           {{ OVERALL_LABELS.get(student.status_overall, student.status_overall) }}
         </span>
       </div>
+      <div style="margin-top:12px">
+        {% if session.get('role') in ['teacher','admin'] %}
+        <button class="btn-edit-student" onclick="openEditModal()">
+          ✏️ Sửa thông tin
+        </button>
+        {% endif %}
+      </div>
     </div>
   </div>
 
@@ -160,6 +167,37 @@
   </div>
   {% endif %}
 </div>
+
+{# === MODAL SỬA THÔNG TIN === #}
+<div id="edit-modal" class="edit-modal-overlay hidden">
+  <div class="edit-modal-box">
+    <div class="edit-modal-title">✏️ Sửa thông tin học sinh</div>
+    <div class="form-group">
+      <label>Họ tên</label>
+      <input type="text" id="edit-hoten" class="form-control" value="{{ student.ho_ten }}">
+    </div>
+    <div class="form-group">
+      <label>Ngày sinh</label>
+      <input type="text" id="edit-ngaysinh" class="form-control" value="{{ student.ngay_sinh }}" placeholder="dd/mm/yyyy">
+    </div>
+    <div class="form-group">
+      <label>Lớp</label>
+      <input type="text" id="edit-lop" class="form-control" value="{{ student.lop }}">
+    </div>
+    <div class="form-group">
+      <label>STT</label>
+      <input type="number" id="edit-stt" class="form-control" value="{{ student.stt }}">
+    </div>
+    <div class="form-group">
+      <label>Ghi chú</label>
+      <input type="text" id="edit-ghichu" class="form-control" value="{{ student.ghi_chu or '' }}">
+    </div>
+    <div class="edit-modal-actions">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveEdit()" id="edit-save-btn">💾 Lưu thay đổi</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -265,6 +303,38 @@ function confirmDelete(studentId, docType, label) {
     })
     .catch(err => { showToast('Lỗi kết nối: ' + err.message, 'error'); });
   });
+}
+
+// Sửa thông tin học sinh
+function openEditModal() {
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.add('hidden');
+}
+function saveEdit() {
+  const btn = document.getElementById('edit-save-btn');
+  btn.disabled = true; btn.textContent = 'Đang lưu...';
+  const payload = {
+    student_id: STUDENT_ID,
+    ho_ten:    document.getElementById('edit-hoten').value.trim(),
+    ngay_sinh: document.getElementById('edit-ngaysinh').value.trim(),
+    lop:       document.getElementById('edit-lop').value.trim(),
+    stt:       document.getElementById('edit-stt').value.trim(),
+    ghi_chu:   document.getElementById('edit-ghichu').value.trim(),
+  };
+  if (!payload.ho_ten) { showToast('Họ tên không được để trống.', 'error'); btn.disabled = false; btn.textContent = '💾 Lưu thay đổi'; return; }
+  fetch('/api/edit-student', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) { showToast(d.message, 'success'); setTimeout(() => location.reload(), 1000); }
+    else { showToast(d.error || 'Lỗi lưu.', 'error'); btn.disabled = false; btn.textContent = '💾 Lưu thay đổi'; }
+  })
+  .catch(() => { showToast('Lỗi kết nối.', 'error'); btn.disabled = false; btn.textContent = '💾 Lưu thay đổi'; });
 }
 </script>
 {% endblock %}
