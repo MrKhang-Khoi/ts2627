@@ -99,28 +99,29 @@
 
           {% if can_edit %}
             {% if is_hb68 %}
-            {# === UPLOAD ĐẶC BIỆT CHO HỌC BẠ 6-8: mobile-friendly === #}
+            {# === UPLOAD HB68: mobile-friendly === #}
             <div class="hb68-info">
-              <p>📌 <strong>Học bạ nhiều file?</strong> Bấm vùng bên dưới hoặc "Thêm file" để chọn từng file một (hỗ trợ điện thoại).</p>
+              <p>📌 <strong>Học bạ nhiều file?</strong> Mỗi lần bấm chọn 1 file, bấm <strong>Thêm file</strong> để chọn file tiếp theo.</p>
             </div>
-            <div class="upload-zone" id="zone-{{ dt }}" onclick="triggerHb68Picker()">
+            {# Dùng label[for] — browser tự mở picker không cần JS, an toàn trên iOS #}
+            <label for="file-HOCBA_6_8" class="upload-zone" id="zone-HOCBA_6_8">
               <div class="upload-zone-icon">📂</div>
               <div class="upload-zone-text">
-                <strong>Bấm để chọn file</strong>
-                <small>PDF, JPG, PNG — Bấm nhiều lần để thêm từng file</small>
+                <strong>Bấm để chọn file đầu tiên</strong>
+                <small>PDF, JPG, PNG — Bấm “Thêm file” để chọn tiếp</small>
               </div>
               <input type="file" id="file-HOCBA_6_8" class="file-input" accept=".pdf,.jpg,.jpeg,.png"
                      onchange="addHb68File(this)">
-            </div>
+            </label>
             <div id="hb68-list" class="file-preview-list hidden"></div>
-            <button class="btn btn-secondary" style="width:100%;margin-top:6px" onclick="triggerHb68Picker()">➕ Thêm file</button>
+            <button class="btn btn-secondary btn-block" style="margin-top:8px" onclick="addHb68FileNew()">➕ Thêm file</button>
             <button id="btn-upload-HOCBA_6_8" class="btn btn-upload btn-block hidden"
                     onclick="uploadHb68({{ student.id }})">
               ⬆ Tải lên và nối học bạ 6-8
             </button>
             {% else %}
-            {# === UPLOAD THÔNG THƯỜNG === #}
-            <div class="upload-zone" id="zone-{{ dt }}" onclick="document.getElementById('file-{{ dt }}').click()">
+            {# === UPLOAD THÔNG THƯỜNG: dùng label[for] để mở picker an toàn trên iOS === #}
+            <label for="file-{{ dt }}" class="upload-zone" id="zone-{{ dt }}">
               <div class="upload-zone-icon">📂</div>
               <div class="upload-zone-text">
                 <strong>Bấm để chọn file</strong>
@@ -128,7 +129,7 @@
               </div>
               <input type="file" id="file-{{ dt }}" class="file-input" accept=".pdf,.jpg,.jpeg,.png"
                      onchange="onFileSelected('{{ dt }}', this)">
-            </div>
+            </label>
             <div id="preview-{{ dt }}" class="file-preview-list hidden"></div>
             <button id="btn-upload-{{ dt }}" class="btn btn-upload btn-block hidden"
                     onclick="uploadFile('{{ dt }}', {{ student.id }})">
@@ -223,17 +224,41 @@
 const STUDENT_ID = {{ student.id }};
 function formatSize(b){return b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1)+' MB';}
 
-// ===== HB68 MULTI-FILE (mobile-friendly) =====
+// ===== HB68 MULTI-FILE =====
+// iOS Safari chỉ cho mở file picker khi được gọi từ user gesture trực tiếp.
+// label[for] xử lý file đầu tiên (browser tự kết nối, không cần JS).
+// addHb68FileNew() tạo một input mới và .click() nó trong cùng onclick handler —
+// đây là cách duy nhất để iOS cho phép mở picker theo chương trình.
 let _hb68Files = [];
-function triggerHb68Picker() { document.getElementById('file-HOCBA_6_8').click(); }
+
 function addHb68File(input) {
+  // Gọi khi label zone được dùng để chọn file đầu tiên
   Array.from(input.files).forEach(f => {
     if (!_hb68Files.find(x => x.name===f.name && x.size===f.size)) _hb68Files.push(f);
   });
-  input.value = '';
+  input.value = '';  // reset để lần sau vẫn onchange trigger
   _renderHb68List();
 }
+
+function addHb68FileNew() {
+  // Tạo input mới mỗi lần — tránh bị iOS block
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.pdf,.jpg,.jpeg,.png';
+  inp.style.cssText = 'position:fixed;top:-200px;left:-200px;opacity:0;width:1px;height:1px;';
+  inp.onchange = function() {
+    Array.from(this.files).forEach(f => {
+      if (!_hb68Files.find(x => x.name===f.name && x.size===f.size)) _hb68Files.push(f);
+    });
+    _renderHb68List();
+    if (document.body.contains(this)) document.body.removeChild(this);
+  };
+  document.body.appendChild(inp);
+  inp.click();  // an toàn vì đang trong onclick handler của button
+}
+
 function removeHb68File(i) { _hb68Files.splice(i,1); _renderHb68List(); }
+
 function _renderHb68List() {
   const list = document.getElementById('hb68-list');
   const btn  = document.getElementById('btn-upload-HOCBA_6_8');
