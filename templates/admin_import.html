@@ -6,8 +6,10 @@
     <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Quay lại</a>
     <h1>📥 Import Danh Sách Học Sinh</h1>
   </div>
-  <div class="card">
-    <h2>Tải lên file Excel hoặc CSV</h2>
+
+  {# === BƯỚC 1: CHỌN FILE === #}
+  <div class="card" id="step1-card">
+    <h2>📂 Bước 1 — Chọn file Excel hoặc CSV</h2>
     <p>File phải có các cột: <code>ma_hoso, lop, stt, ho_ten, ngay_sinh, ghi_chu</code></p>
     <a href="{{ url_for('download_template') }}" class="btn btn-secondary">📄 Tải file mẫu</a>
     <div class="upload-area" id="drop-area">
@@ -19,43 +21,182 @@
       </label>
     </div>
     <div id="import-filename" class="import-filename"></div>
-    <button id="import-btn" class="btn btn-primary btn-block" onclick="doImport()" disabled>⬆ Import danh sách</button>
+    <button id="preview-btn" class="btn btn-primary btn-block" onclick="doPreview()" disabled>
+      🔍 Phân tích file
+    </button>
+  </div>
+
+  {# === BƯỚC 2: KẾT QUẢ PHÂN TÍCH === #}
+  <div class="card hidden" id="step2-card">
+    <h2>📊 Bước 2 — Kết quả phân tích</h2>
+    <div id="preview-summary"></div>
+
+    {# Bảng trùng lặp #}
+    <div id="dup-section" class="hidden">
+      <div class="import-warn-banner">
+        ⚠️ <strong id="dup-count-text"></strong> học sinh đã có trong hệ thống (dựa vào mã CCCD).
+        Chọn cách xử lý:
+      </div>
+      <div class="dup-option-row">
+        <label class="dup-option">
+          <input type="radio" name="dup-mode" value="skip" checked>
+          <div class="dup-option-box">
+            <div class="dup-opt-icon">⏭️</div>
+            <div><strong>Bỏ qua</strong><br><small>Giữ nguyên dữ liệu cũ, chỉ thêm mới</small></div>
+          </div>
+        </label>
+        <label class="dup-option">
+          <input type="radio" name="dup-mode" value="overwrite">
+          <div class="dup-option-box">
+            <div class="dup-opt-icon">🔄</div>
+            <div><strong>Ghi đè</strong><br><small>Cập nhật thông tin mới cho HS trùng</small></div>
+          </div>
+        </label>
+      </div>
+      <div id="dup-table-wrap">
+        <table class="data-table dup-table">
+          <thead><tr><th>Mã CCCD</th><th>Tên hiện tại (cũ)</th><th>Lớp cũ</th><th>→ Tên mới</th><th>→ Lớp mới</th></tr></thead>
+          <tbody id="dup-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Bảng mới #}
+    <div id="new-section" class="hidden">
+      <div class="import-new-banner">
+        ✅ <strong id="new-count-text"></strong> học sinh sẽ được thêm mới.
+      </div>
+    </div>
+
+    <div class="import-step2-actions">
+      <button class="btn btn-secondary" onclick="resetImport()">← Chọn file khác</button>
+      <button class="btn btn-primary" id="confirm-btn" onclick="doImport()">⬆ Xác nhận import</button>
+    </div>
     <div id="import-result" class="import-result hidden"></div>
   </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
 <script>
-const fileInput = document.getElementById('import-file');
-const importBtn = document.getElementById('import-btn');
-const filename = document.getElementById('import-filename');
+const fileInput  = document.getElementById('import-file');
+const previewBtn = document.getElementById('preview-btn');
+const filenameEl = document.getElementById('import-filename');
+let _lastFile    = null;
+
 fileInput.addEventListener('change', () => {
   if (fileInput.files.length) {
-    filename.textContent = '\ud83d\udcc4 ' + fileInput.files[0].name;
-    importBtn.disabled = false;
+    _lastFile = fileInput.files[0];
+    filenameEl.textContent = '📄 ' + _lastFile.name;
+    previewBtn.disabled = false;
   }
 });
-function doImport() {
-  if (!fileInput.files.length) return;
-  importBtn.disabled = true; importBtn.textContent = '\u0110ang import...';
+
+function resetImport() {
+  document.getElementById('step2-card').classList.add('hidden');
+  document.getElementById('step1-card').classList.remove('hidden');
+  document.getElementById('import-result').classList.add('hidden');
+  fileInput.value = '';
+  filenameEl.textContent = '';
+  previewBtn.disabled = true;
+  _lastFile = null;
+}
+
+// ===== BƯỚC 1: PHÂN TÍCH =====
+async function doPreview() {
+  if (!_lastFile) return;
+  previewBtn.disabled = true;
+  previewBtn.textContent = '⏳ Đang phân tích...';
+
   const fd = new FormData();
-  fd.append('file', fileInput.files[0]);
-  fetch('/api/import-students', {method:'POST', body: fd})
-    .then(r => r.json())
-    .then(d => {
-      const res = document.getElementById('import-result');
-      res.classList.remove('hidden');
-      if (d.success) {
-        let html = `<div class="alert alert-success">\u2705 \u0110\u00e3 import th\u00e0nh c\u00f4ng <strong>${d.imported}</strong> h\u1ecdc sinh.</div>`;
-        if (d.errors && d.errors.length) {
-          html += `<div class="alert alert-warning">\u26a0\ufe0f ${d.errors.length} l\u1ed7i:<ul>${d.errors.map(e=>'<li>'+e+'</li>').join('')}</ul></div>`;
-        }
-        res.innerHTML = html;
-      } else {
-        res.innerHTML = `<div class="alert alert-error">\u274c ${d.error}</div>`;
-      }
-      importBtn.textContent = '\u2b06 Import danh s\u00e1ch'; importBtn.disabled = false;
-    });
+  fd.append('file', _lastFile);
+  const r = await fetch('/api/preview-import', {method: 'POST', body: fd});
+  const d = await r.json();
+  previewBtn.textContent = '🔍 Phân tích file';
+  previewBtn.disabled = false;
+
+  if (!d.success) {
+    alert('❌ ' + (d.error || 'Lỗi phân tích file.'));
+    return;
+  }
+
+  // Chuyển sang bước 2
+  document.getElementById('step1-card').classList.add('hidden');
+  document.getElementById('step2-card').classList.remove('hidden');
+  renderPreview(d);
+}
+
+function renderPreview(d) {
+  const sumEl = document.getElementById('preview-summary');
+  sumEl.innerHTML = `
+    <div class="preview-summary-row">
+      <div class="preview-stat blue"><div class="ps-num">${d.total}</div><div class="ps-label">Tổng dòng</div></div>
+      <div class="preview-stat green"><div class="ps-num">${d.new.length}</div><div class="ps-label">Học sinh mới</div></div>
+      <div class="preview-stat orange"><div class="ps-num">${d.duplicates.length}</div><div class="ps-label">Trùng (đã có)</div></div>
+      <div class="preview-stat red"><div class="ps-num">${d.errors.length}</div><div class="ps-label">Lỗi dữ liệu</div></div>
+    </div>`;
+
+  // Duplicates
+  const dupSec = document.getElementById('dup-section');
+  if (d.duplicates.length > 0) {
+    dupSec.classList.remove('hidden');
+    document.getElementById('dup-count-text').textContent = d.duplicates.length;
+    const tbody = document.getElementById('dup-tbody');
+    tbody.innerHTML = d.duplicates.map(dup =>
+      `<tr>
+        <td><code>${dup.ma_hoso}</code></td>
+        <td>${dup.ho_ten_cu}</td><td>${dup.lop_cu}</td>
+        <td class="${dup.ho_ten_moi !== dup.ho_ten_cu ? 'changed-cell' : ''}">${dup.ho_ten_moi}</td>
+        <td class="${dup.lop_moi !== dup.lop_cu ? 'changed-cell' : ''}">${dup.lop_moi}</td>
+      </tr>`
+    ).join('');
+  } else {
+    dupSec.classList.add('hidden');
+  }
+
+  // New
+  const newSec = document.getElementById('new-section');
+  if (d.new.length > 0) {
+    newSec.classList.remove('hidden');
+    document.getElementById('new-count-text').textContent = d.new.length;
+  } else {
+    newSec.classList.add('hidden');
+  }
+
+  // Disable confirm if nothing to do
+  if (d.new.length === 0 && d.duplicates.length === 0) {
+    document.getElementById('confirm-btn').disabled = true;
+  }
+}
+
+// ===== BƯỚC 2: THỰC SỰ IMPORT =====
+async function doImport() {
+  if (!_lastFile) return;
+  const mode = document.querySelector('input[name="dup-mode"]:checked')?.value || 'skip';
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang import...';
+
+  const fd = new FormData();
+  fd.append('file', _lastFile);
+  fd.append('overwrite', mode === 'overwrite' ? '1' : '0');
+  const r = await fetch('/api/import-students', {method: 'POST', body: fd});
+  const d = await r.json();
+
+  const resEl = document.getElementById('import-result');
+  resEl.classList.remove('hidden');
+  if (d.success) {
+    let html = `<div class="alert alert-success">✅ Đã import thành công <strong>${d.imported}</strong> học sinh.</div>`;
+    if (d.skipped) html += `<div class="alert alert-info">⏭ Đã bỏ qua <strong>${d.skipped}</strong> học sinh trùng.</div>`;
+    if (d.errors && d.errors.length)
+      html += `<div class="alert alert-warning">⚠️ ${d.errors.length} lỗi:<ul>${d.errors.map(e=>'<li>'+e+'</li>').join('')}</ul></div>`;
+    resEl.innerHTML = html;
+    btn.textContent = '✅ Hoàn thành';
+  } else {
+    resEl.innerHTML = `<div class="alert alert-error">❌ ${d.error}</div>`;
+    btn.disabled = false;
+    btn.textContent = '⬆ Xác nhận import';
+  }
 }
 </script>
 {% endblock %}

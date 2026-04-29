@@ -50,10 +50,15 @@ def get_student_with_docs(student_id):
     return dict(s), get_student_docs(student_id)
 
 def enrich_students(students):
+    """Thêm docs và doc_count cho mỗi học sinh."""
     result = []
     for s in students:
         sd = dict(s)
-        sd['docs'] = get_student_docs(s['id'])
+        docs = get_student_docs(s['id'])
+        sd['docs'] = docs
+        # Đếm số tài liệu đã nộp (có file, không tính CHUA_NOP)
+        sd['doc_count'] = sum(1 for d in docs.values() if d.get('file_path'))
+        sd['doc_total'] = len(DISPLAY_ORDER)  # tổng số mục
         result.append(sd)
     return result
 
@@ -657,21 +662,21 @@ def api_import_students():
         return jsonify({'error': f'Lỗi đọc file: {str(e)}'}), 400
 
     conn = get_db()
-    count, errors = 0, []
+    overwrite = request.form.get('overwrite', '1') == '1'  # mặc định ghi đè (hành vi cũ)
+    # Lấy danh sách ma_hoso đã tồn tại
+    existing_ma = {r['ma_hoso'] for r in conn.execute('SELECT ma_hoso FROM students').fetchall()}
+    count, skipped, errors = 0, 0, []
     for i, r in enumerate(rows_data, 2):
         ma_hoso = r.get('ma_hoso', '').strip()
         lop = r.get('lop', '').strip()
-        # STT: Excel có thể đọc thành "1.0" hay " 1" — chuẩn hóa thành số nguyên
         stt_raw = r.get('stt', '').strip()
         try:
             stt = str(int(float(stt_raw))) if stt_raw else ''
         except (ValueError, TypeError):
             stt = stt_raw
         ho_ten = r.get('ho_ten', '').strip()
-        # Ngày sinh: openpyxl có thể trả về datetime object, chuẩn hóa thành dd/mm/yyyy
         ngay_sinh_raw = r.get('ngay_sinh', '').strip()
         if ngay_sinh_raw:
-            # Nếu openpyxl đối chiếu thành dạng "2011-04-05 00:00:00" hoặc "2011-04-05"
             import re as _re
             m = _re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})', ngay_sinh_raw)
             if m:
@@ -682,6 +687,10 @@ def api_import_students():
             ngay_sinh = ''
         if not all([ma_hoso, lop, ho_ten]):
             errors.append(f"Dòng {i}: thiếu thông tin bắt buộc.")
+            continue
+        # Kiểm tra trùng
+        if ma_hoso in existing_ma and not overwrite:
+            skipped += 1
             continue
         ho_ten_khong_dau = to_ascii(ho_ten)
         now = datetime.now().isoformat()
@@ -695,7 +704,63 @@ def api_import_students():
             errors.append(f"Dòng {i}: {str(e)}")
     conn.commit()
     conn.close()
-    return jsonify({'success': True, 'imported': count, 'errors': errors})
+    return jsonify({'success': True, 'imported': count, 'skipped': skipped, 'errors': errors})
+
+@app.route('/api/preview-import', methods=['POST'])
+@login_required
+@admin_required
+def api_preview_import():
+    """Phân tích file Excel: trả về danh sách mới / trùng (dựa vào ma_hoso)."""
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error': 'Chưa chọn file.'}), 400
+    ext = file.filename.rsplit('.', 1)[-1].lower()
+    rows_data = []
+    try:
+        if ext in ('xlsx', 'xls'):
+            wb = openpyxl.load_workbook(file, read_only=True)
+            ws = wb.active
+            headers = [str(c.value).strip() if c.value else '' for c in next(ws.iter_rows())]
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if any(v for v in row):
+                    def _cs(v):
+                        if v is None: return ''
+                        try:
+                            from datetime import datetime as _dt
+                            if isinstance(v, _dt): return v.strftime('%d/%m/%Y')
+                        except Exception: pass
+                        return str(v).strip()
+                    rows_data.append(dict(zip(headers, [_cs(v) for v in row])))
+        elif ext == 'csv':
+            import csv, io as _io
+            content = file.read().decode('utf-8-sig')
+            reader = csv.DictReader(_io.StringIO(content))
+            for row in reader:
+                rows_data.append({k.strip(): v.strip() for k, v in row.items()})
+        else:
+            return jsonify({'error': 'Chỉ hỗ trợ .xlsx hoặc .csv'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Lỗi đọc file: {str(e)}'}), 400
+
+    conn = get_db()
+    existing_ma = {r['ma_hoso']: dict(r) for r in conn.execute('SELECT ma_hoso, ho_ten, lop FROM students').fetchall()}
+    conn.close()
+
+    new_list, dup_list, err_list = [], [], []
+    for i, r in enumerate(rows_data, 2):
+        ma = r.get('ma_hoso', '').strip()
+        ho_ten = r.get('ho_ten', '').strip()
+        lop = r.get('lop', '').strip()
+        if not all([ma, ho_ten, lop]):
+            err_list.append({'row': i, 'reason': 'Thiếu thông tin bắt buộc'})
+            continue
+        if ma in existing_ma:
+            dup_list.append({'ma_hoso': ma, 'ho_ten_moi': ho_ten, 'lop_moi': lop,
+                             'ho_ten_cu': existing_ma[ma]['ho_ten'], 'lop_cu': existing_ma[ma]['lop']})
+        else:
+            new_list.append({'ma_hoso': ma, 'ho_ten': ho_ten, 'lop': lop})
+    return jsonify({'success': True, 'new': new_list, 'duplicates': dup_list, 'errors': err_list,
+                    'total': len(rows_data)})
 
 @app.route('/api/fix-data', methods=['POST'])
 @login_required

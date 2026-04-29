@@ -26,7 +26,12 @@
       <div class="student-stt">{{ s.stt }}</div>
       <div class="student-info">
         <div class="student-name">{{ s.ho_ten }}</div>
-        <div class="student-dob">{{ s.ngay_sinh }}</div>
+        <div class="student-dob">
+          {{ s.ngay_sinh }}
+          <span class="doc-count-badge {% if s.doc_count == s.doc_total %}doc-count-full{% elif s.doc_count > 0 %}doc-count-partial{% else %}doc-count-none{% endif %}">
+            📄 {{ s.doc_count }}/{{ s.doc_total }} tệp
+          </span>
+        </div>
       </div>
       <div class="student-right">
         <span class="status-badge status-{{ s.status_overall }}">
