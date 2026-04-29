@@ -160,7 +160,7 @@
   </div>
   {% endif %}
 </div>
-
+{% endblock %}
 {% block scripts %}
 <script>
 const STUDENT_ID = {{ student.id }};
@@ -267,5 +267,4 @@ function confirmDelete(studentId, docType, label) {
   });
 }
 </script>
-{% endblock %}
 {% endblock %}

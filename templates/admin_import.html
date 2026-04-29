@@ -23,6 +23,7 @@
     <div id="import-result" class="import-result hidden"></div>
   </div>
 </div>
+{% endblock %}
 {% block scripts %}
 <script>
 const fileInput = document.getElementById('import-file');
@@ -30,13 +31,13 @@ const importBtn = document.getElementById('import-btn');
 const filename = document.getElementById('import-filename');
 fileInput.addEventListener('change', () => {
   if (fileInput.files.length) {
-    filename.textContent = '📄 ' + fileInput.files[0].name;
+    filename.textContent = '\ud83d\udcc4 ' + fileInput.files[0].name;
     importBtn.disabled = false;
   }
 });
 function doImport() {
   if (!fileInput.files.length) return;
-  importBtn.disabled = true; importBtn.textContent = 'Đang import...';
+  importBtn.disabled = true; importBtn.textContent = '\u0110ang import...';
   const fd = new FormData();
   fd.append('file', fileInput.files[0]);
   fetch('/api/import-students', {method:'POST', body: fd})
@@ -45,17 +46,16 @@ function doImport() {
       const res = document.getElementById('import-result');
       res.classList.remove('hidden');
       if (d.success) {
-        let html = `<div class="alert alert-success">✅ Đã import thành công <strong>${d.imported}</strong> học sinh.</div>`;
+        let html = `<div class="alert alert-success">\u2705 \u0110\u00e3 import th\u00e0nh c\u00f4ng <strong>${d.imported}</strong> h\u1ecdc sinh.</div>`;
         if (d.errors && d.errors.length) {
-          html += `<div class="alert alert-warning">⚠️ ${d.errors.length} lỗi:<ul>${d.errors.map(e=>'<li>'+e+'</li>').join('')}</ul></div>`;
+          html += `<div class="alert alert-warning">\u26a0\ufe0f ${d.errors.length} l\u1ed7i:<ul>${d.errors.map(e=>'<li>'+e+'</li>').join('')}</ul></div>`;
         }
         res.innerHTML = html;
       } else {
-        res.innerHTML = `<div class="alert alert-error">❌ ${d.error}</div>`;
+        res.innerHTML = `<div class="alert alert-error">\u274c ${d.error}</div>`;
       }
-      importBtn.textContent = '⬆ Import danh sách'; importBtn.disabled = false;
+      importBtn.textContent = '\u2b06 Import danh s\u00e1ch'; importBtn.disabled = false;
     });
 }
 </script>
-{% endblock %}
 {% endblock %}
