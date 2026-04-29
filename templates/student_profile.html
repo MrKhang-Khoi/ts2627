@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}Hồ Sơ - {{ student.ho_ten }}{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="{{ url_for('student_list', class_name=student.lop) }}" class="back-link">← Quay lại danh sách lớp {{ student.lop }}</a>
+    <div class="student-header-card">
+      <div class="student-avatar">{{ student.ho_ten[0] }}</div>
+      <div class="student-header-info">
+        <h1 class="student-header-name">{{ student.ho_ten }}</h1>
+        <div class="student-meta">
+          <span>🏫 Lớp {{ student.lop }}</span>
+          <span>📋 STT {{ student.stt }}</span>
+          <span>🎂 {{ student.ngay_sinh }}</span>
+        </div>
+        <span class="overall-badge status-{{ student.status_overall }} large">
+          {{ OVERALL_LABELS.get(student.status_overall, student.status_overall) }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  {% if student.status_overall == 'DU_HO_SO_CHINH_THUC' %}
+  <div class="alert alert-success">✅ Hồ sơ của em đã đủ. Nếu phát hiện sai sót, liên hệ giáo viên chủ nhiệm.</div>
+  {% endif %}
+
+  {# === BANNER NỐI HỌC BẠ HOÀN CHỈNH === #}
+  {% set hb68 = doc_map.get('HOCBA_6_8', {}) %}
+  {% set hb9 = doc_map.get('HOCBA_9', {}) %}
+  {% set hb = doc_map.get('HOCBA', {}) %}
+  {% if hb68.get('file_path') and hb9.get('file_path') and not hb.get('file_path') %}
+  <div class="merge-banner">
+    <div class="merge-banner-text">
+      <span class="merge-icon">🔗</span>
+      <div>
+        <strong>Đã có đủ Học bạ 6-8 và Học bạ 9!</strong>
+        <p>Bấm nút bên cạnh để tạo Học bạ hoàn chỉnh tự động.</p>
+      </div>
+    </div>
+    <button class="btn btn-merge-big" onclick="selfMergeTranscript({{ student.id }})">
+      📋 Nối học bạ hoàn chỉnh
+    </button>
+  </div>
+  {% elif hb.get('file_path') %}
+  <div class="alert alert-success">📋 Học bạ hoàn chỉnh đã được tạo! <a href="{{ url_for('view_file', student_id=student.id, doc_type='HOCBA') }}" target="_blank" class="alert-link">👁 Xem</a></div>
+  {% endif %}
+
+  {# === THIẾU HỒ SƠ === #}
+  {% set missing = [] %}
+  {% for dt in ['GIAYKHAISINH','CCCD','HOCBA','CNTN_THCS'] %}
+    {% if not doc_map.get(dt) or doc_map.get(dt,{}).get('status') == 'CHUA_NOP' %}{% set _ = missing.append(DOC_LABELS.get(dt)) %}{% endif %}
+  {% endfor %}
+  {% if missing %}
+  <div class="alert alert-warning">⚠️ Hồ sơ còn thiếu: <strong>{{ missing|join(', ') }}</strong></div>
+  {% endif %}
+
+  {# === PHẦN NỘP FILE TỪNG LOẠI === #}
+  <div class="docs-grid">
+    {% set all_doc_types = ['GIAYKHAISINH','CCCD','HOCBA_6_8','HOCBA_9','CNTN_THCS'] %}
+    {% for dt in all_doc_types %}
+      {% set doc = doc_map.get(dt, {}) %}
+      {% set is_active = dt in active_docs %}
+      {% set status = doc.get('status', 'CHUA_NOP') %}
+      {% set locked = doc.get('locked', 0) %}
+      {% set can_edit = status in ['CHUA_NOP','DA_NOP_CHO_KIEM_TRA','FILE_MO','SAI_FILE','THIEU_TRANG','CAN_NOP_LAI'] or (status == 'DAT' and not locked) %}
+      {% set is_hb68 = dt == 'HOCBA_6_8' %}
+
+      <div class="doc-card status-border-{{ status }} {% if not is_active %}doc-inactive{% endif %}">
+        <div class="doc-card-header">
+          <h3 class="doc-title">
+            {% if status == 'DAT' %}✅{% elif status == 'CHUA_NOP' %}⬜{% elif status == 'DA_NOP_CHO_KIEM_TRA' %}🕐{% else %}⚠️{% endif %}
+            {{ DOC_LABELS.get(dt) }}
+          </h3>
+          <span class="doc-status-badge file-status-{{ status }}">{{ STATUS_LABELS.get(status, status) }}</span>
+        </div>
+
+        {% if not is_active %}
+          <p class="doc-phase-note">⏳ Chưa đến giai đoạn nộp</p>
+        {% else %}
+          {% if doc.get('note') %}
+            <div class="doc-note-box">💬 Giáo viên ghi chú: <em>{{ doc.get('note') }}</em></div>
+          {% endif %}
+
+          {# Nút xem file đã nộp #}
+          {% if doc.get('file_path') %}
+          <div class="doc-file-preview">
+            <span class="file-preview-icon">📄</span>
+            <span class="file-preview-name">{{ dt }}.pdf</span>
+            <a href="{{ url_for('view_file', student_id=student.id, doc_type=dt) }}" target="_blank" class="btn btn-view btn-sm">👁 Xem</a>
+          </div>
+          {% endif %}
+
+          {% if can_edit %}
+            {% if is_hb68 %}
+            {# === UPLOAD ĐẶC BIỆT CHO HỌC BẠ 6-8: hỗ trợ nhiều file === #}
+            <div class="hb68-info">
+              <p>📌 <strong>Nếu học bạ bị tách nhiều file</strong> (mỗi năm 1 file), chọn tất cả cùng lúc — ứng dụng sẽ tự nối lại.</p>
+            </div>
+            <div class="upload-zone" id="zone-{{ dt }}" onclick="document.getElementById('file-{{ dt }}').click()">
+              <div class="upload-zone-icon">📂</div>
+              <div class="upload-zone-text">
+                <strong>Bấm để chọn file</strong>
+                <small>PDF, JPG, PNG — Có thể chọn nhiều file cùng lúc</small>
+              </div>
+              <input type="file" id="file-{{ dt }}" class="file-input" accept=".pdf,.jpg,.jpeg,.png" multiple
+                     onchange="onFileSelected('{{ dt }}', this, true)">
+            </div>
+            <div id="preview-{{ dt }}" class="file-preview-list hidden"></div>
+            <button id="btn-upload-{{ dt }}" class="btn btn-upload btn-block hidden"
+                    onclick="uploadHb68({{ student.id }})">
+              ⬆ Tải lên và nối học bạ 6-8
+            </button>
+            {% else %}
+            {# === UPLOAD THÔNG THƯỜNG === #}
+            <div class="upload-zone" id="zone-{{ dt }}" onclick="document.getElementById('file-{{ dt }}').click()">
+              <div class="upload-zone-icon">📂</div>
+              <div class="upload-zone-text">
+                <strong>Bấm để chọn file</strong>
+                <small>PDF, JPG hoặc PNG (tối đa {{ max_mb }}MB)</small>
+              </div>
+              <input type="file" id="file-{{ dt }}" class="file-input" accept=".pdf,.jpg,.jpeg,.png"
+                     onchange="onFileSelected('{{ dt }}', this, false)">
+            </div>
+            <div id="preview-{{ dt }}" class="file-preview-list hidden"></div>
+            <button id="btn-upload-{{ dt }}" class="btn btn-upload btn-block hidden"
+                    onclick="uploadFile('{{ dt }}', {{ student.id }})">
+              ⬆ Tải lên
+            </button>
+            {% endif %}
+
+            {# Nút xóa — chỉ khi có file và chưa bị khóa DAT #}
+            {% if doc.get('file_path') and not (status == 'DAT' and locked) %}
+            <button class="btn btn-delete-doc" onclick="confirmDelete({{ student.id }}, '{{ dt }}', '{{ DOC_LABELS.get(dt) }}')">
+              🗑 Xóa và nộp lại
+            </button>
+            {% endif %}
+          {% else %}
+            {% if status == 'DAT' and locked %}
+            <p class="doc-locked-note">🔒 File đã được giáo viên xác nhận đạt. Liên hệ giáo viên nếu cần thay đổi.</p>
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>{# end docs-grid #}
+
+  {# === CARD HỌC BẠ HOÀN CHỈNH (chỉ xem) === #}
+  {% if hb.get('file_path') %}
+  <div class="doc-card status-border-{{ hb.get('status','CHUA_NOP') }}" style="margin-top:16px">
+    <div class="doc-card-header">
+      <h3 class="doc-title">✅ Học bạ hoàn chỉnh (đã nối)</h3>
+      <span class="doc-status-badge file-status-{{ hb.get('status','CHUA_NOP') }}">{{ STATUS_LABELS.get(hb.get('status','CHUA_NOP')) }}</span>
+    </div>
+    <div class="doc-file-preview">
+      <span class="file-preview-icon">📋</span>
+      <span class="file-preview-name">HOCBA.pdf</span>
+      <a href="{{ url_for('view_file', student_id=student.id, doc_type='HOCBA') }}" target="_blank" class="btn btn-view btn-sm">👁 Xem</a>
+    </div>
+    <p class="doc-phase-note">File này được tạo tự động từ Học bạ 6-8 và Học bạ 9.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+const STUDENT_ID = {{ student.id }};
+
+// Khi chọn file — hiển thị tên file + kích hoạt nút tải lên
+function onFileSelected(docType, input, isMulti) {
+  const preview = document.getElementById('preview-' + docType);
+  const btn = document.getElementById('btn-upload-' + docType);
+  const zone = document.getElementById('zone-' + docType);
+  const files = input.files;
+  if (!files || files.length === 0) {
+    preview.classList.add('hidden');
+    btn.classList.add('hidden');
+    zone.classList.remove('zone-selected');
+    return;
+  }
+  // Hiển thị danh sách file đã chọn
+  let html = '';
+  let totalSize = 0;
+  for (let f of files) {
+    totalSize += f.size;
+    html += `<div class="file-chip">
+      <span class="chip-icon">📄</span>
+      <span class="chip-name">${f.name}</span>
+      <span class="chip-size">${formatSize(f.size)}</span>
+    </div>`;
+  }
+  if (isMulti && files.length > 1) {
+    html = `<div class="multi-info">📎 Đã chọn ${files.length} file — sẽ được nối thành 1 PDF</div>` + html;
+  }
+  preview.innerHTML = html;
+  preview.classList.remove('hidden');
+  btn.classList.remove('hidden');
+  zone.classList.add('zone-selected');
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+// Upload file đơn
+function uploadFile(docType, studentId) {
+  const input = document.getElementById('file-' + docType);
+  if (!input.files.length) { showToast('Vui lòng chọn file trước.', 'error'); return; }
+  const btn = document.getElementById('btn-upload-' + docType);
+  btn.disabled = true; btn.textContent = '⏳ Đang tải lên...';
+  const fd = new FormData();
+  fd.append('student_id', studentId);
+  fd.append('doc_type', docType);
+  fd.append('file', input.files[0]);
+  fetch('/api/upload', {method:'POST', body: fd})
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) { showToast(d.message, 'success'); setTimeout(() => location.reload(), 1200); }
+      else { showToast(d.error || 'Lỗi tải lên.', 'error'); btn.disabled = false; btn.textContent = '⬆ Tải lên'; }
+    })
+    .catch(() => { showToast('Lỗi kết nối máy chủ.', 'error'); btn.disabled = false; btn.textContent = '⬆ Tải lên'; });
+}
+
+// Upload nhiều file cho học bạ 6-8
+function uploadHb68(studentId) {
+  const input = document.getElementById('file-HOCBA_6_8');
+  if (!input.files.length) { showToast('Vui lòng chọn file trước.', 'error'); return; }
+  const btn = document.getElementById('btn-upload-HOCBA_6_8');
+  btn.disabled = true; btn.textContent = `⏳ Đang xử lý ${input.files.length} file...`;
+  const fd = new FormData();
+  for (let f of input.files) fd.append('files', f);
+  fetch('/api/merge-hocba-parts/' + studentId, {method:'POST', body: fd})
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) { showToast(d.message, 'success'); setTimeout(() => location.reload(), 1500); }
+      else { showToast(d.error || 'Lỗi xử lý file.', 'error'); btn.disabled = false; btn.textContent = '⬆ Tải lên và nối học bạ 6-8'; }
+    })
+    .catch(() => { showToast('Lỗi kết nối.', 'error'); btn.disabled = false; btn.textContent = '⬆ Tải lên và nối học bạ 6-8'; });
+}
+
+// Nối học bạ hoàn chỉnh (học sinh tự thực hiện khi đủ 6-8 và 9)
+function selfMergeTranscript(studentId) {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '⏳ Đang nối...';
+  fetch('/api/merge-transcript/' + studentId, {method:'POST'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) { showToast(d.message || 'Nối học bạ thành công!', 'success'); setTimeout(() => location.reload(), 1500); }
+      else { showToast(d.error, 'error'); btn.disabled = false; btn.textContent = '📋 Nối học bạ hoàn chỉnh'; }
+    });
+}
+
+// Xóa file
+function confirmDelete(studentId, docType, label) {
+  showModal('Bạn có chắc muốn xóa file "' + label + '" đã nộp không?\n\nFile sẽ được lưu vào bộ nhớ tạm, em có thể nộp lại.', () => {
+    fetch('/api/delete-file', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({student_id: studentId, doc_type: docType})
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) { showToast('Đã xóa file. Em có thể nộp lại.', 'success'); setTimeout(() => location.reload(), 1000); }
+      else { showToast(d.error || 'Không xóa được.', 'error'); }
+    })
+    .catch(err => { showToast('Lỗi kết nối: ' + err.message, 'error'); });
+  });
+}
+</script>
+{% endblock %}
+{% endblock %}

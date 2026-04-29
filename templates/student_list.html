@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Lớp {{ class_name }} - Danh Sách Học Sinh{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="{{ url_for('index') }}" class="back-link">← Chọn lớp khác</a>
+    <h1 class="page-title">📋 DANH SÁCH LỚP {{ class_name }}</h1>
+    <p class="page-subtitle">Tìm tên em và bấm vào để nộp hồ sơ</p>
+  </div>
+
+  <div class="search-bar-wrap">
+    <input type="text" id="search-input" class="search-input" placeholder="🔍 Tìm theo tên hoặc số thứ tự...">
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all">Tất cả</button>
+      <button class="filter-tab" data-filter="DU_HO_SO_CHINH_THUC">Đủ hồ sơ</button>
+      <button class="filter-tab" data-filter="CHUA_NOP">Chưa nộp</button>
+      <button class="filter-tab" data-filter="CHUA_DU">Chưa đủ</button>
+      <button class="filter-tab" data-filter="CAN_SUA">Cần sửa</button>
+    </div>
+  </div>
+
+  <div class="student-list" id="student-list">
+    {% for s in students %}
+    <div class="student-item" data-name="{{ s.ho_ten|lower }}" data-stt="{{ s.stt }}" data-status="{{ s.status_overall }}">
+      <div class="student-stt">{{ s.stt }}</div>
+      <div class="student-info">
+        <div class="student-name">{{ s.ho_ten }}</div>
+        <div class="student-dob">{{ s.ngay_sinh }}</div>
+      </div>
+      <div class="student-right">
+        <span class="status-badge status-{{ s.status_overall }}">
+          {{ OVERALL_LABELS.get(s.status_overall, s.status_overall) }}
+        </span>
+        <a href="{{ url_for('student_profile', student_id=s.id) }}" class="btn-view-profile">
+          Xem hồ sơ →
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>Chưa có học sinh trong lớp này.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+const searchInput = document.getElementById('search-input');
+const items = document.querySelectorAll('.student-item');
+const filterTabs = document.querySelectorAll('.filter-tab');
+let activeFilter = 'all';
+
+function applyFilter() {
+  const q = searchInput.value.toLowerCase();
+  items.forEach(item => {
+    const name = item.dataset.name || '';
+    const stt = item.dataset.stt || '';
+    const status = item.dataset.status || '';
+    const matchSearch = !q || name.includes(q) || stt.includes(q);
+    const matchFilter = activeFilter === 'all' || status === activeFilter;
+    item.style.display = matchSearch && matchFilter ? '' : 'none';
+  });
+}
+
+searchInput.addEventListener('input', applyFilter);
+filterTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    filterTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeFilter = tab.dataset.filter;
+    applyFilter();
+  });
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Bảng Theo Dõi Giáo Viên - Lớp {{ selected_class }}{% endblock %}
+{% block content %}
+<div class="container-wide">
+  <div class="dashboard-header">
+    <h1>📊 Theo Dõi Nộp Hồ Sơ</h1>
+    <div class="class-selector">
+      {% for cls in classes %}
+      <a href="{{ url_for('teacher_dashboard') }}?class={{ cls }}"
+         class="class-tab {% if cls == selected_class %}active{% endif %}">{{ cls }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num">{{ stats.total }}</div><div class="stat-label">Tổng số</div></div>
+    <div class="stat-card green"><div class="stat-num">{{ stats.DU_HO_SO_CHINH_THUC }}</div><div class="stat-label">Đủ hồ sơ</div></div>
+    <div class="stat-card yellow"><div class="stat-num">{{ stats.TAM_DU_GIAI_DOAN_1 }}</div><div class="stat-label">Tạm đủ GĐ1</div></div>
+    <div class="stat-card red"><div class="stat-num">{{ stats.CHUA_NOP }}</div><div class="stat-label">Chưa nộp</div></div>
+    <div class="stat-card orange"><div class="stat-num">{{ stats.CAN_SUA }}</div><div class="stat-label">Cần sửa</div></div>
+    <div class="stat-card blue"><div class="stat-num">{{ stats.CHUA_DU }}</div><div class="stat-label">Chưa đủ</div></div>
+  </div>
+
+  {% if selected_class %}
+  <div class="toolbar">
+    <input type="text" id="search-teacher" class="search-input" placeholder="🔍 Tìm học sinh...">
+    <a href="/api/export-excel?class={{ selected_class }}" class="btn btn-excel">📥 Xuất Excel</a>
+    <a href="/api/download-class-zip/{{ selected_class }}" class="btn btn-zip">📦 Tải ZIP lớp</a>
+    <button class="btn btn-merge" onclick="mergeClass('{{ selected_class }}')">🔗 Nối học bạ cả lớp</button>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table" id="teacher-table">
+      <thead>
+        <tr>
+          <th>STT</th><th>Họ tên</th>
+          {% for dt in DOC_TYPES %}<th>{{ DOC_LABELS.get(dt,'') }}</th>{% endfor %}
+          <th>Trạng thái</th><th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr data-name="{{ s.ho_ten|lower }}">
+          <td class="center">{{ s.stt }}</td>
+          <td class="name-cell"><strong>{{ s.ho_ten }}</strong></td>
+          {% for dt in DOC_TYPES %}
+            {% set doc = s.docs.get(dt, {}) %}
+            {% set status = doc.get('status','CHUA_NOP') %}
+            <td class="center">
+              <span class="file-badge file-status-{{ status }}" title="{{ STATUS_LABELS.get(status,status) }}">
+                {% if status == 'DAT' %}✅{% elif status == 'CHUA_NOP' %}—{% elif status == 'DA_NOP_CHO_KIEM_TRA' %}🕐{% elif status in ['FILE_MO','SAI_FILE','THIEU_TRANG','CAN_NOP_LAI'] %}⚠️{% else %}?{% endif %}
+                {{ STATUS_LABELS.get(status,status) }}
+              </span>
+            </td>
+          {% endfor %}
+          <td><span class="status-badge status-{{ s.status_overall }}">{{ OVERALL_LABELS.get(s.status_overall,s.status_overall) }}</span></td>
+          <td>
+            <button class="btn btn-sm btn-primary" onclick="openCheckPanel({{ s.id }}, '{{ s.ho_ten }}')">Kiểm tra</button>
+            <a href="{{ url_for('student_profile', student_id=s.id) }}" class="btn btn-sm btn-secondary">Xem</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Panel kiểm tra file -->
+<div id="check-panel" class="side-panel hidden">
+  <div class="side-panel-header">
+    <h3 id="check-panel-title">Kiểm tra hồ sơ</h3>
+    <button onclick="closeCheckPanel()" class="close-btn">✕</button>
+  </div>
+  <div id="check-panel-body"></div>
+</div>
+<div id="panel-overlay" class="panel-overlay hidden" onclick="closeCheckPanel()"></div>
+
+{% block scripts %}
+<script>
+document.getElementById('search-teacher').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('#teacher-table tbody tr').forEach(row => {
+    row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+  });
+});
+
+function mergeClass(cls) {
+  if (!confirm('Nối học bạ cho toàn bộ lớp ' + cls + '?')) return;
+  fetch('/api/merge-transcript-class/' + cls, {method:'POST'})
+    .then(r => r.json()).then(d => {
+      let msg = `Đã nối: ${d.success_count}, Chưa nối: ${d.fail_count}`;
+      if (d.failures && d.failures.length) {
+        msg += '\nDanh sách chưa nối:\n' + d.failures.map(f => f.ho_ten + ': ' + f.ly_do).join('\n');
+      }
+      alert(msg); location.reload();
+    });
+}
+
+let currentStudentId = null;
+const DOC_LABELS = {{ DOC_LABELS | tojson }};
+const DOC_TYPES = {{ DOC_TYPES | tojson }};
+const STATUS_LABELS = {{ STATUS_LABELS | tojson }};
+
+function openCheckPanel(studentId, name) {
+  currentStudentId = studentId;
+  document.getElementById('check-panel-title').textContent = 'Kiểm tra: ' + name;
+  document.getElementById('panel-overlay').classList.remove('hidden');
+  document.getElementById('check-panel').classList.remove('hidden');
+  fetch('/api/student/' + studentId).then(r => r.json()).then(d => {
+    renderCheckPanel(d.docs, studentId);
+  });
+}
+
+function closeCheckPanel() {
+  document.getElementById('check-panel').classList.add('hidden');
+  document.getElementById('panel-overlay').classList.add('hidden');
+}
+
+function renderCheckPanel(docs, studentId) {
+  let html = '';
+  DOC_TYPES.forEach(dt => {
+    if (dt === 'HOCBA') {
+      html += `<div class="check-item"><strong>${DOC_LABELS[dt]}</strong>
+        <button class="btn btn-sm btn-merge" onclick="mergeOne(${studentId})">🔗 Nối học bạ</button></div>`;
+      return;
+    }
+    const doc = docs[dt] || {};
+    const status = doc.status || 'CHUA_NOP';
+    html += `<div class="check-item">
+      <div class="check-item-header">
+        <strong>${DOC_LABELS[dt]}</strong>
+        <span class="file-badge file-status-${status}">${STATUS_LABELS[status] || status}</span>
+      </div>
+      ${doc.file_path ? `<a href="/view-file/${studentId}/${dt}" target="_blank" class="btn btn-sm btn-view">👁 Xem file</a>` : '<em>Chưa có file</em>'}
+      ${doc.file_path ? `
+      <div class="check-actions">
+        <select id="sel-${dt}" class="form-select">
+          <option value="">-- Chọn kết quả --</option>
+          <option value="DAT">✅ Đạt</option>
+          <option value="FILE_MO">🌫 File mờ</option>
+          <option value="SAI_FILE">❌ Sai file</option>
+          <option value="THIEU_TRANG">📄 Thiếu trang</option>
+          <option value="CAN_NOP_LAI">🔄 Cần nộp lại</option>
+        </select>
+        <input type="text" id="note-${dt}" class="form-control" placeholder="Ghi chú (nếu có)">
+        <button class="btn btn-sm btn-primary" onclick="checkFile(${studentId},'${dt}')">Lưu</button>
+        ${doc.locked ? `<button class="btn btn-sm btn-warning" onclick="unlockFile(${studentId},'${dt}')">🔓 Mở khóa</button>` : ''}
+      </div>` : ''}
+    </div>`;
+  });
+  document.getElementById('check-panel-body').innerHTML = html;
+}
+
+function checkFile(studentId, docType) {
+  const status = document.getElementById('sel-' + docType).value;
+  const note = document.getElementById('note-' + docType).value;
+  if (!status) { showToast('Vui lòng chọn kết quả kiểm tra.', 'error'); return; }
+  fetch('/api/check-file', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({student_id: studentId, doc_type: docType, status, note})})
+    .then(r => r.json()).then(d => {
+      if (d.success) { showToast('Đã lưu kết quả kiểm tra.', 'success'); location.reload(); }
+      else showToast(d.error, 'error');
+    });
+}
+
+function unlockFile(studentId, docType) {
+  if (!confirm('Mở khóa để học sinh nộp lại?')) return;
+  fetch('/api/unlock-file', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({student_id: studentId, doc_type: docType})})
+    .then(r => r.json()).then(d => {
+      if (d.success) { showToast('Đã mở khóa.', 'success'); location.reload(); }
+      else showToast(d.error, 'error');
+    });
+}
+
+function mergeOne(studentId) {
+  fetch('/api/merge-transcript/' + studentId, {method:'POST'})
+    .then(r => r.json()).then(d => {
+      if (d.success) { showToast(d.message, 'success'); location.reload(); }
+      else showToast(d.error, 'error');
+    });
+}
+</script>
+{% endblock %}
+{% endblock %}

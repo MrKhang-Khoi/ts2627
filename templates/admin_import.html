@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Import Danh Sách Học Sinh{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Quay lại</a>
+    <h1>📥 Import Danh Sách Học Sinh</h1>
+  </div>
+  <div class="card">
+    <h2>Tải lên file Excel hoặc CSV</h2>
+    <p>File phải có các cột: <code>ma_hoso, lop, stt, ho_ten, ngay_sinh, ghi_chu</code></p>
+    <a href="/static/students_template.xlsx" class="btn btn-secondary" download>📄 Tải file mẫu</a>
+    <div class="upload-area" id="drop-area">
+      <input type="file" id="import-file" accept=".xlsx,.xls,.csv" hidden>
+      <label for="import-file" class="upload-label">
+        <div class="upload-icon">📂</div>
+        <p>Kéo thả file vào đây hoặc <strong>bấm để chọn</strong></p>
+        <p class="upload-hint">Hỗ trợ .xlsx, .xls, .csv</p>
+      </label>
+    </div>
+    <div id="import-filename" class="import-filename"></div>
+    <button id="import-btn" class="btn btn-primary btn-block" onclick="doImport()" disabled>⬆ Import danh sách</button>
+    <div id="import-result" class="import-result hidden"></div>
+  </div>
+</div>
+{% block scripts %}
+<script>
+const fileInput = document.getElementById('import-file');
+const importBtn = document.getElementById('import-btn');
+const filename = document.getElementById('import-filename');
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) {
+    filename.textContent = '📄 ' + fileInput.files[0].name;
+    importBtn.disabled = false;
+  }
+});
+function doImport() {
+  if (!fileInput.files.length) return;
+  importBtn.disabled = true; importBtn.textContent = 'Đang import...';
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  fetch('/api/import-students', {method:'POST', body: fd})
+    .then(r => r.json())
+    .then(d => {
+      const res = document.getElementById('import-result');
+      res.classList.remove('hidden');
+      if (d.success) {
+        let html = `<div class="alert alert-success">✅ Đã import thành công <strong>${d.imported}</strong> học sinh.</div>`;
+        if (d.errors && d.errors.length) {
+          html += `<div class="alert alert-warning">⚠️ ${d.errors.length} lỗi:<ul>${d.errors.map(e=>'<li>'+e+'</li>').join('')}</ul></div>`;
+        }
+        res.innerHTML = html;
+      } else {
+        res.innerHTML = `<div class="alert alert-error">❌ ${d.error}</div>`;
+      }
+      importBtn.textContent = '⬆ Import danh sách'; importBtn.disabled = false;
+    });
+}
+</script>
+{% endblock %}
+{% endblock %}

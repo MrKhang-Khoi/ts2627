@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Hồ Sơ Tuyển Sinh Lớp 10{% endblock %}</title>
+<meta name="description" content="Hệ thống nộp hồ sơ tuyển sinh lớp 10 - Trường THCS">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <div class="navbar-brand">
+    <span class="brand-icon">🎓</span>
+    <span class="brand-text">HỒ SƠ TUYỂN SINH LỚP 10</span>
+  </div>
+  <div class="navbar-menu">
+    {% if session.get('user_id') %}
+      <span class="nav-user">👤 {{ session.get('full_name', session.get('username')) }}</span>
+      {% if session.get('role') in ['teacher','admin'] %}
+        <a href="{{ url_for('teacher_dashboard') }}" class="nav-link">📊 Bảng theo dõi</a>
+      {% endif %}
+      {% if session.get('role') == 'admin' %}
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-link">⚙️ Quản trị</a>
+      {% endif %}
+      <a href="{{ url_for('logout') }}" class="nav-link nav-logout">Đăng xuất</a>
+    {% else %}
+      <a href="{{ url_for('login') }}" class="nav-link">🔐 Đăng nhập GV</a>
+    {% endif %}
+  </div>
+</nav>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-container">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<main class="main-content">
+{% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <p>🏫 Hệ thống Nộp Hồ Sơ Tuyển Sinh Lớp 10 &nbsp;|&nbsp; Năm học 2025-2026</p>
+</footer>
+
+<div id="toast" class="toast hidden"></div>
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal-box">
+    <p id="modal-message"></p>
+    <div class="modal-actions">
+      <button id="modal-confirm" class="btn btn-danger">Xác nhận</button>
+      <button id="modal-cancel" class="btn btn-secondary" onclick="closeModal()">Hủy</button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

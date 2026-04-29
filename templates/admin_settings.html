@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Cài Đặt Hệ Thống{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Quay lại</a>
+    <h1>⚙️ Cài Đặt Hệ Thống</h1>
+  </div>
+
+  <div class="settings-grid">
+    <div class="card">
+      <h2>📅 Giai đoạn nộp hồ sơ</h2>
+      <p>Giai đoạn 1: Cho nộp GKS, CCCD, Học bạ 6-8</p>
+      <p>Giai đoạn 2: Mở thêm Học bạ 9, CNTN THCS và nối học bạ</p>
+      <div class="phase-selector">
+        <button class="btn phase-btn {% if phase=='1' %}active{% endif %}" onclick="setPhase(1)">Giai đoạn 1</button>
+        <button class="btn phase-btn {% if phase=='2' %}active{% endif %}" onclick="setPhase(2)">Giai đoạn 2</button>
+      </div>
+      <p>Giai đoạn hiện tại: <strong id="phase-display">{{ phase }}</strong></p>
+    </div>
+
+    <div class="card">
+      <h2>📦 Giới hạn dung lượng file</h2>
+      <div class="form-group">
+        <label>Dung lượng tối đa mỗi file (MB)</label>
+        <input type="number" id="max-mb" class="form-control" value="{{ max_mb }}" min="1" max="100">
+        <button class="btn btn-primary" onclick="setMaxMb()">Lưu</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>👨‍🏫 Thêm tài khoản giáo viên</h2>
+      <div class="form-group">
+        <input type="text" id="gv-username" class="form-control" placeholder="Tên đăng nhập">
+        <input type="text" id="gv-fullname" class="form-control" placeholder="Họ tên đầy đủ">
+        <input type="password" id="gv-password" class="form-control" placeholder="Mật khẩu">
+        <select id="gv-class" class="form-select">
+          <option value="">-- Chọn lớp phụ trách --</option>
+          {% for cls in classes %}
+          <option value="{{ cls }}">{{ cls }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-primary" onclick="addTeacher()">Thêm giáo viên</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔒 Đổi mật khẩu của tôi</h2>
+      <div class="form-group">
+        <input type="password" id="old-pw" class="form-control" placeholder="Mật khẩu cũ">
+        <input type="password" id="new-pw" class="form-control" placeholder="Mật khẩu mới (≥6 ký tự)">
+        <button class="btn btn-primary" onclick="changePassword()">Đổi mật khẩu</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>👥 Danh sách tài khoản</h2>
+      <table class="data-table">
+        <thead><tr><th>Username</th><th>Họ tên</th><th>Vai trò</th><th>Lớp phụ trách</th></tr></thead>
+        <tbody>
+          {% for t in teachers %}
+          <tr>
+            <td>{{ t.username }}</td><td>{{ t.full_name }}</td>
+            <td><span class="role-badge role-{{ t.role }}">{{ t.role }}</span></td>
+            <td>{{ t.assigned_class or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+function setPhase(p) {
+  fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phase: String(p)})})
+    .then(r => r.json()).then(d => {
+      if (d.success) { document.getElementById('phase-display').textContent = p;
+        document.querySelectorAll('.phase-btn').forEach((b,i) => b.classList.toggle('active', i+1 === p));
+        showToast('Đã chuyển sang giai đoạn ' + p, 'success'); }
+    });
+}
+function setMaxMb() {
+  const mb = document.getElementById('max-mb').value;
+  fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({max_file_size_mb: mb})})
+    .then(r => r.json()).then(d => { if (d.success) showToast('Đã lưu giới hạn ' + mb + 'MB.', 'success'); });
+}
+function addTeacher() {
+  const data = {username: document.getElementById('gv-username').value.trim(),
+    full_name: document.getElementById('gv-fullname').value.trim(),
+    password: document.getElementById('gv-password').value,
+    assigned_class: document.getElementById('gv-class').value};
+  fetch('/api/add-teacher', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)})
+    .then(r => r.json()).then(d => {
+      if (d.success) { showToast('Đã thêm tài khoản.', 'success'); location.reload(); }
+      else showToast(d.error, 'error');
+    });
+}
+function changePassword() {
+  const data = {old_password: document.getElementById('old-pw').value, new_password: document.getElementById('new-pw').value};
+  fetch('/api/change-password', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)})
+    .then(r => r.json()).then(d => {
+      if (d.success) showToast('Đã đổi mật khẩu thành công!', 'success');
+      else showToast(d.error, 'error');
+    });
+}
+</script>
+{% endblock %}
+{% endblock %}

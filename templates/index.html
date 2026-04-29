@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Trang Chủ - Nộp Hồ Sơ Tuyển Sinh Lớp 10{% endblock %}
+{% block content %}
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-icon">🎓</div>
+    <h1 class="hero-title">HỆ THỐNG NỘP HỒ SƠ<br>TUYỂN SINH LỚP 10</h1>
+    <p class="hero-subtitle">Năm học 2025 – 2026</p>
+    <p class="hero-desc">Chọn lớp của em để bắt đầu nộp hồ sơ</p>
+  </div>
+</div>
+
+<div class="container">
+  <div class="card select-card">
+    <h2 class="card-title">📚 Bước 1: Chọn lớp của em</h2>
+    <div class="class-grid">
+      {% for cls in classes %}
+      <a href="{{ url_for('student_list', class_name=cls) }}" class="class-btn">
+        <span class="class-icon">🏫</span>
+        <span class="class-name">Lớp {{ cls }}</span>
+      </a>
+      {% else %}
+      <div class="empty-state">
+        <p>⚠️ Chưa có danh sách lớp. Vui lòng liên hệ giáo viên.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="info-cards">
+    <div class="info-card">
+      <div class="info-icon">📄</div>
+      <h3>Các giấy tờ cần nộp</h3>
+      <ul>
+        <li>✅ Giấy khai sinh</li>
+        <li>✅ CCCD / Mã định danh</li>
+        <li>✅ Học bạ lớp 6-8</li>
+        <li>✅ Học bạ lớp 9 <em>(giai đoạn 2)</em></li>
+        <li>✅ Chứng nhận tốt nghiệp THCS <em>(giai đoạn 2)</em></li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <div class="info-icon">📱</div>
+      <h3>Hướng dẫn nộp file</h3>
+      <ol>
+        <li>Chụp ảnh rõ nét hoặc scan tài liệu</li>
+        <li>Chọn lớp → Chọn tên em</li>
+        <li>Bấm <strong>Chọn file</strong> rồi <strong>Tải lên</strong></li>
+        <li>Chờ giáo viên xác nhận</li>
+      </ol>
+    </div>
+    <div class="info-card">
+      <div class="info-icon">⚠️</div>
+      <h3>Lưu ý quan trọng</h3>
+      <ul>
+        <li>File phải rõ nét, không bị mờ</li>
+        <li>Chấp nhận: PDF, JPG, PNG</li>
+        <li>Dung lượng tối đa: 20MB/file</li>
+        <li>Chọn đúng tên của em trong danh sách</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

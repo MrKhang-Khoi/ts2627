@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hoso-lop10
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --timeout 120
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true   # Render tự tạo key ngẫu nhiên, bảo mật
+      - key: DATA_DIR
+        value: /var/data       # Đường dẫn Persistent Disk
+    disk:
+      name: hoso-data
+      mountPath: /var/data
+      sizeGB: 1               # 1GB = $0.25/tháng
