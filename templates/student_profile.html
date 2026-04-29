@@ -1,33 +1,35 @@
 {% extends "base.html" %}
 {% block title %}Hồ Sơ - {{ student.ho_ten }}{% endblock %}
 {% block content %}
-<div class="container">
-  <div class="page-header">
-    <a href="{{ url_for('student_list', class_name=student.lop) }}" class="back-link">← Quay lại danh sách lớp {{ student.lop }}</a>
-    <div class="student-header-card">
-      <div class="student-avatar">{{ student.ho_ten[0] }}</div>
-      <div class="student-header-info">
-        <h1 class="student-header-name">{{ student.ho_ten }}</h1>
-        <div class="student-meta">
-          <span>🏫 Lớp {{ student.lop }}</span>
-          <span>📋 STT {{ student.stt }}</span>
-          <span>🎂 {{ student.ngay_sinh }}</span>
-        </div>
-        <span class="overall-badge status-{{ student.status_overall }} large">
-          {{ OVERALL_LABELS.get(student.status_overall, student.status_overall) }}
-        </span>
+<div class="sp-container">
+
+  {# === HEADER === #}
+  <a href="{{ url_for('student_list', class_name=student.lop) }}" class="sp-back-link">← Quay lại lớp {{ student.lop }}</a>
+
+  <div class="sp-header-card">
+    <div class="sp-avatar">{{ student.ho_ten[0] }}</div>
+    <div class="sp-header-info">
+      <h1 class="sp-name">{{ student.ho_ten }}</h1>
+      <div class="sp-meta">
+        <span>🏫 Lớp {{ student.lop }}</span>
+        <span>📋 STT {{ student.stt }}</span>
+        <span>🎂 {{ student.ngay_sinh }}</span>
       </div>
-      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-        {% if session.get('role') in ['teacher','admin'] %}
-        <button class="btn-edit-student" onclick="openEditModal()">✏️ Sửa thông tin</button>
-        {% endif %}
-        <a href="{{ url_for('api_download_hoso', student_id=student.id) }}" class="btn-download-hoso">⬇ Tải hồ sơ</a>
-      </div>
+      <span class="sp-overall-badge status-{{ student.status_overall }}">
+        {{ OVERALL_LABELS.get(student.status_overall, student.status_overall) }}
+      </span>
+    </div>
+    <div class="sp-header-actions">
+      {% if session.get('role') in ['teacher','admin'] %}
+      <button class="sp-btn-edit" onclick="openEditModal()">✏️ Sửa</button>
+      {% endif %}
+      <a href="{{ url_for('api_download_hoso', student_id=student.id) }}" class="sp-btn-download">⬇ Tải hồ sơ</a>
     </div>
   </div>
 
+  {# === ALERT ĐỦ HỒ SƠ === #}
   {% if student.status_overall == 'DU_HO_SO_CHINH_THUC' %}
-  <div class="alert alert-success">✅ Hồ sơ của em đã đủ. Nếu phát hiện sai sót, liên hệ giáo viên chủ nhiệm.</div>
+  <div class="sp-alert sp-alert-success">✅ Hồ sơ của em đã đầy đủ!</div>
   {% endif %}
 
   {# === THIẾU HỒ SƠ === #}
@@ -36,86 +38,109 @@
     {% if not doc_map.get(dt) or doc_map.get(dt,{}).get('status') == 'CHUA_NOP' %}{% set _ = missing.append(DOC_LABELS.get(dt)) %}{% endif %}
   {% endfor %}
   {% if missing %}
-  <div class="alert alert-warning">⚠️ Hồ sơ còn thiếu: <strong>{{ missing|join(', ') }}</strong></div>
+  <div class="sp-alert sp-alert-warning">⚠️ Hồ sơ còn thiếu: <strong>{{ missing|join(', ') }}</strong></div>
   {% endif %}
 
-  {# === BẢNG NỘP TÀI LIỆU (theo thứ tự hệ thống chính thức) === #}
-  <div class="doc-table-wrap">
-    <div class="doc-table-title">Danh sách tệp đính kèm hồ sơ</div>
-    <table class="doc-table">
-      <thead><tr>
-        <th class="col-name">Tài liệu cần nộp</th>
-        <th class="col-files">Danh sách tệp</th>
-        <th class="col-upload">Tải lên tệp</th>
-        <th class="col-del">Xóa tất cả</th>
-      </tr></thead>
-      <tbody>
-      {% for dt in DISPLAY_ORDER %}
-        {% set doc = doc_map.get(dt, {}) %}
-        {% set status = doc.get('status', 'CHUA_NOP') %}
-        {% set locked = doc.get('locked', 0) %}
-        {% set has_file = doc.get('file_path') %}
-        {% set is_active = dt in active_docs %}
-        {% set can_upload = is_active and (status in ['CHUA_NOP','DA_NOP_CHO_KIEM_TRA','FILE_MO','SAI_FILE','THIEU_TRANG','CAN_NOP_LAI'] or (status == 'DAT' and not locked)) %}
-        {% set is_hb = (dt == 'HOCBA_6_8') %}
-        <tr class="doc-row{% if status=='DAT' %} row-dat{% elif status=='DA_NOP_CHO_KIEM_TRA' %} row-pending{% elif status not in ['CHUA_NOP'] %} row-warn{% endif %}">
-          <td class="col-name">
-            <div class="doc-name-main">{{ DOC_LABELS.get(dt) }}{% if dt not in OPTIONAL_DOCS %} <span class="required-star">*</span>{% else %} <span class="optional-tag">(nếu có)</span>{% endif %}</div>
-            {% if status != 'CHUA_NOP' %}
-            <span class="doc-row-badge file-status-{{ status }}">{{ STATUS_LABELS.get(status, status) }}</span>
+  {# === DANH SÁCH TÀI LIỆU (card-per-doc) === #}
+  <div class="sp-docs-section">
+    <div class="sp-docs-title">📋 Danh sách tệp đính kèm hồ sơ</div>
+
+    {% for dt in DISPLAY_ORDER %}
+      {% set doc = doc_map.get(dt, {}) %}
+      {% set status = doc.get('status', 'CHUA_NOP') %}
+      {% set locked = doc.get('locked', 0) %}
+      {% set has_file = doc.get('file_path') %}
+      {% set is_active = dt in active_docs %}
+      {% set can_upload = is_active and (status in ['CHUA_NOP','DA_NOP_CHO_KIEM_TRA','FILE_MO','SAI_FILE','THIEU_TRANG','CAN_NOP_LAI'] or (status == 'DAT' and not locked)) %}
+      {% set is_hb = (dt == 'HOCBA_6_8') %}
+
+      <div class="sp-doc-card sp-doc-{{ status }}">
+        {# --- Tên tài liệu + badge --- #}
+        <div class="sp-doc-header">
+          <div class="sp-doc-name">
+            {{ DOC_LABELS.get(dt) }}
+            {% if dt not in OPTIONAL_DOCS %}
+            <span class="sp-required">*</span>
+            {% else %}
+            <span class="sp-optional">(nếu có)</span>
             {% endif %}
-            {% if doc.get('note') and 'trang' not in doc.get('note','') %}
-            <div class="doc-teacher-note">💬 GV: {{ doc.get('note') }}</div>
-            {% endif %}
-          </td>
-          <td class="col-files">
-            {% if has_file %}
-            <div class="file-row-item">
-              <span>📄 {{ dt }}.pdf{% if is_hb and doc.get('note') and 'trang' in doc.get('note','') %} ({{ doc.get('note') }}){% endif %}</span>
-              <a href="{{ url_for('view_file', student_id=student.id, doc_type=dt) }}" target="_blank" class="btn-view-link">👁 Xem</a>
+          </div>
+          {% if status != 'CHUA_NOP' %}
+          <span class="sp-status-badge file-status-{{ status }}">{{ STATUS_LABELS.get(status, status) }}</span>
+          {% endif %}
+        </div>
+
+        {# --- Ghi chú GV --- #}
+        {% if doc.get('note') and 'trang' not in doc.get('note','') %}
+        <div class="sp-gv-note">💬 Giáo viên: {{ doc.get('note') }}</div>
+        {% endif %}
+
+        {# --- File đã nộp --- #}
+        {% if has_file %}
+        <div class="sp-file-box">
+          <div class="sp-file-icon">📄</div>
+          <div class="sp-file-details">
+            <div class="sp-file-name">
+              {{ dt }}.pdf
+              {% if is_hb and doc.get('note') and 'trang' in doc.get('note','') %}
+              <span class="sp-file-pages">({{ doc.get('note') }})</span>
+              {% endif %}
+            </div>
+            <a href="{{ url_for('view_file', student_id=student.id, doc_type=dt) }}" target="_blank" class="sp-view-link">👁 Xem tệp</a>
+          </div>
+        </div>
+        {% endif %}
+
+        {# --- File vừa chọn (preview chip) --- #}
+        <div id="preview-{{ dt }}" class="sp-file-preview hidden"></div>
+
+        {# --- Buttons --- #}
+        <div class="sp-doc-actions">
+          {% if can_upload %}
+            {% if is_hb %}
+            <label for="file-{{ dt }}" class="sp-btn-upload">
+              📤 {% if has_file %}Thêm trang{% else %}Tải lên{% endif %}
+            </label>
+            <input type="file" id="file-{{ dt }}" class="file-input-hidden" accept=".pdf,image/*" multiple
+                   onchange="handleHbSelect({{ student.id }}, this)">
+            <div id="hb-area" class="sp-pending-area hidden">
+              <div id="hb-chips" class="sp-chip-list"></div>
+              <div class="sp-pending-btns">
+                <button class="sp-btn-confirm" onclick="submitHb({{ student.id }})">⬆ Tải lên</button>
+                <button class="sp-btn-cancel" onclick="cancelHbSel()">✕ Hủy</button>
+              </div>
             </div>
             {% else %}
-            <span class="no-file-text">Chưa có tệp</span>
-            {% endif %}
-            <div id="preview-{{ dt }}" class="row-file-preview hidden"></div>
-          </td>
-          <td class="col-upload">
-            {% if can_upload %}
-              {% if is_hb %}
-              <label for="file-{{ dt }}" class="btn-upload-row">📤 {% if has_file %}Thêm trang{% else %}Tải lên{% endif %}</label>
-              <input type="file" id="file-{{ dt }}" class="file-input-hidden" accept=".pdf,image/*" multiple
-                     onchange="handleHbSelect({{ student.id }}, this)">
-              <div id="hb-area" class="row-pending-area hidden">
-                <div id="hb-chips" class="row-chip-list"></div>
-                <button class="btn-upload-confirm" onclick="submitHb({{ student.id }})">⬆ Tải lên</button>
-                <button class="btn-cancel-sel" onclick="cancelHbSel()">✕</button>
+            <label for="file-{{ dt }}" class="sp-btn-upload">
+              📤 {% if has_file %}Thay thế{% else %}Tải lên{% endif %}
+            </label>
+            <input type="file" id="file-{{ dt }}" class="file-input-hidden" accept=".pdf,image/*"
+                   onchange="handleDocSelect('{{ dt }}',{{ student.id }},this)">
+            <div id="doc-area-{{ dt }}" class="sp-pending-area hidden">
+              <div id="doc-chip-{{ dt }}" class="sp-chip-list"></div>
+              <div class="sp-pending-btns">
+                <button class="sp-btn-confirm" onclick="submitDoc('{{ dt }}',{{ student.id }})">⬆ Tải lên</button>
+                <button class="sp-btn-cancel" onclick="cancelDocSel('{{ dt }}')">✕ Hủy</button>
               </div>
-              {% else %}
-              <label for="file-{{ dt }}" class="btn-upload-row">📤 {% if has_file %}Thay thế{% else %}Tải lên{% endif %}</label>
-              <input type="file" id="file-{{ dt }}" class="file-input-hidden" accept=".pdf,image/*"
-                     onchange="handleDocSelect('{{ dt }}',{{ student.id }},this)">
-              <div id="doc-area-{{ dt }}" class="row-pending-area hidden">
-                <div id="doc-chip-{{ dt }}" class="row-chip-list"></div>
-                <button class="btn-upload-confirm" onclick="submitDoc('{{ dt }}',{{ student.id }})">⬆ Tải lên</button>
-                <button class="btn-cancel-sel" onclick="cancelDocSel('{{ dt }}')">✕</button>
-              </div>
-              {% endif %}
-            {% elif not is_active %}
-              <span class="not-yet-text">⏳ Chưa đến giai đoạn</span>
-            {% elif status == 'DAT' and locked %}
-              <span class="locked-text">🔒 Đã xác nhận</span>
+            </div>
             {% endif %}
-          </td>
-          <td class="col-del">
-            {% if has_file and can_upload %}
-            <button class="btn-del-row" onclick="confirmDelete({{ student.id }},'{{ dt }}','{{ DOC_LABELS.get(dt) }}')">Xóa tất cả</button>
+
+            {% if has_file %}
+            <button class="sp-btn-delete" onclick="confirmDelete({{ student.id }},'{{ dt }}','{{ DOC_LABELS.get(dt) }}')">
+              🗑 Xóa
+            </button>
             {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    <p class="doc-submit-note">** Tệp đính kèm phải là ảnh (.PNG, .JPG) hoặc PDF. Dung lượng không quá {{ max_mb }}MB/file. Số lượng tối đa 7 file cho mỗi mục.</p>
+
+          {% elif not is_active %}
+            <span class="sp-not-yet">⏳ Chưa đến giai đoạn nộp</span>
+          {% elif status == 'DAT' and locked %}
+            <span class="sp-locked">🔒 Đã được xác nhận đạt</span>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+
+    <p class="sp-note">** Tệp đính kèm phải là ảnh (.PNG, .JPG) hoặc PDF. Tối đa {{ max_mb }}MB/file.</p>
   </div>
 </div>
 
@@ -123,26 +148,16 @@
 <div id="edit-modal" class="edit-modal-overlay hidden">
   <div class="edit-modal-box">
     <div class="edit-modal-title">✏️ Sửa thông tin học sinh</div>
-    <div class="form-group">
-      <label>Họ tên</label>
-      <input type="text" id="edit-hoten" class="form-control" value="{{ student.ho_ten }}">
-    </div>
-    <div class="form-group">
-      <label>Ngày sinh</label>
-      <input type="text" id="edit-ngaysinh" class="form-control" value="{{ student.ngay_sinh }}" placeholder="dd/mm/yyyy">
-    </div>
-    <div class="form-group">
-      <label>Lớp</label>
-      <input type="text" id="edit-lop" class="form-control" value="{{ student.lop }}">
-    </div>
-    <div class="form-group">
-      <label>STT</label>
-      <input type="number" id="edit-stt" class="form-control" value="{{ student.stt }}">
-    </div>
-    <div class="form-group">
-      <label>Ghi chú</label>
-      <input type="text" id="edit-ghichu" class="form-control" value="{{ student.note or '' }}">
-    </div>
+    <div class="form-group"><label>Họ tên</label>
+      <input type="text" id="edit-hoten" class="form-control" value="{{ student.ho_ten }}"></div>
+    <div class="form-group"><label>Ngày sinh</label>
+      <input type="text" id="edit-ngaysinh" class="form-control" value="{{ student.ngay_sinh }}" placeholder="dd/mm/yyyy"></div>
+    <div class="form-group"><label>Lớp</label>
+      <input type="text" id="edit-lop" class="form-control" value="{{ student.lop }}"></div>
+    <div class="form-group"><label>STT</label>
+      <input type="number" id="edit-stt" class="form-control" value="{{ student.stt }}"></div>
+    <div class="form-group"><label>Ghi chú</label>
+      <input type="text" id="edit-ghichu" class="form-control" value="{{ student.note or '' }}"></div>
     <div class="edit-modal-actions">
       <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
       <button class="btn btn-primary" onclick="saveEdit()" id="edit-save-btn">💾 Lưu thay đổi</button>
@@ -155,39 +170,33 @@
 const STUDENT_ID = {{ student.id }};
 function formatSize(b){return b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1)+' MB';}
 
-// ===== HỌC BẠ: tích lũy nhiều file (append) =====
+// ===== HỌC BẠ (tích lũy) =====
 let _hbFiles = [];
-
-function handleHbSelect(studentId, input) {
+function handleHbSelect(sid, input) {
   Array.from(input.files).forEach(f => {
     if (!_hbFiles.find(x => x.name===f.name && x.size===f.size)) _hbFiles.push(f);
   });
   input.value = '';
   _renderHbChips();
 }
-
 function _renderHbChips() {
   const area = document.getElementById('hb-area');
   const chips = document.getElementById('hb-chips');
   if (!_hbFiles.length) { area.classList.add('hidden'); return; }
-  let html = '';
-  _hbFiles.forEach((f,i) => {
-    html += `<span class="file-chip"><span class="chip-name">${f.name}</span><span class="chip-size">${formatSize(f.size)}</span><button class="chip-remove" onclick="removeHbFile(${i})">✕</button></span>`;
-  });
-  chips.innerHTML = html;
+  chips.innerHTML = _hbFiles.map((f,i) =>
+    `<span class="sp-chip"><span class="sp-chip-name">${f.name}</span><span class="sp-chip-size">${formatSize(f.size)}</span><button class="sp-chip-rm" onclick="removeHbFile(${i})">✕</button></span>`
+  ).join('');
   area.classList.remove('hidden');
 }
-
 function removeHbFile(i) { _hbFiles.splice(i,1); _renderHbChips(); }
 function cancelHbSel() { _hbFiles=[]; _renderHbChips(); }
-
-function submitHb(studentId) {
+function submitHb(sid) {
   if (!_hbFiles.length) { showToast('Vui lòng chọn file trước.','error'); return; }
-  const btn = document.querySelector('#hb-area .btn-upload-confirm');
+  const btn = document.querySelector('#hb-area .sp-btn-confirm');
   btn.disabled=true; btn.textContent='⏳ Đang xử lý...';
   const fd = new FormData();
   _hbFiles.forEach(f => fd.append('files', f));
-  fetch('/api/append-hocba/'+studentId, {method:'POST', body:fd})
+  fetch('/api/append-hocba/'+sid,{method:'POST',body:fd})
     .then(r=>r.json()).then(d=>{
       if(d.success){showToast(d.message,'success');setTimeout(()=>location.reload(),1200);}
       else{showToast(d.error||'Lỗi.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';}
@@ -196,31 +205,26 @@ function submitHb(studentId) {
 
 // ===== TÀI LIỆU THÔNG THƯỜNG =====
 let _pendingDoc = {};
-
-function handleDocSelect(docType, studentId, input) {
+function handleDocSelect(dt, sid, input) {
   if (!input.files.length) return;
-  const file = input.files[0];
-  _pendingDoc[docType] = file;
-  const area = document.getElementById('doc-area-'+docType);
-  const chip = document.getElementById('doc-chip-'+docType);
-  chip.innerHTML = `<span class="file-chip"><span class="chip-name">${file.name}</span><span class="chip-size">${formatSize(file.size)}</span></span>`;
-  area.classList.remove('hidden');
+  const f = input.files[0];
+  _pendingDoc[dt] = f;
+  const chip = document.getElementById('doc-chip-'+dt);
+  chip.innerHTML = `<span class="sp-chip"><span class="sp-chip-name">${f.name}</span><span class="sp-chip-size">${formatSize(f.size)}</span></span>`;
+  document.getElementById('doc-area-'+dt).classList.remove('hidden');
 }
-
-function cancelDocSel(docType) {
-  _pendingDoc[docType] = null;
-  const area = document.getElementById('doc-area-'+docType);
-  if (area) area.classList.add('hidden');
+function cancelDocSel(dt) {
+  _pendingDoc[dt] = null;
+  const a = document.getElementById('doc-area-'+dt);
+  if(a) a.classList.add('hidden');
 }
-
-function submitDoc(docType, studentId) {
-  const file = _pendingDoc[docType];
-  if (!file) { showToast('Vui lòng chọn file.','error'); return; }
-  const btn = document.querySelector('#doc-area-'+docType+' .btn-upload-confirm');
+function submitDoc(dt, sid) {
+  const f = _pendingDoc[dt];
+  if (!f) { showToast('Vui lòng chọn file.','error'); return; }
+  const btn = document.querySelector('#doc-area-'+dt+' .sp-btn-confirm');
   btn.disabled=true; btn.textContent='⏳ Đang tải...';
   const fd = new FormData();
-  fd.append('student_id', studentId); fd.append('doc_type', docType);
-  fd.append('file', file, file.name);
+  fd.append('student_id',sid); fd.append('doc_type',dt); fd.append('file',f,f.name);
   fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{
     if(d.success){showToast(d.message,'success');setTimeout(()=>location.reload(),1200);}
     else{showToast(d.error||'Lỗi tải lên.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';}
@@ -228,18 +232,18 @@ function submitDoc(docType, studentId) {
 }
 
 // ===== XÓA FILE =====
-function confirmDelete(studentId, docType, label) {
-  showModal('Xóa file "'+label+'"?\nFile được lưu backup, có thể nộp lại.',()=>{
+function confirmDelete(sid, dt, label) {
+  showModal('Xóa file "'+label+'"?\nCó thể nộp lại sau khi xóa.',()=>{
     fetch('/api/delete-file',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({student_id:studentId,doc_type:docType})})
+      body:JSON.stringify({student_id:sid,doc_type:dt})})
     .then(r=>r.json()).then(d=>{
-      if(d.success){showToast('Đã xóa. Có thể nộp lại.','success');setTimeout(()=>location.reload(),1000);}
+      if(d.success){showToast('Đã xóa.','success');setTimeout(()=>location.reload(),1000);}
       else showToast(d.error||'Không xóa được.','error');
     }).catch(e=>showToast('Lỗi: '+e.message,'error'));
   });
 }
 
-// ===== SỬA THÔNG TIN HỌC SINH =====
+// ===== SỬA HS =====
 function openEditModal(){document.getElementById('edit-modal').classList.remove('hidden');}
 function closeEditModal(){document.getElementById('edit-modal').classList.add('hidden');}
 function saveEdit(){
