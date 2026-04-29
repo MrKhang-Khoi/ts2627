@@ -17,6 +17,8 @@ DOC_TYPES = ['GIAYKHAISINH', 'CCCD', 'HOCBA_6_8', 'HOCBA_9', 'HOCBA', 'CNTN_THCS
 DISPLAY_ORDER = ['GIAYKHAISINH', 'CNTN_THCS', 'HOCBA_6_8', 'CCCD', 'ANH_THE', 'UU_TIEN']
 # Tài liệu không bắt buộc (không có dấu *)
 OPTIONAL_DOCS = {'UU_TIEN'}
+# Tài liệu cho phép chọn nhiều file (gộp lại thành 1 PDF) — không cộng dồn, thay thế toàn bộ
+MULTI_FILE_DOCS = {'CCCD'}
 # Thứ tự file trong ZIP tải xuống
 ZIP_ORDER = [
     ('GIAYKHAISINH', '01_GiayKhaiSinh'),

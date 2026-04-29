@@ -6,7 +6,7 @@ from datetime import datetime
 from database import get_db, init_db, add_log, get_setting, set_setting, update_overall_status
 from file_utils import (to_ascii, get_student_folder, save_uploaded_file, delete_file_to_backup,
                         DOC_TYPES, DOC_LABELS, STATUS_LABELS, OVERALL_LABELS, UPLOAD_FOLDER,
-                        DISPLAY_ORDER, OPTIONAL_DOCS)
+                        DISPLAY_ORDER, OPTIONAL_DOCS, MULTI_FILE_DOCS)
 from pdf_utils import (merge_transcripts, export_excel, create_student_zip,
                        create_class_zip, create_all_zip, append_to_existing_pdf)
 
@@ -86,7 +86,8 @@ def student_profile(student_id):
     return render_template('student_profile.html', student=student, doc_map=doc_map,
                            DOC_TYPES=DOC_TYPES, DOC_LABELS=DOC_LABELS, STATUS_LABELS=STATUS_LABELS,
                            OVERALL_LABELS=OVERALL_LABELS, active_docs=active_docs, phase=phase,
-                           max_mb=max_mb, DISPLAY_ORDER=DISPLAY_ORDER, OPTIONAL_DOCS=OPTIONAL_DOCS)
+                           max_mb=max_mb, DISPLAY_ORDER=DISPLAY_ORDER, OPTIONAL_DOCS=OPTIONAL_DOCS,
+                           MULTI_FILE_DOCS=MULTI_FILE_DOCS)
 
 @app.route('/api/download-hoso/<int:student_id>')
 def api_download_hoso(student_id):
@@ -281,6 +282,52 @@ def api_append_hocba(student_id):
                         'page_count': page_count})
     except Exception as e:
         return jsonify({'error': f'Lỗi máy chủ: {str(e)}'}), 500
+
+@app.route('/api/upload-multi/<int:student_id>/<doc_type>', methods=['POST'])
+def api_upload_multi(student_id, doc_type):
+    """Upload nhiều file cùng lúc, gộp thành 1 PDF (dành cho CCCD 2 mặt, v.v.)"""
+    doc_type = doc_type.upper()
+    if doc_type not in MULTI_FILE_DOCS:
+        return jsonify({'error': f'Loại tài liệu {doc_type} không hỗ trợ multi-upload.'}), 400
+    student, doc_map = get_student_with_docs(student_id)
+    if not student:
+        return jsonify({'error': 'Không tìm thấy học sinh.'}), 404
+    existing = doc_map.get(doc_type, {})
+    if existing.get('locked') and existing.get('status') == 'DAT':
+        return jsonify({'error': 'Tài liệu đã được xác nhận Đạt. Liên hệ giáo viên để mở khóa.'}), 403
+    files = request.files.getlist('files')
+    if not files:
+        return jsonify({'error': 'Chưa chọn file nào.'}), 400
+    max_mb = int(get_setting('max_file_size_mb', '20'))
+    folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
+    dest = os.path.join(folder, f'{doc_type}.pdf')
+    bk_dir = os.path.join(os.environ.get('DATA_DIR', os.path.dirname(__file__)), 'backups', student['ma_hoso'])
+    # Sử dụng merge_multiple_pdfs để tạo PDF mới (THAY THẾ file cũ, không cộng dồn)
+    from pdf_utils import merge_multiple_pdfs
+    dest_path, err = merge_multiple_pdfs(files, dest, backup_dir=bk_dir, doc_type=doc_type, max_mb=max_mb)
+    if err:
+        return jsonify({'error': err}), 400
+    page_count = 0
+    try:
+        from pypdf import PdfReader
+        page_count = len(PdfReader(dest_path).pages)
+    except Exception:
+        pass
+    conn = get_db()
+    now = datetime.now().isoformat()
+    conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type=?", (student_id, doc_type))
+    conn.execute("""INSERT INTO documents (student_id,doc_type,file_name,file_path,status,uploaded_at,note)
+                    VALUES (?,?,?,?,?,?,?)""",
+                 (student_id, doc_type, f'{doc_type}.pdf', dest_path,
+                  'DA_NOP_CHO_KIEM_TRA', now, f'{page_count} trang'))
+    conn.commit()
+    conn.close()
+    update_overall_status(student_id)
+    add_log(session.get('user_id'), f'UPLOAD_MULTI_{doc_type}', student_id, doc_type,
+            f"Nộp {doc_type}: {len(files)} file → {page_count} trang")
+    return jsonify({'success': True,
+                    'message': f'Đã nộp {doc_type} ({len(files)} file, {page_count} trang).',
+                    'page_count': page_count})
 
 @app.route('/api/delete-file', methods=['POST'])
 def api_delete_file():

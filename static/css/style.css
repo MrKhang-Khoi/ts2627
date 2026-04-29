@@ -133,15 +133,41 @@
 .file-input-hidden { display: none; }
 
 /* Layout */
-.sp-container { max-width: 680px; margin: 0 auto; padding: 12px 14px 40px; }
-.sp-back-link { display: inline-block; color: var(--primary); font-size: 14px; text-decoration: none;
-  margin-bottom: 14px; font-weight: 600; }
-.sp-back-link:hover { text-decoration: underline; }
+.sp-container { max-width: 680px; margin: 0 auto; padding: 0 0 40px; }
+
+/* Back bar */
+.sp-back-bar {
+  background: white; border-bottom: 1px solid #e0e0e0;
+  padding: 0; margin-bottom: 14px; position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.sp-back-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; text-decoration: none; color: #1565C0; font-size: 15px; font-weight: 700;
+  transition: background 0.15s;
+}
+.sp-back-btn:active { background: #f0f4ff; }
+.sp-back-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; background: #1565C0; color: white;
+  border-radius: 50%; font-size: 16px; font-weight: 900; flex-shrink: 0;
+  line-height: 1;
+}
+.sp-back-btn:hover .sp-back-icon { background: #0d47a1; }
+.sp-back-btn span:last-child { color: #333; font-weight: 600; font-size: 14px; }
+.sp-back-btn strong { color: #1565C0; }
+
+/* Hint text (CCCD multi) */
+.sp-multi-hint {
+  font-size: 12px; color: #666; background: #e8f5e9; border-radius: 6px;
+  padding: 5px 10px; margin-bottom: 6px; display: inline-block;
+}
+
 
 /* Header card */
 .sp-header-card {
   background: white; border-radius: var(--radius); padding: 20px;
-  box-shadow: var(--shadow); margin-bottom: 14px; display: flex;
+  box-shadow: var(--shadow); margin: 0 14px 14px; display: flex;
   flex-direction: column; align-items: flex-start; gap: 14px;
 }
 .sp-avatar {
@@ -173,12 +199,12 @@
 
 /* Alerts */
 .sp-alert { border-radius: var(--radius-sm); padding: 12px 14px; font-size: 14px;
-  margin-bottom: 12px; line-height: 1.5; }
+  margin: 0 14px 12px; line-height: 1.5; }
 .sp-alert-success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #43a047; }
 .sp-alert-warning { background: #fff8e1; color: #e65100; border-left: 4px solid #FFB300; }
 
 /* Doc section */
-.sp-docs-section { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 14px; }
+.sp-docs-section { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin: 0 14px 14px; }
 .sp-docs-title { padding: 14px 16px; background: #f5f5f5; border-bottom: 2px solid #e0e0e0;
   font-weight: 700; font-size: 14px; color: #444; }
 

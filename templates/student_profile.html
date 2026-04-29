@@ -4,7 +4,12 @@
 <div class="sp-container">
 
   {# === HEADER === #}
-  <a href="{{ url_for('student_list', class_name=student.lop) }}" class="sp-back-link">← Quay lại lớp {{ student.lop }}</a>
+<div class="sp-back-bar">
+  <a href="{{ url_for('student_list', class_name=student.lop) }}" class="sp-back-btn">
+    <span class="sp-back-icon">←</span>
+    <span>Quay lại danh sách lớp <strong>{{ student.lop }}</strong></span>
+  </a>
+</div>
 
   <div class="sp-header-card">
     <div class="sp-avatar">{{ student.ho_ten[0] }}</div>
@@ -108,6 +113,21 @@
               <div class="sp-pending-btns">
                 <button class="sp-btn-confirm" onclick="submitHb({{ student.id }})">⬆ Tải lên</button>
                 <button class="sp-btn-cancel" onclick="cancelHbSel()">✕ Hủy</button>
+              </div>
+            </div>
+            {% elif dt in MULTI_FILE_DOCS %}
+            {# --- MULTI FILE: CCCD 2 mặt (thay thế) --- #}
+            <div class="sp-multi-hint">📱 Chọn ảnh 2 mặt CCCD (hoặc 1 file PDF)</div>
+            <label for="file-{{ dt }}" class="sp-btn-upload">
+              📤 {% if has_file %}Thay thế{% else %}Tải lên (2 mặt){% endif %}
+            </label>
+            <input type="file" id="file-{{ dt }}" class="file-input-hidden" accept="image/*,.pdf" multiple
+                   onchange="handleMultiSelect('{{ dt }}',{{ student.id }},this)">
+            <div id="multi-area-{{ dt }}" class="sp-pending-area hidden">
+              <div id="multi-chips-{{ dt }}" class="sp-chip-list"></div>
+              <div class="sp-pending-btns">
+                <button class="sp-btn-confirm" onclick="submitMulti('{{ dt }}',{{ student.id }})">&#11014; Tải lên</button>
+                <button class="sp-btn-cancel" onclick="cancelMulti('{{ dt }}')">&#10005; Hủy</button>
               </div>
             </div>
             {% else %}
@@ -261,6 +281,41 @@ function saveEdit(){
     if(d.success){showToast(d.message,'success');setTimeout(()=>location.reload(),1000);}
     else{showToast(d.error||'Lỗi lưu.','error');btn.disabled=false;btn.textContent='💾 Lưu thay đổi';}
   }).catch(()=>{showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='💾 Lưu thay đổi';});
+}
+// ===== CCCD / MULTI-FILE (thay thế toàn bộ) =====
+let _multiFiles = {};
+function handleMultiSelect(dt, sid, input) {
+  if (!_multiFiles[dt]) _multiFiles[dt] = [];
+  Array.from(input.files).forEach(f => {
+    if (!_multiFiles[dt].find(x => x.name===f.name && x.size===f.size)) _multiFiles[dt].push(f);
+  });
+  input.value = '';
+  _renderMultiChips(dt);
+}
+function _renderMultiChips(dt) {
+  const area = document.getElementById('multi-area-'+dt);
+  const chips = document.getElementById('multi-chips-'+dt);
+  const arr = _multiFiles[dt] || [];
+  if (!arr.length) { area.classList.add('hidden'); return; }
+  chips.innerHTML = arr.map((f,i) =>
+    `<span class="sp-chip"><span class="sp-chip-name">${f.name}</span><span class="sp-chip-size">${formatSize(f.size)}</span><button class="sp-chip-rm" onclick="removeMultiFile('${dt}',${i})">&#10005;</button></span>`
+  ).join('');
+  area.classList.remove('hidden');
+}
+function removeMultiFile(dt, i) { _multiFiles[dt].splice(i,1); _renderMultiChips(dt); }
+function cancelMulti(dt) { _multiFiles[dt]=[]; _renderMultiChips(dt); }
+function submitMulti(dt, sid) {
+  const arr = _multiFiles[dt] || [];
+  if (!arr.length) { showToast('Vui lòng chọn file.','error'); return; }
+  const btn = document.querySelector('#multi-area-'+dt+' .sp-btn-confirm');
+  btn.disabled=true; btn.textContent='⏳ Đang xử lý...';
+  const fd = new FormData();
+  arr.forEach(f => fd.append('files', f));
+  fetch('/api/upload-multi/'+sid+'/'+dt,{method:'POST',body:fd})
+    .then(r=>r.json()).then(d=>{
+      if(d.success){showToast(d.message,'success');setTimeout(()=>location.reload(),1200);}
+      else{showToast(d.error||'Lỗi.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';}
+    }).catch(()=>{showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';});
 }
 </script>
 {% endblock %}
