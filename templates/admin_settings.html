@@ -75,6 +75,32 @@
       <button class="btn btn-primary" onclick="fixData()" id="fix-data-btn">🔧 Chạy dọn dữ liệu</button>
       <p id="fix-data-result" style="margin-top:10px;color:#2e7d32;font-weight:600;"></p>
     </div>
+
+    {# === DISK USAGE MONITOR === #}
+    <div class="card" style="border-left: 4px solid {% if disk_info.pct > 80 %}#e53935{% elif disk_info.pct > 60 %}#f57c00{% else %}#43a047{% endif %};">
+      <h2>💾 Dung lượng lưu trữ (PythonAnywhere Free: 512 MB)</h2>
+      {% set pct = disk_info.pct %}
+      <div style="background:#f5f5f5;border-radius:8px;height:20px;margin:10px 0;overflow:hidden;">
+        <div style="height:100%;width:{{ pct }}%;background:{% if pct > 80 %}#e53935{% elif pct > 60 %}#f57c00{% else %}#43a047{% endif %};transition:width 0.3s;border-radius:8px;"></div>
+      </div>
+      <p style="font-size:14px;margin:0;font-weight:700;">
+        Đã dùng: <strong>{{ disk_info.total_mb }} MB / {{ disk_info.quota_mb }} MB</strong>
+        ({{ pct }}%)
+        {% if pct > 80 %}<span style="color:#e53935;">⚠️ SẮP ĐẦY!</span>{% endif %}
+      </p>
+      <table style="width:100%;font-size:13px;margin-top:12px;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;">📁 File hồ sơ (uploads/)</td><td style="text-align:right;font-weight:600;">{{ disk_info.uploads_mb }} MB</td></tr>
+        <tr><td style="padding:4px 0;">♻️ Backup cũ (backups/)</td><td style="text-align:right;font-weight:600;">{{ disk_info.backups_mb }} MB</td></tr>
+        <tr><td style="padding:4px 0;">🗄️ Database (database.db)</td><td style="text-align:right;font-weight:600;">{{ disk_info.db_mb }} MB</td></tr>
+      </table>
+      {% if pct > 60 %}
+      <div style="background:#fff3e0;border:1px solid #ffe082;border-radius:8px;padding:10px;margin-top:12px;font-size:13px;">
+        💡 <strong>Khuyến nghị:</strong> Dọn thư mục <code>backups/</code> định kỳ hoặc nâng cấp lên PythonAnywhere Hacker ($5/tháng = 5 GB).
+        Để xóa backup cũ, chạy trong Bash console:
+        <code style="display:block;margin-top:6px;padding:6px;background:#f5f5f5;border-radius:4px;">rm -rf ~/data/backups/*</code>
+      </div>
+      {% endif %}
+    </div>
   </div>
 </div>
 

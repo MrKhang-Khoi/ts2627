@@ -7,8 +7,12 @@ DATA_DIR = os.environ.get('DATA_DIR', os.path.dirname(__file__))
 DB_PATH = os.path.join(DATA_DIR, 'database.db')
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    # WAL mode: cho phép đọc đồng thời khi đang ghi, tốt hơn cho web app nhiều user
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")   # Cân bằng tốc độ & an toàn
+    conn.execute("PRAGMA busy_timeout=8000")    # Chờ tối đa 8s nếu DB bị lock
     return conn
 
 def init_db():
@@ -73,8 +77,8 @@ def init_db():
     if not existing:
         c.execute("INSERT INTO users (username,password_hash,role,full_name,created_at) VALUES (?,?,?,?,?)",
                   ('admin', generate_password_hash('admin123'), 'admin', 'Quản trị viên', datetime.now().isoformat()))
-    # Cài đặt mặc định
-    for key, val in [('phase', '1'), ('max_file_size_mb', '20')]:
+    # Cài đặt mặc định: giới hạn file 5MB để bảo vệ quota 512MB PythonAnywhere
+    for key, val in [('phase', '1'), ('max_file_size_mb', '5')]:
         c.execute("INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)", (key, val))
     conn.commit()
     conn.close()

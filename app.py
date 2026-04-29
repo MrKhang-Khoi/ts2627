@@ -819,12 +819,33 @@ def admin_import():
 @admin_required
 def admin_settings():
     phase = get_setting('phase', '1')
-    max_mb = get_setting('max_file_size_mb', '20')
+    max_mb = get_setting('max_file_size_mb', '5')
     conn = get_db()
     teachers = conn.execute("SELECT * FROM users WHERE role IN ('teacher','admin') ORDER BY full_name").fetchall()
     classes = [r['lop'] for r in conn.execute("SELECT DISTINCT lop FROM students ORDER BY lop").fetchall()]
     conn.close()
-    return render_template('admin_settings.html', phase=phase, max_mb=max_mb, teachers=teachers, classes=classes)
+    # Tính dung lượng để monitor quota PythonAnywhere
+    disk_info = {'uploads_mb': 0, 'backups_mb': 0, 'db_mb': 0, 'total_mb': 0, 'pct': 0, 'quota_mb': 512}
+    try:
+        from file_utils import UPLOAD_FOLDER, BACKUP_FOLDER
+        from database import DB_PATH as _db_path
+        def _folder_mb(path):
+            total = 0
+            if os.path.exists(path):
+                for root, _, files in os.walk(path):
+                    for fn in files:
+                        try: total += os.path.getsize(os.path.join(root, fn))
+                        except OSError: pass
+            return round(total / 1024 / 1024, 1)
+        disk_info['uploads_mb'] = _folder_mb(UPLOAD_FOLDER)
+        disk_info['backups_mb'] = _folder_mb(BACKUP_FOLDER)
+        disk_info['db_mb']      = round(os.path.getsize(_db_path) / 1024 / 1024, 2) if os.path.exists(_db_path) else 0
+        disk_info['total_mb']   = disk_info['uploads_mb'] + disk_info['backups_mb'] + disk_info['db_mb']
+        disk_info['pct']        = min(round(disk_info['total_mb'] / disk_info['quota_mb'] * 100, 1), 100)
+    except Exception:
+        pass
+    return render_template('admin_settings.html', phase=phase, max_mb=max_mb,
+                           teachers=teachers, classes=classes, disk_info=disk_info)
 
 @app.route('/api/add-teacher', methods=['POST'])
 @login_required
