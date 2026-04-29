@@ -31,9 +31,16 @@
         <span class="status-badge status-{{ s.status_overall }}">
           {{ OVERALL_LABELS.get(s.status_overall, s.status_overall) }}
         </span>
+        {# Giáo viên/admin đi thẳng, học sinh phải xác minh CCCD #}
+        {% if session.get('role') in ['teacher', 'admin'] %}
         <a href="{{ url_for('student_profile', student_id=s.id) }}" class="btn-view-profile">
           Xem hồ sơ →
         </a>
+        {% else %}
+        <button class="btn-view-profile" onclick="openVerify({{ s.id }}, '{{ s.ho_ten|e }}')">
+          Xem hồ sơ →
+        </button>
+        {% endif %}
       </div>
     </div>
     {% else %}
@@ -41,6 +48,48 @@
       <p>Chưa có học sinh trong lớp này.</p>
     </div>
     {% endfor %}
+  </div>
+</div>
+
+{# === MODAL XÁC MINH CCCD === #}
+<div id="verify-modal" class="verify-overlay hidden" onclick="handleOverlayClick(event)">
+  <div class="verify-box">
+
+    <div class="verify-lock-ring">
+      <span class="verify-lock-emoji">🔒</span>
+    </div>
+
+    <div class="verify-title">Xác minh danh tính</div>
+    <div class="verify-subtitle" id="verify-student-name">Đang tải...</div>
+
+    <div class="verify-hint-box">
+      <span class="verify-hint-icon">💡</span>
+      <div>
+        <div class="verify-hint-label">Gợi ý mã bảo mật:</div>
+        <div class="verify-hint-text">Số <strong>CCCD / Căn cước công dân</strong> của em<br>
+          <em>(ghi trên mặt trước thẻ CCCD)</em>
+        </div>
+      </div>
+    </div>
+
+    <div class="verify-input-wrap">
+      <label class="verify-input-label">Nhập mã bảo mật (số CCCD):</label>
+      <input type="text" id="verify-code" class="verify-input"
+             placeholder="Ví dụ: 064311001234"
+             inputmode="numeric" autocomplete="off" maxlength="20"
+             onkeydown="if(event.key==='Enter')submitVerify()">
+    </div>
+
+    <div id="verify-error" class="verify-error hidden"></div>
+
+    <div class="verify-actions">
+      <button class="verify-btn-cancel" onclick="closeVerify()">Hủy</button>
+      <button class="verify-btn-submit" id="verify-submit" onclick="submitVerify()">🔓 Xác nhận</button>
+    </div>
+
+    <div class="verify-footer">
+      Nếu không nhớ CCCD, liên hệ giáo viên chủ nhiệm để được hỗ trợ.
+    </div>
   </div>
 </div>
 
@@ -62,7 +111,6 @@ function applyFilter() {
     item.style.display = matchSearch && matchFilter ? '' : 'none';
   });
 }
-
 searchInput.addEventListener('input', applyFilter);
 filterTabs.forEach(tab => {
   tab.addEventListener('click', () => {
@@ -72,6 +120,88 @@ filterTabs.forEach(tab => {
     applyFilter();
   });
 });
+
+// ===== XÁC MINH CCCD =====
+let _verifyStudentId = null;
+
+function openVerify(studentId, name) {
+  _verifyStudentId = studentId;
+  document.getElementById('verify-student-name').textContent = name;
+  document.getElementById('verify-code').value = '';
+  document.getElementById('verify-error').classList.add('hidden');
+  document.getElementById('verify-error').textContent = '';
+  document.getElementById('verify-submit').disabled = false;
+  document.getElementById('verify-submit').textContent = '🔓 Xác nhận';
+  document.getElementById('verify-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('verify-code').focus(), 100);
+}
+
+function closeVerify() {
+  document.getElementById('verify-modal').classList.add('hidden');
+  _verifyStudentId = null;
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('verify-modal')) closeVerify();
+}
+
+function submitVerify() {
+  const code = document.getElementById('verify-code').value.trim();
+  if (!code) {
+    showVerifyError('Vui lòng nhập mã CCCD của em.');
+    return;
+  }
+  const btn = document.getElementById('verify-submit');
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang kiểm tra...';
+  document.getElementById('verify-error').classList.add('hidden');
+
+  fetch('/api/verify-student-code', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({student_id: _verifyStudentId, code: code})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      btn.textContent = '✅ Xác minh thành công!';
+      btn.style.background = '#2e7d32';
+      setTimeout(() => { window.location.href = d.redirect; }, 600);
+    } else {
+      showVerifyError(d.error || 'Mã không đúng.');
+      btn.disabled = false;
+      btn.textContent = '🔓 Xác nhận';
+      // Rung hộp thoại
+      document.querySelector('.verify-box').classList.add('shake');
+      setTimeout(() => document.querySelector('.verify-box').classList.remove('shake'), 500);
+    }
+  })
+  .catch(() => {
+    showVerifyError('Lỗi kết nối. Vui lòng thử lại.');
+    btn.disabled = false;
+    btn.textContent = '🔓 Xác nhận';
+  });
+}
+
+function showVerifyError(msg) {
+  const el = document.getElementById('verify-error');
+  el.textContent = '❌ ' + msg;
+  el.classList.remove('hidden');
+}
+
+// Tự động mở modal nếu URL có ?verify=<id>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const vid = params.get('verify');
+  if (vid) {
+    // Tìm học sinh tương ứng và mở modal
+    const btn = document.querySelector(`button[onclick*="openVerify(${vid},"]`);
+    if (btn) {
+      const match = btn.getAttribute('onclick').match(/openVerify\((\d+),\s*'([^']+)'\)/);
+      if (match) openVerify(parseInt(match[1]), match[2]);
+    }
+  }
+})();
 </script>
 {% endblock %}
 {% endblock %}

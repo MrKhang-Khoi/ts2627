@@ -79,9 +79,14 @@ def student_profile(student_id):
     if not student:
         flash('Không tìm thấy học sinh.', 'error')
         return redirect(url_for('index'))
+    # Bảo mật: học sinh phải xác minh mã CCCD trước khi xem hồ sơ
+    if session.get('role') not in ('teacher', 'admin'):
+        verified = session.get('verified_students', [])
+        if student_id not in verified:
+            # Redirect về trang lớp, front-end sẽ mở modal xác minh
+            return redirect(url_for('student_list', class_name=student['lop']) + f'?verify={student_id}')
     phase = get_setting('phase', '1')
     max_mb = int(get_setting('max_file_size_mb', '20'))
-    # Tất cả các mục trong DISPLAY_ORDER luôn có thể nộp (không có phase-gating)
     active_docs = list(DISPLAY_ORDER)
     return render_template('student_profile.html', student=student, doc_map=doc_map,
                            DOC_TYPES=DOC_TYPES, DOC_LABELS=DOC_LABELS, STATUS_LABELS=STATUS_LABELS,
@@ -100,6 +105,35 @@ def api_download_hoso(student_id):
     filename = f"HoSo_{student['ho_ten_khong_dau']}_{student['lop']}.zip"
     return send_file(buf, mimetype='application/zip',
                      as_attachment=True, download_name=filename)
+@app.route('/api/verify-student-code', methods=['POST'])
+def api_verify_student_code():
+    """Học sinh nhập CCCD để xác minh danh tính trước khi xem hồ sơ."""
+    data = request.get_json(force=True) or {}
+    student_id = data.get('student_id')
+    code = (data.get('code') or '').strip().replace(' ', '').replace('-', '')
+    if not student_id or not code:
+        return jsonify({'error': 'Vui lòng nhập mã bảo mật.'}), 400
+    conn = get_db()
+    row = conn.execute("SELECT id, ma_hoso, ho_ten, lop FROM students WHERE id=?", (student_id,)).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({'error': 'Không tìm thấy học sinh.'}), 404
+    # So sánh mã nhập với ma_hoso (= số CCCD trong file Excel)
+    if code == str(row['ma_hoso']).strip():
+        # Lưu danh sách học sinh đã xác minh vào session
+        verified = session.get('verified_students', [])
+        sid = int(student_id)
+        if sid not in verified:
+            verified.append(sid)
+        session['verified_students'] = verified
+        session.modified = True
+        add_log(None, 'STUDENT_VERIFY', student_id, None, f"HS xác minh: {row['ho_ten']}")
+        return jsonify({'success': True,
+                        'redirect': url_for('student_profile', student_id=student_id)})
+    else:
+        add_log(None, 'VERIFY_FAIL', student_id, None, f"Sai mã: {row['ho_ten']}")
+        return jsonify({'error': 'Mã bảo mật không đúng. Kiểm tra lại số CCCD của em.'}), 401
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
