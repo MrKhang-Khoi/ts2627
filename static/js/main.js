@@ -23,8 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmBtn = document.getElementById('modal-confirm');
   if (confirmBtn) {
     confirmBtn.addEventListener('click', () => {
+      const cb = _modalCallback;  // lưu trước khi closeModal() xóa nó
       closeModal();
-      if (_modalCallback) _modalCallback();
+      if (cb) cb();
     });
   }
 });
