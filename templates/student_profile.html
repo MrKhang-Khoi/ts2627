@@ -105,12 +105,14 @@
             </div>
             {# Dùng label[for] — browser tự mở picker không cần JS, an toàn trên iOS #}
             <label for="file-HOCBA_6_8" class="upload-zone" id="zone-HOCBA_6_8">
-              <div class="upload-zone-icon">📂</div>
+              <div class="upload-zone-icon">🖼️</div>
               <div class="upload-zone-text">
-                <strong>Bấm để chọn file đầu tiên</strong>
-                <small>PDF, JPG, PNG — Bấm “Thêm file” để chọn tiếp</small>
+                <strong>Bấm để chọn nhiều ảnh / file</strong>
+                <small>Chọn nhiều ảnh cùng lúc — hỗ trợ iOS và Android</small>
               </div>
-              <input type="file" id="file-HOCBA_6_8" class="file-input" accept=".pdf,.jpg,.jpeg,.png"
+              <input type="file" id="file-HOCBA_6_8" class="file-input"
+                     accept=".pdf,image/*"
+                     multiple
                      onchange="addHb68File(this)">
             </label>
             <div id="hb68-list" class="file-preview-list hidden"></div>
@@ -122,12 +124,13 @@
             {% else %}
             {# === UPLOAD THÔNG THƯỜNG: dùng label[for] để mở picker an toàn trên iOS === #}
             <label for="file-{{ dt }}" class="upload-zone" id="zone-{{ dt }}">
-              <div class="upload-zone-icon">📂</div>
+              <div class="upload-zone-icon">🖼️</div>
               <div class="upload-zone-text">
-                <strong>Bấm để chọn file</strong>
-                <small>PDF, JPG hoặc PNG (tối đa {{ max_mb }}MB)</small>
+                <strong>Bấm để chọn ảnh / file</strong>
+                <small>PDF hoặc ảnh (tối đa {{ max_mb }}MB)</small>
               </div>
-              <input type="file" id="file-{{ dt }}" class="file-input" accept=".pdf,.jpg,.jpeg,.png"
+              <input type="file" id="file-{{ dt }}" class="file-input"
+                     accept=".pdf,image/*"
                      onchange="onFileSelected('{{ dt }}', this)">
             </label>
             <div id="preview-{{ dt }}" class="file-preview-list hidden"></div>
@@ -242,9 +245,11 @@ function addHb68File(input) {
 
 function addHb68FileNew() {
   // Tạo input mới mỗi lần — tránh bị iOS block
+  // accept="image/*" kích hoạt native photo picker có multi-select UI
   const inp = document.createElement('input');
   inp.type = 'file';
-  inp.accept = '.pdf,.jpg,.jpeg,.png';
+  inp.accept = '.pdf,image/*';
+  inp.multiple = true;  // cho chọn nhiều ảnh cùng lúc
   inp.style.cssText = 'position:fixed;top:-200px;left:-200px;opacity:0;width:1px;height:1px;';
   inp.onchange = function() {
     Array.from(this.files).forEach(f => {
@@ -254,7 +259,7 @@ function addHb68FileNew() {
     if (document.body.contains(this)) document.body.removeChild(this);
   };
   document.body.appendChild(inp);
-  inp.click();  // an toàn vì đang trong onclick handler của button
+  inp.click();  // an toàn vì đang trong onclick handler
 }
 
 function removeHb68File(i) { _hb68Files.splice(i,1); _renderHb68List(); }
