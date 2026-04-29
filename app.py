@@ -69,6 +69,11 @@ def index():
     conn.close()
     return render_template('index.html', classes=classes)
 
+@app.route('/huong-dan')
+def huong_dan():
+    """Trang hướng dẫn nộp hồ sơ dành cho học sinh"""
+    return send_file('static/huong_dan_hoso.html')
+
 @app.route('/class/<class_name>')
 def student_list(class_name):
     conn = get_db()
