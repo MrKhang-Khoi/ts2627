@@ -613,6 +613,42 @@ def api_import_students():
     conn.close()
     return jsonify({'success': True, 'imported': count, 'errors': errors})
 
+@app.route('/api/fix-data', methods=['POST'])
+@login_required
+@admin_required
+def api_fix_data():
+    """Dọn dữ liệu cũ: chuẩn hóa stt (1.0→1) và ngày sinh (YYYY-MM-DD→dd/mm/YYYY)."""
+    import re
+    conn = get_db()
+    rows = conn.execute("SELECT id, stt, ngay_sinh FROM students").fetchall()
+    fixed = 0
+    for row in rows:
+        new_stt = row['stt']
+        new_date = row['ngay_sinh']
+        changed = False
+        # Fix STT: "1.0" → "1"
+        if new_stt:
+            try:
+                clean = str(int(float(new_stt.strip())))
+                if clean != new_stt.strip():
+                    new_stt = clean
+                    changed = True
+            except (ValueError, AttributeError):
+                pass
+        # Fix ngày sinh: YYYY-MM-DD... → dd/mm/YYYY
+        if new_date:
+            m = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})', new_date.strip())
+            if m:
+                new_date = f"{m.group(3).zfill(2)}/{m.group(2).zfill(2)}/{m.group(1)}"
+                changed = True
+        if changed:
+            conn.execute("UPDATE students SET stt=?, ngay_sinh=? WHERE id=?",
+                         (new_stt, new_date, row['id']))
+            fixed += 1
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'fixed': fixed, 'message': f'Đã chuẩn hóa {fixed} bản ghi.'})
+
 @app.route('/api/settings', methods=['POST'])
 @login_required
 @admin_required

@@ -68,6 +68,13 @@
         </tbody>
       </table>
     </div>
+
+    <div class="card" style="border-left: 4px solid #e53935;">
+      <h2>🔧 Dọn dữ liệu cũ</h2>
+      <p>Chuẩn hóa số thứ tự (STT) và định dạng ngày sinh của các học sinh đã import trước đây (fix lỗi "1.0", "2011-04-05 00:00:00"...).</p>
+      <button class="btn btn-primary" onclick="fixData()" id="fix-data-btn">🔧 Chạy dọn dữ liệu</button>
+      <p id="fix-data-result" style="margin-top:10px;color:#2e7d32;font-weight:600;"></p>
+    </div>
   </div>
 </div>
 
@@ -104,6 +111,18 @@ function changePassword() {
       if (d.success) showToast('Đã đổi mật khẩu thành công!', 'success');
       else showToast(d.error, 'error');
     });
+}
+function fixData() {
+  const btn = document.getElementById('fix-data-btn');
+  btn.disabled = true; btn.textContent = '⏳ Đang xử lý...';
+  fetch('/api/fix-data', {method:'POST'})
+    .then(r => r.json()).then(d => {
+      btn.disabled = false; btn.textContent = '🔧 Chạy dọn dữ liệu';
+      if (d.success) {
+        document.getElementById('fix-data-result').textContent = d.message;
+        showToast(d.message, 'success');
+      } else showToast(d.error || 'Lỗi.', 'error');
+    }).catch(() => { btn.disabled = false; btn.textContent = '🔧 Chạy dọn dữ liệu'; showToast('Lỗi kết nối.', 'error'); });
 }
 </script>
 {% endblock %}
