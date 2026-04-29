@@ -17,10 +17,11 @@
           {{ OVERALL_LABELS.get(student.status_overall, student.status_overall) }}
         </span>
       </div>
-      <div style="margin-top:12px">
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
         {% if session.get('role') in ['teacher','admin'] %}
         <button class="btn-edit-student" onclick="openEditModal()">✏️ Sửa thông tin</button>
         {% endif %}
+        <a href="{{ url_for('api_download_hoso', student_id=student.id) }}" class="btn-download-hoso">⬇ Tải hồ sơ</a>
       </div>
     </div>
   </div>
@@ -31,7 +32,7 @@
 
   {# === THIẾU HỒ SƠ === #}
   {% set missing = [] %}
-  {% for dt in ['GIAYKHAISINH','CNTN_THCS','HOCBA_6_8','CCCD'] %}
+  {% for dt in ['GIAYKHAISINH','CNTN_THCS','HOCBA_6_8','CCCD','ANH_THE'] %}
     {% if not doc_map.get(dt) or doc_map.get(dt,{}).get('status') == 'CHUA_NOP' %}{% set _ = missing.append(DOC_LABELS.get(dt)) %}{% endif %}
   {% endfor %}
   {% if missing %}
@@ -59,7 +60,7 @@
         {% set is_hb = (dt == 'HOCBA_6_8') %}
         <tr class="doc-row{% if status=='DAT' %} row-dat{% elif status=='DA_NOP_CHO_KIEM_TRA' %} row-pending{% elif status not in ['CHUA_NOP'] %} row-warn{% endif %}">
           <td class="col-name">
-            <div class="doc-name-main">{{ DOC_LABELS.get(dt) }} <span class="required-star">*</span></div>
+            <div class="doc-name-main">{{ DOC_LABELS.get(dt) }}{% if dt not in OPTIONAL_DOCS %} <span class="required-star">*</span>{% else %} <span class="optional-tag">(nếu có)</span>{% endif %}</div>
             {% if status != 'CHUA_NOP' %}
             <span class="doc-row-badge file-status-{{ status }}">{{ STATUS_LABELS.get(status, status) }}</span>
             {% endif %}

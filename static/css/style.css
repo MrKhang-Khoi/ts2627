@@ -182,6 +182,16 @@
   font-weight: 700; cursor: pointer; transition: var(--transition);
 }
 .btn-edit-student:hover { background: var(--warning); color: white; }
+.btn-download-hoso {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; background: #1565C0; color: white;
+  border: none; border-radius: var(--radius-sm); font-size: 13px;
+  font-weight: 700; cursor: pointer; transition: var(--transition);
+  text-decoration: none;
+}
+.btn-download-hoso:hover { background: #0d47a1; }
+.optional-tag { color: #999; font-size: 12px; font-style: italic; font-weight: 400; }
+
 
 /* Image editor modal */
 .img-editor-overlay {

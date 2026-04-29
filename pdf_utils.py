@@ -223,22 +223,18 @@ def create_student_zip(student, doc_map):
     """Tạo ZIP hồ sơ của một học sinh với đúng thứ tự nộp"""
     buf = io.BytesIO()
     hocba_path, _ = _get_hocba_path(doc_map)
-    docs_ordered = [
-        ('GIAYKHAISINH', '01_GiayKhaiSinh.pdf'),
-        ('CNTN_THCS',    '02_ChungNhanTotNghiep.pdf'),
-    ]
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for dk, fname in docs_ordered:
-            fp = doc_map.get(dk, {}).get('file_path')
+        ordered = [
+            (doc_map.get('GIAYKHAISINH',{}).get('file_path'), '01_GiayKhaiSinh.pdf'),
+            (doc_map.get('CNTN_THCS',   {}).get('file_path'), '02_ChungNhanTotNghiep.pdf'),
+            (hocba_path,                                        '03_HocBa.pdf'),
+            (doc_map.get('CCCD',        {}).get('file_path'), '04_CCCD.pdf'),
+            (doc_map.get('ANH_THE',     {}).get('file_path'), '05_AnhThe.pdf'),
+            (doc_map.get('UU_TIEN',     {}).get('file_path'), '06_UuTien.pdf'),
+        ]
+        for fp, fname in ordered:
             if fp and os.path.exists(fp):
                 zf.write(fp, fname)
-        # Học bạ (03)
-        if hocba_path:
-            zf.write(hocba_path, '03_HocBa.pdf')
-        # CCCD (04)
-        fp = doc_map.get('CCCD', {}).get('file_path')
-        if fp and os.path.exists(fp):
-            zf.write(fp, '04_CCCD.pdf')
     buf.seek(0)
     return buf
 
@@ -251,10 +247,12 @@ def create_class_zip(class_name, students_data):
             docs = s.get('docs', {})
             hocba_path, _ = _get_hocba_path(docs)
             ordered = [
-                (docs.get('GIAYKHAISINH', {}).get('file_path'), '01_GiayKhaiSinh.pdf'),
-                (docs.get('CNTN_THCS', {}).get('file_path'),    '02_ChungNhanTotNghiep.pdf'),
-                (hocba_path,                                      '03_HocBa.pdf'),
-                (docs.get('CCCD', {}).get('file_path'),          '04_CCCD.pdf'),
+                (docs.get('GIAYKHAISINH',{}).get('file_path'), '01_GiayKhaiSinh.pdf'),
+                (docs.get('CNTN_THCS',   {}).get('file_path'), '02_ChungNhanTotNghiep.pdf'),
+                (hocba_path,                                     '03_HocBa.pdf'),
+                (docs.get('CCCD',        {}).get('file_path'), '04_CCCD.pdf'),
+                (docs.get('ANH_THE',     {}).get('file_path'), '05_AnhThe.pdf'),
+                (docs.get('UU_TIEN',     {}).get('file_path'), '06_UuTien.pdf'),
             ]
             for fp, fname in ordered:
                 if fp and os.path.exists(fp):
@@ -271,10 +269,12 @@ def create_all_zip(all_students):
             docs = s.get('docs', {})
             hocba_path, _ = _get_hocba_path(docs)
             ordered = [
-                (docs.get('GIAYKHAISINH', {}).get('file_path'), '01_GiayKhaiSinh.pdf'),
-                (docs.get('CNTN_THCS', {}).get('file_path'),    '02_ChungNhanTotNghiep.pdf'),
-                (hocba_path,                                      '03_HocBa.pdf'),
-                (docs.get('CCCD', {}).get('file_path'),          '04_CCCD.pdf'),
+                (docs.get('GIAYKHAISINH',{}).get('file_path'), '01_GiayKhaiSinh.pdf'),
+                (docs.get('CNTN_THCS',   {}).get('file_path'), '02_ChungNhanTotNghiep.pdf'),
+                (hocba_path,                                     '03_HocBa.pdf'),
+                (docs.get('CCCD',        {}).get('file_path'), '04_CCCD.pdf'),
+                (docs.get('ANH_THE',     {}).get('file_path'), '05_AnhThe.pdf'),
+                (docs.get('UU_TIEN',     {}).get('file_path'), '06_UuTien.pdf'),
             ]
             for fp, fname in ordered:
                 if fp and os.path.exists(fp):

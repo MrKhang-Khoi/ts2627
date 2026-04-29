@@ -5,7 +5,8 @@ import os, io, openpyxl
 from datetime import datetime
 from database import get_db, init_db, add_log, get_setting, set_setting, update_overall_status
 from file_utils import (to_ascii, get_student_folder, save_uploaded_file, delete_file_to_backup,
-                        DOC_TYPES, DOC_LABELS, STATUS_LABELS, OVERALL_LABELS, UPLOAD_FOLDER, DISPLAY_ORDER)
+                        DOC_TYPES, DOC_LABELS, STATUS_LABELS, OVERALL_LABELS, UPLOAD_FOLDER,
+                        DISPLAY_ORDER, OPTIONAL_DOCS)
 from pdf_utils import (merge_transcripts, export_excel, create_student_zip,
                        create_class_zip, create_all_zip, append_to_existing_pdf)
 
@@ -80,12 +81,24 @@ def student_profile(student_id):
         return redirect(url_for('index'))
     phase = get_setting('phase', '1')
     max_mb = int(get_setting('max_file_size_mb', '20'))
-    phase1_docs = ['GIAYKHAISINH', 'CCCD', 'HOCBA_6_8']
-    active_docs = DOC_TYPES if phase == '2' else phase1_docs
+    # Tất cả các mục trong DISPLAY_ORDER luôn có thể nộp (không có phase-gating)
+    active_docs = list(DISPLAY_ORDER)
     return render_template('student_profile.html', student=student, doc_map=doc_map,
                            DOC_TYPES=DOC_TYPES, DOC_LABELS=DOC_LABELS, STATUS_LABELS=STATUS_LABELS,
                            OVERALL_LABELS=OVERALL_LABELS, active_docs=active_docs, phase=phase,
-                           max_mb=max_mb, DISPLAY_ORDER=DISPLAY_ORDER)
+                           max_mb=max_mb, DISPLAY_ORDER=DISPLAY_ORDER, OPTIONAL_DOCS=OPTIONAL_DOCS)
+
+@app.route('/api/download-hoso/<int:student_id>')
+def api_download_hoso(student_id):
+    """Tải toàn bộ hồ sơ của một học sinh dạng ZIP"""
+    student, doc_map = get_student_with_docs(student_id)
+    if not student:
+        flash('Không tìm thấy học sinh.', 'error')
+        return redirect(url_for('index'))
+    buf = create_student_zip(student, doc_map)
+    filename = f"HoSo_{student['ho_ten_khong_dau']}_{student['lop']}.zip"
+    return send_file(buf, mimetype='application/zip',
+                     as_attachment=True, download_name=filename)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
