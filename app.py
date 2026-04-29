@@ -626,7 +626,7 @@ def api_delete_file():
         conn.commit()
         conn.close()
         update_overall_status(student_id)
-        add_log(student_id, f"Học sinh tự xóa file {doc_type}")
+        add_log(None, 'delete_file', student_id=student_id, doc_type=doc_type, detail='Học sinh tự xóa')
     except Exception as e:
         return jsonify({'error': f'Lỗi khi xóa: {str(e)}'}), 500
     return jsonify({'success': True, 'message': f'Đã xóa {doc_type}. Có thể nộp lại.'})
@@ -653,12 +653,12 @@ def api_edit_student():
     try:
         conn = get_db()
         conn.execute("""UPDATE students SET ho_ten=?, ho_ten_khong_dau=?, ngay_sinh=?,
-                        lop=?, stt=?, ghi_chu=?, updated_at=? WHERE id=?""",
+                        lop=?, stt=?, note=?, updated_at=? WHERE id=?""",
                      (ho_ten, ho_ten_khong_dau, ngay_sinh, lop, stt, ghi_chu,
                       datetime.now().isoformat(), student_id))
         conn.commit()
         conn.close()
-        add_log(student_id, f"GV sửa thông tin: {ho_ten}")
+        add_log(None, 'edit_student', student_id=student_id, detail=f"GV sửa: {ho_ten}")
     except Exception as e:
         return jsonify({'error': f'Lỗi cập nhật: {str(e)}'}), 500
     return jsonify({'success': True, 'message': 'Đã cập nhật thông tin học sinh.'})
