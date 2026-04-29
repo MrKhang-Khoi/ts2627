@@ -13,7 +13,7 @@ from pdf_utils import (merge_transcripts, export_excel, create_student_zip,
 app = Flask(__name__)
 # Đọc secret key từ biến môi trường (bắt buộc trên Render)
 app.secret_key = os.environ.get('SECRET_KEY', 'hoso_lop10_secret_key_2026_local')
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB — file lên Drive, không lo quota disk
 
 def login_required(f):
     @wraps(f)
@@ -296,15 +296,22 @@ def api_append_hocba(student_id):
         files = request.files.getlist('files')
         if not files:
             return jsonify({'error': 'Chưa chọn file nào.'}), 400
-        max_mb = int(get_setting('max_file_size_mb', '5'))
+        max_mb = int(get_setting('max_file_size_mb', '20'))
 
         # Lấy bytes của file hiện tại (local hoặc Drive)
-        from pdf_utils import append_bytes
+        # Nếu không tải được (Drive trả về HTML, file bị xóa...) → bắt đầu mới
+        from pdf_utils import append_bytes, _get_bytes
         existing_bytes = None
         existing_path = existing.get('file_path')
         if existing_path:
-            from pdf_utils import _get_bytes
-            existing_bytes, _ = _get_bytes(existing_path)
+            try:
+                raw, dl_err = _get_bytes(existing_path)
+                if not dl_err and raw and len(raw) > 100:
+                    # Kiểm tra đây có phải PDF thực không
+                    if raw[:4] == b'%PDF':
+                        existing_bytes = raw
+            except Exception:
+                pass  # Không tải được → coi như chưa có file cũ
 
         pdf_bytes, page_count, err = append_bytes(existing_bytes, files, max_mb)
         if err:
@@ -361,7 +368,7 @@ def api_upload_multi(student_id, doc_type):
     files = request.files.getlist('files')
     if not files:
         return jsonify({'error': 'Chưa chọn file nào.'}), 400
-    max_mb = int(get_setting('max_file_size_mb', '5'))
+    max_mb = int(get_setting('max_file_size_mb', '20'))
 
     from pdf_utils import merge_to_bytes
     pdf_bytes, page_count, err = merge_to_bytes(files, max_mb)

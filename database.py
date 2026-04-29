@@ -77,8 +77,8 @@ def init_db():
     if not existing:
         c.execute("INSERT INTO users (username,password_hash,role,full_name,created_at) VALUES (?,?,?,?,?)",
                   ('admin', generate_password_hash('admin123'), 'admin', 'Quản trị viên', datetime.now().isoformat()))
-    # Cài đặt mặc định: giới hạn file 5MB để bảo vệ quota 512MB PythonAnywhere
-    for key, val in [('phase', '1'), ('max_file_size_mb', '5')]:
+    # File lên Google Drive — không lo quota disk, cho phép 20MB/file
+    for key, val in [('phase', '1'), ('max_file_size_mb', '20')]:
         c.execute("INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)", (key, val))
     conn.commit()
     conn.close()
