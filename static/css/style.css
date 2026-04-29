@@ -97,6 +97,64 @@
 /* ===== UTILITY ===== */
 .hidden { display: none !important; }
 
+/* ===== DOCUMENT TABLE (như giao diện hệ thống chính thức) ===== */
+.file-input-hidden { display: none; }
+.doc-table-wrap { margin-top: 16px; border: 1px solid #e0e0e0; border-radius: var(--radius); overflow: hidden; }
+.doc-table-title { padding: 12px 16px; background: #f5f5f5; border-bottom: 1px solid #e0e0e0; font-weight: 700; font-size: 14px; color: #444; }
+.doc-table { width: 100%; border-collapse: collapse; }
+.doc-table th { background: #f8f8f8; padding: 10px 14px; text-align: left; font-size: 13px; font-weight: 700; color: #555; border-bottom: 2px solid #e0e0e0; }
+.doc-table td { padding: 12px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: top; font-size: 13px; }
+.doc-row:last-child td { border-bottom: none; }
+.doc-row:hover { background: #fafafa; }
+.doc-row.row-dat { background: #f0fdf4; }
+.doc-row.row-pending { background: #fffbf0; }
+.doc-row.row-warn { background: #fff5f5; }
+.col-name { width: 35%; min-width: 160px; }
+.col-files { width: 30%; }
+.col-upload { width: 25%; }
+.col-del { width: 10%; text-align: center; }
+.doc-name-main { font-weight: 600; color: #333; margin-bottom: 4px; }
+.required-star { color: #e53935; font-style: normal; }
+.doc-row-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-top: 4px; font-weight: 600; }
+.doc-teacher-note { font-size: 12px; color: #e65100; margin-top: 4px; }
+.file-row-item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.btn-view-link { color: var(--primary); font-size: 12px; text-decoration: none; white-space: nowrap; }
+.btn-view-link:hover { text-decoration: underline; }
+.no-file-text { color: #999; font-size: 13px; }
+.row-file-preview { margin-top: 6px; }
+.btn-upload-row {
+  display: inline-block; padding: 6px 12px; background: #1565C0; color: white;
+  border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+  white-space: nowrap; border: none; transition: background 0.2s;
+}
+.btn-upload-row:hover { background: #0d47a1; }
+.row-pending-area { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.row-chip-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.file-chip { display: inline-flex; align-items: center; gap: 4px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 12px; padding: 2px 8px; font-size: 11px; max-width: 200px; }
+.chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+.chip-size { color: #888; white-space: nowrap; }
+.chip-remove { background: none; border: none; cursor: pointer; color: #999; padding: 0; font-size: 12px; }
+.chip-remove:hover { color: #e53935; }
+.btn-upload-confirm { padding: 6px 14px; background: #2e7d32; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.btn-upload-confirm:hover { background: #1b5e20; }
+.btn-cancel-sel { background: none; border: none; color: #999; cursor: pointer; font-size: 12px; padding: 0; }
+.btn-del-row { background: #e53935; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-del-row:hover { background: #b71c1c; }
+.not-yet-text { color: #bbb; font-size: 12px; }
+.locked-text { color: #388e3c; font-size: 12px; }
+.doc-submit-note { padding: 10px 16px; font-size: 11px; color: #e53935; background: #fff8e1; border-top: 1px solid #ffe082; margin: 0; }
+
+/* Mobile responsive for table */
+@media (max-width: 600px) {
+  .doc-table, .doc-table thead, .doc-table tbody, .doc-table th, .doc-table td, .doc-table tr { display: block; }
+  .doc-table thead { display: none; }
+  .doc-table td { border: none; padding: 6px 12px; }
+  .doc-table td:first-child { padding-top: 14px; font-weight: 700; background: #f8f8f8; border-top: 2px solid #e0e0e0; }
+  .col-name { width: auto; }
+  .col-del { text-align: left; padding-bottom: 14px; }
+}
+
+
 /* Chip remove button */
 .chip-remove {
   background: none; border: none; color: #999; cursor: pointer;

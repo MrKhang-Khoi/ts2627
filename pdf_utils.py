@@ -63,6 +63,58 @@ def merge_multiple_pdfs(file_objects, dest_path, backup_dir=None, doc_type='FILE
         return dest_path, None
     except Exception as e:
         return None, f'Lỗi lưu file: {str(e)}'
+def append_to_existing_pdf(existing_path, new_file_objects, dest_path, backup_dir=None, max_mb=20):
+    """Thêm trang mới vào PDF đã có. Nếu chưa có thì tạo mới."""
+    writer = PdfWriter()
+    # Bước 1: Đọc nội dung file hiện có (nếu có)
+    if existing_path and os.path.exists(existing_path):
+        try:
+            reader = PdfReader(existing_path)
+            for page in reader.pages:
+                writer.add_page(page)
+        except Exception as e:
+            return None, f'Lỗi đọc file hiện tại: {str(e)}'
+    # Bước 2: Gộp file mới vào sau
+    for f in new_file_objects:
+        f.seek(0, 2); size = f.tell(); f.seek(0)
+        if size == 0:
+            return None, f'File "{getattr(f, "filename", "?")}"\ rỗng.'
+        if size > max_mb * 1024 * 1024:
+            return None, f'File quá lớn (tối đa {max_mb}MB).'
+        ext = (getattr(f, 'filename', '') or '').rsplit('.', 1)[-1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            return None, f'File không hợp lệ. Chỉ nhận PDF, JPG, PNG.'
+        try:
+            if ext == 'pdf':
+                reader = PdfReader(f)
+                for page in reader.pages:
+                    writer.add_page(page)
+            else:
+                from PIL import Image
+                img = Image.open(f)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                tmp = io.BytesIO()
+                img.save(tmp, 'PDF', resolution=150)
+                tmp.seek(0)
+                for page in PdfReader(tmp).pages:
+                    writer.add_page(page)
+        except Exception as e:
+            return None, f'Lỗi đọc file: {str(e)}'
+    if len(writer.pages) == 0:
+        return None, 'Không có trang nào được tạo.'
+    # Backup file cũ
+    if backup_dir and os.path.exists(dest_path):
+        os.makedirs(backup_dir, exist_ok=True)
+        ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+        shutil.copy2(dest_path, os.path.join(backup_dir, f'backup_HOCBA_{ts}.pdf'))
+    try:
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+        with open(dest_path, 'wb') as out:
+            writer.write(out)
+        return dest_path, len(writer.pages), None
+    except Exception as e:
+        return None, 0, f'Lỗi lưu file: {str(e)}'
 
 
 def merge_transcripts(student_folder, ma_hoso, doc_map):
@@ -157,44 +209,75 @@ def export_excel(students_data, class_name=None):
     buf.seek(0)
     return buf
 
+def _get_hocba_path(doc_map):
+    """Lấy đường dẫn học bạ: ưu tiên HOCBA (học bạ đã nối), fallback HOCBA_6_8"""
+    fp = doc_map.get('HOCBA', {}).get('file_path')
+    if fp and os.path.exists(fp):
+        return fp, 'HOCBA'
+    fp = doc_map.get('HOCBA_6_8', {}).get('file_path')
+    if fp and os.path.exists(fp):
+        return fp, 'HOCBA_6_8'
+    return None, None
+
 def create_student_zip(student, doc_map):
-    """Tạo ZIP hồ sơ của một học sinh"""
+    """Tạo ZIP hồ sơ của một học sinh với đúng thứ tự nộp"""
     buf = io.BytesIO()
-    final_docs = ['GIAYKHAISINH', 'CCCD', 'HOCBA', 'CNTN_THCS']
+    hocba_path, _ = _get_hocba_path(doc_map)
+    docs_ordered = [
+        ('GIAYKHAISINH', '01_GiayKhaiSinh.pdf'),
+        ('CNTN_THCS',    '02_ChungNhanTotNghiep.pdf'),
+    ]
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for dk in final_docs:
+        for dk, fname in docs_ordered:
             fp = doc_map.get(dk, {}).get('file_path')
             if fp and os.path.exists(fp):
-                zf.write(fp, f"{dk}.pdf")
+                zf.write(fp, fname)
+        # Học bạ (03)
+        if hocba_path:
+            zf.write(hocba_path, '03_HocBa.pdf')
+        # CCCD (04)
+        fp = doc_map.get('CCCD', {}).get('file_path')
+        if fp and os.path.exists(fp):
+            zf.write(fp, '04_CCCD.pdf')
     buf.seek(0)
     return buf
 
 def create_class_zip(class_name, students_data):
-    """Tạo ZIP hồ sơ cả lớp"""
+    """Tạo ZIP hồ sơ cả lớp với đúng thứ tự"""
     buf = io.BytesIO()
-    final_docs = ['GIAYKHAISINH', 'CCCD', 'HOCBA', 'CNTN_THCS']
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for s in students_data:
-            folder_name = f"{s['ma_hoso']}_{s['ho_ten_khong_dau']}"
+            folder_name = f"{s['stt']:02d}_{s['ho_ten_khong_dau']}" if s.get('stt') else s['ho_ten_khong_dau']
             docs = s.get('docs', {})
-            for dk in final_docs:
-                fp = docs.get(dk, {}).get('file_path')
+            hocba_path, _ = _get_hocba_path(docs)
+            ordered = [
+                (docs.get('GIAYKHAISINH', {}).get('file_path'), '01_GiayKhaiSinh.pdf'),
+                (docs.get('CNTN_THCS', {}).get('file_path'),    '02_ChungNhanTotNghiep.pdf'),
+                (hocba_path,                                      '03_HocBa.pdf'),
+                (docs.get('CCCD', {}).get('file_path'),          '04_CCCD.pdf'),
+            ]
+            for fp, fname in ordered:
                 if fp and os.path.exists(fp):
-                    zf.write(fp, f"{class_name}/{folder_name}/{dk}.pdf")
+                    zf.write(fp, f"{class_name}/{folder_name}/{fname}")
     buf.seek(0)
     return buf
 
 def create_all_zip(all_students):
-    """Tạo ZIP toàn khối"""
+    """Tạo ZIP toàn khối với đúng thứ tự"""
     buf = io.BytesIO()
-    final_docs = ['GIAYKHAISINH', 'CCCD', 'HOCBA', 'CNTN_THCS']
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for s in all_students:
-            folder_name = f"{s['ma_hoso']}_{s['ho_ten_khong_dau']}"
+            folder_name = f"{s['stt']:02d}_{s['ho_ten_khong_dau']}" if s.get('stt') else s['ho_ten_khong_dau']
             docs = s.get('docs', {})
-            for dk in final_docs:
-                fp = docs.get(dk, {}).get('file_path')
+            hocba_path, _ = _get_hocba_path(docs)
+            ordered = [
+                (docs.get('GIAYKHAISINH', {}).get('file_path'), '01_GiayKhaiSinh.pdf'),
+                (docs.get('CNTN_THCS', {}).get('file_path'),    '02_ChungNhanTotNghiep.pdf'),
+                (hocba_path,                                      '03_HocBa.pdf'),
+                (docs.get('CCCD', {}).get('file_path'),          '04_CCCD.pdf'),
+            ]
+            for fp, fname in ordered:
                 if fp and os.path.exists(fp):
-                    zf.write(fp, f"{s['lop']}/{folder_name}/{dk}.pdf")
+                    zf.write(fp, f"{s['lop']}/{folder_name}/{fname}")
     buf.seek(0)
     return buf

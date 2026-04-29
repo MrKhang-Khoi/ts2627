@@ -5,8 +5,9 @@ import os, io, openpyxl
 from datetime import datetime
 from database import get_db, init_db, add_log, get_setting, set_setting, update_overall_status
 from file_utils import (to_ascii, get_student_folder, save_uploaded_file, delete_file_to_backup,
-                        DOC_TYPES, DOC_LABELS, STATUS_LABELS, OVERALL_LABELS, UPLOAD_FOLDER)
-from pdf_utils import merge_transcripts, export_excel, create_student_zip, create_class_zip, create_all_zip
+                        DOC_TYPES, DOC_LABELS, STATUS_LABELS, OVERALL_LABELS, UPLOAD_FOLDER, DISPLAY_ORDER)
+from pdf_utils import (merge_transcripts, export_excel, create_student_zip,
+                       create_class_zip, create_all_zip, append_to_existing_pdf)
 
 app = Flask(__name__)
 # Đọc secret key từ biến môi trường (bắt buộc trên Render)
@@ -83,7 +84,8 @@ def student_profile(student_id):
     active_docs = DOC_TYPES if phase == '2' else phase1_docs
     return render_template('student_profile.html', student=student, doc_map=doc_map,
                            DOC_TYPES=DOC_TYPES, DOC_LABELS=DOC_LABELS, STATUS_LABELS=STATUS_LABELS,
-                           OVERALL_LABELS=OVERALL_LABELS, active_docs=active_docs, phase=phase, max_mb=max_mb)
+                           OVERALL_LABELS=OVERALL_LABELS, active_docs=active_docs, phase=phase,
+                           max_mb=max_mb, DISPLAY_ORDER=DISPLAY_ORDER)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -224,6 +226,48 @@ def api_upload():
     add_log(session.get('user_id'), 'UPLOAD', student_id, doc_type, f"Nộp file {doc_type}")
     label = DOC_LABELS.get(doc_type, doc_type)
     return jsonify({'success': True, 'message': f"Đã nộp thành công {label} cho {student['ho_ten']} - Lớp {student['lop']}."})
+
+@app.route('/api/append-hocba/<int:student_id>', methods=['POST'])
+def api_append_hocba(student_id):
+    """Thêm trang vào học bạ đã nộp. Nếu chưa có thì tạo mới."""
+    try:
+        student, doc_map = get_student_with_docs(student_id)
+        if not student:
+            return jsonify({'error': 'Không tìm thấy học sinh.'}), 404
+        # Kiểm tra khóa
+        existing = doc_map.get('HOCBA_6_8', {})
+        if existing.get('locked') and existing.get('status') == 'DAT':
+            return jsonify({'error': 'Học bạ đã được xác nhận Đạt. Liên hệ giáo viên để mở khóa.'}), 403
+        files = request.files.getlist('files')
+        if not files or len(files) == 0:
+            return jsonify({'error': 'Chưa chọn file nào.'}), 400
+        max_mb = int(get_setting('max_file_size_mb', '20'))
+        folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
+        dest = os.path.join(folder, 'HOCBA_6_8.pdf')
+        bk_dir = os.path.join(os.environ.get('DATA_DIR', os.path.dirname(__file__)), 'backups', student['ma_hoso'])
+        existing_path = existing.get('file_path') if existing.get('file_path') and os.path.exists(existing.get('file_path', '')) else None
+        result = append_to_existing_pdf(existing_path, files, dest, bk_dir, max_mb)
+        if result[2]:  # error message at index 2
+            return jsonify({'error': result[2]}), 400
+        dest_path, page_count, _ = result
+        conn = get_db()
+        now = datetime.now().isoformat()
+        conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type='HOCBA_6_8'", (student_id,))
+        conn.execute("""INSERT INTO documents (student_id,doc_type,file_name,file_path,status,uploaded_at,note)
+                        VALUES (?,?,?,?,?,?,?)""",
+                     (student_id, 'HOCBA_6_8', 'HOCBA_6_8.pdf', dest_path,
+                      'DA_NOP_CHO_KIEM_TRA', now, f'{page_count} trang'))
+        conn.commit()
+        conn.close()
+        update_overall_status(student_id)
+        action = 'APPEND_HOCBA' if existing_path else 'UPLOAD_HOCBA'
+        add_log(session.get('user_id'), action, student_id, 'HOCBA_6_8',
+                f"{'Thêm' if existing_path else 'Tạo'} học bạ: {page_count} trang")
+        return jsonify({'success': True,
+                        'message': f'Đã cập nhật học bạ ({page_count} trang tổng cộng).',
+                        'page_count': page_count})
+    except Exception as e:
+        return jsonify({'error': f'Lỗi máy chủ: {str(e)}'}), 500
 
 @app.route('/api/delete-file', methods=['POST'])
 def api_delete_file():

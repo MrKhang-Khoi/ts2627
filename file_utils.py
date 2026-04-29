@@ -12,10 +12,21 @@ ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
 MAX_FILE_SIZE_MB = 20
 
 DOC_TYPES = ['GIAYKHAISINH', 'CCCD', 'HOCBA_6_8', 'HOCBA_9', 'HOCBA', 'CNTN_THCS']
+
+# Thứ tự hiển thị theo hệ thống chính thức (hình 1)
+DISPLAY_ORDER = ['GIAYKHAISINH', 'CNTN_THCS', 'HOCBA_6_8', 'CCCD']
+# Thứ tự file trong ZIP tải xuống (đúng thứ tự nộp lên hệ thống)
+ZIP_ORDER = [
+    ('GIAYKHAISINH', '01_GiayKhaiSinh'),
+    ('CNTN_THCS',    '02_ChungNhanTotNghiep'),
+    ('HOCBA',        '03_HocBa'),        # Học bạ hoàn chỉnh ưu tiên
+    ('HOCBA_6_8',    '03_HocBa'),        # Fallback nếu chưa tạo HOCBA
+    ('CCCD',         '04_CCCD'),
+]
 DOC_LABELS = {
-    'GIAYKHAISINH': 'Giấy khai sinh',
+    'GIAYKHAISINH': 'Bản sao Giấy khai sinh',
     'CCCD': 'CCCD / Mã định danh',
-    'HOCBA_6_8': 'Học bạ lớp 6-8',
+    'HOCBA_6_8': 'Học bạ (lớp 6-9)',
     'HOCBA_9': 'Học bạ lớp 9',
     'HOCBA': 'Học bạ hoàn chỉnh',
     'CNTN_THCS': 'Chứng nhận tốt nghiệp THCS',
