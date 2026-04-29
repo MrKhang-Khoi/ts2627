@@ -97,18 +97,26 @@
 /* ===== UTILITY ===== */
 .hidden { display: none !important; }
 
+/* Chip remove button */
+.chip-remove {
+  background: none; border: none; color: #999; cursor: pointer;
+  font-size: 14px; padding: 0 4px; margin-left: auto; line-height: 1;
+}
+.chip-remove:hover { color: var(--danger); }
+
 /* Edit modal */
 .edit-modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.55);
   display: flex; align-items: center; justify-content: center; z-index: 600;
+  padding: 16px;
 }
 .edit-modal-overlay.hidden { display: none !important; }
 .edit-modal-box {
-  background: white; border-radius: var(--radius); padding: 32px; width: 90%; max-width: 480px;
-  box-shadow: 0 12px 48px rgba(0,0,0,0.25);
+  background: white; border-radius: var(--radius); padding: 28px; width: 100%; max-width: 480px;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.25); max-height: 90vh; overflow-y: auto;
 }
-.edit-modal-title { font-size: 20px; font-weight: 800; color: var(--primary); margin-bottom: 20px; }
-.edit-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.edit-modal-title { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 18px; }
+.edit-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
 .btn-edit-student {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 16px; background: var(--warning-light); color: var(--warning);
@@ -116,6 +124,26 @@
   font-weight: 700; cursor: pointer; transition: var(--transition);
 }
 .btn-edit-student:hover { background: var(--warning); color: white; }
+
+/* Image editor modal */
+.img-editor-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center; z-index: 700;
+  padding: 16px;
+}
+.img-editor-overlay.hidden { display: none !important; }
+.img-editor-box {
+  background: white; border-radius: var(--radius); padding: 20px; width: 100%;
+  max-width: 640px; box-shadow: 0 16px 64px rgba(0,0,0,0.4); max-height: 95vh; overflow-y: auto;
+}
+.img-editor-title { font-size: 16px; font-weight: 800; color: var(--primary); margin-bottom: 14px; }
+.img-canvas-wrap {
+  background: #f0f0f0; border-radius: 8px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; min-height: 180px; margin-bottom: 14px;
+}
+#img-canvas { display: block; max-width: 100%; }
+.img-editor-controls { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
+.img-editor-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
