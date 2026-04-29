@@ -598,39 +598,6 @@ def api_change_password():
     conn.close()
     return jsonify({'success': True})
 
-@app.route('/api/delete-file', methods=['POST'])
-def api_delete_file():
-    """Xóa file đã nộp (chuyển vào backup). Học sinh tự xóa khi chưa bị khóa."""
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'Dữ liệu không hợp lệ.'}), 400
-    student_id = data.get('student_id')
-    doc_type = (data.get('doc_type') or '').upper()
-    if not student_id or not doc_type:
-        return jsonify({'error': 'Thiếu thông tin.'}), 400
-    student, doc_map = get_student_with_docs(student_id)
-    if not student:
-        return jsonify({'error': 'Không tìm thấy học sinh.'}), 404
-    doc = doc_map.get(doc_type)
-    if not doc:
-        return jsonify({'error': 'Không có file để xóa.'}), 404
-    # Không cho phép xóa nếu đã bị khóa (DAT + locked)
-    if doc.get('status') == 'DAT' and doc.get('locked'):
-        return jsonify({'error': 'File đã được giáo viên xác nhận, không thể xóa.'}), 403
-    try:
-        fp = doc.get('file_path')
-        if fp:
-            delete_file_to_backup(fp, student['ma_hoso'], doc_type)
-        conn = get_db()
-        conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type=?", (student_id, doc_type))
-        conn.commit()
-        conn.close()
-        update_overall_status(student_id)
-        add_log(None, 'delete_file', student_id=student_id, doc_type=doc_type, detail='Học sinh tự xóa')
-    except Exception as e:
-        return jsonify({'error': f'Lỗi khi xóa: {str(e)}'}), 500
-    return jsonify({'success': True, 'message': f'Đã xóa {doc_type}. Có thể nộp lại.'})
-
 @app.route('/api/edit-student', methods=['POST'])
 @login_required
 def api_edit_student():
