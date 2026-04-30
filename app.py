@@ -1315,11 +1315,16 @@ def _tsdc_sync_students(tsdc_students):
     for s in all_students:
         if s['cccd']:
             by_cccd[s['cccd'].strip()] = s['id']
-        # Key: ngay_sinh + normalized name (first 3 words)
+        # Key: ngay_sinh + normalized name
+        # Dung ho_ten (co dau cach) de normalize chinh xac hon ho_ten_khong_dau (CamelCase)
         dob = (s['ngay_sinh'] or '').strip()
-        name_norm = _normalize_name(s['ho_ten_khong_dau'] or s['ho_ten'] or '')
-        key = dob + '|' + name_norm
-        by_dob_name[key] = s['id']
+        name_with_space = _normalize_name(s['ho_ten'] or '')
+        key1 = dob + '|' + name_with_space
+        by_dob_name[key1] = s['id']
+        # Cung them dang khong dau de phong truong hop TSDC tra ve khong dau
+        if s['ho_ten_khong_dau']:
+            name_camel = _normalize_name(s['ho_ten_khong_dau'])
+            by_dob_name[dob + '|' + name_camel] = s['id']
 
     for ts in tsdc_students:
         cccd  = (ts.get('cccd') or '').strip()
