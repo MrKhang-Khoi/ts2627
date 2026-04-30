@@ -165,6 +165,10 @@ def build_stats(students):
         'nv3': sorted(nv3.items(), key=lambda x: -x[1]),
         'students': [{'hoTen':s.get('hoTen',''),'lop':s.get('lop',''),
                       'trangThai':s.get('trangThai',''),
+                      'ngaySinh':s.get('ngaySinh',''),
+                      'cccd':s.get('cccd',''),
+                      'maDinhDanh':s.get('maDinhDanh',''),
+                      'maHocSinh':s.get('maHocSinh',''),
                       'nv1':s.get('nv1',''),'nv2':s.get('nv2',''),'nv3':s.get('nv3','')}
                      for s in students],
         'updated_at': datetime.now().strftime('%d/%m/%Y %H:%M:%S')

@@ -143,13 +143,18 @@ def sync_to_db(students):
             print(f'[SYNC] Them cot: {col}')
 
     # Load tat ca HS local
-    all_local = conn.execute('SELECT id, ho_ten, ho_ten_khong_dau, ngay_sinh, cccd FROM students').fetchall()
-    by_cccd, by_dob_name = {}, {}
+    all_local = conn.execute('SELECT id, ma_hoso, ho_ten, ho_ten_khong_dau, ngay_sinh, cccd FROM students').fetchall()
+    by_ma_hoso, by_cccd, by_dob_name = {}, {}, {}
     for s in all_local:
+        # 1. ma_hoso (= CCCD bo so 0 dau trong Excel)
+        mhs = (s['ma_hoso'] or '').strip().lstrip('0')
+        if mhs and mhs.isdigit():
+            by_ma_hoso[mhs] = s['id']
+        # 2. CCCD da luu trong DB
         if s['cccd']:
-            by_cccd[s['cccd'].strip()] = s['id']
+            by_cccd[s['cccd'].strip().lstrip('0')] = s['id']
+        # 3. DOB + ten (fallback)
         dob = (s['ngay_sinh'] or '').strip()
-        # Dung ho_ten (co dau cach) de normalize - chinh xac hon ho_ten_khong_dau (CamelCase)
         name_with_space = normalize_name(s['ho_ten'] or '')
         by_dob_name[dob + '|' + name_with_space] = (s['id'], s['ho_ten'])
         if s['ho_ten_khong_dau']:
@@ -172,13 +177,18 @@ def sync_to_db(students):
         trang  = ts.get('trangThai', '')
         mahoso = ts.get('maHocSinh', '')
 
+        cccd_raw = cccd.lstrip('0')
         sid, match = None, None
 
-        # 1. CCCD
-        if cccd and cccd in by_cccd:
-            sid = by_cccd[cccd]; match = f'CCCD={cccd}'
+        # 1. ma_hoso (CCCD bo so 0 dau) — chinh xac nhat
+        if cccd_raw and cccd_raw in by_ma_hoso:
+            sid = by_ma_hoso[cccd_raw]; match = f'ma_hoso={cccd_raw}'
 
-        # 2. DOB + ten chuan hoa
+        # 2. CCCD da luu trong DB
+        if not sid and cccd_raw and cccd_raw in by_cccd:
+            sid = by_cccd[cccd_raw]; match = f'cccd_stored={cccd}'
+
+        # 3. DOB + ten chuan hoa (fallback)
         if not sid and dob:
             name_norm = normalize_name(name)
             key = dob + '|' + name_norm
@@ -186,8 +196,7 @@ def sync_to_db(students):
                 sid, local_name = by_dob_name[key]
                 match = f'DOB+name ({local_name})'
             else:
-                # Debug: hien thi tat ca ten trong DB de tim
-                print(f'[SYNC] Khong khop: TSDC="{name}" ({dob}) norm="{name_norm}"')
+                print(f'[SYNC] Khong khop: TSDC="{name}" ({dob}) CCCD={cccd} norm="{name_norm}"')
                 print(f'       DB keys co: {[k for k in by_dob_name if dob in k]}')
 
         if sid:
