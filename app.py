@@ -1298,59 +1298,74 @@ def _normalize_name(name):
     return ' '.join(name.split())
 
 def _tsdc_sync_students(tsdc_students):
-    """Khop hoc sinh TSDC voi DB local theo CCCD hoac ten+ngay_sinh, cap nhat NV va trang thai."""
+    """Khop hoc sinh TSDC voi DB theo:
+      1. ma_hoso == tsdc_cccd.lstrip('0')  (chinh xac nhat - Excel ma_hoso = CCCD khong co so 0 dau)
+      2. cccd (neu da luu truoc do)
+      3. DOB + ten (fallback)
+    """
     if not tsdc_students:
         return 0
     conn = get_db()
     updated = 0
     from database import migrate_db
-    migrate_db()  # Bao dam cac cot da ton tai
+    migrate_db()
     now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
     # Load all local students
     all_students = conn.execute(
-        "SELECT id, ho_ten, ho_ten_khong_dau, ngay_sinh, cccd FROM students"
+        "SELECT id, ma_hoso, ho_ten, ho_ten_khong_dau, ngay_sinh, cccd FROM students"
     ).fetchall()
 
     # Build lookup maps
-    by_cccd = {}
-    by_dob_name = {}
+    by_ma_hoso   = {}   # ma_hoso stripped leading 0 → id
+    by_cccd_exact = {}  # cccd stored in DB → id
+    by_dob_name  = {}   # dob|name_norm → id (fallback)
+
     for s in all_students:
+        # 1. Ma hoso (= CCCD cua HS, khong co so 0 dau)
+        mhs = (s['ma_hoso'] or '').strip().lstrip('0')
+        if mhs and mhs.isdigit():          # Chi map neu ma_hoso la so (khong phai dang 9B1_001)
+            by_ma_hoso[mhs] = s['id']
+
+        # 2. CCCD da luu (co the co so 0 dau hoac khong)
         if s['cccd']:
-            by_cccd[s['cccd'].strip()] = s['id']
-        # Key: ngay_sinh + normalized name
-        # Dung ho_ten (co dau cach) de normalize chinh xac hon ho_ten_khong_dau (CamelCase)
+            by_cccd_exact[s['cccd'].strip().lstrip('0')] = s['id']
+
+        # 3. DOB + ten (fallback)
         dob = (s['ngay_sinh'] or '').strip()
         name_with_space = _normalize_name(s['ho_ten'] or '')
-        key1 = dob + '|' + name_with_space
-        by_dob_name[key1] = s['id']
-        # Cung them dang khong dau de phong truong hop TSDC tra ve khong dau
+        by_dob_name[dob + '|' + name_with_space] = s['id']
         if s['ho_ten_khong_dau']:
-            name_camel = _normalize_name(s['ho_ten_khong_dau'])
-            by_dob_name[dob + '|' + name_camel] = s['id']
+            by_dob_name[dob + '|' + _normalize_name(s['ho_ten_khong_dau'])] = s['id']
 
     for ts in tsdc_students:
-        cccd  = (ts.get('cccd') or '').strip()
-        dob   = (ts.get('ngaySinh') or '').strip()
-        name  = (ts.get('hoTen') or '').strip()
-        nv1   = ts.get('nv1', '')
-        nv2   = ts.get('nv2', '')
-        nv3   = ts.get('nv3', '')
-        trang = ts.get('trangThai', '')
-        mahoso= ts.get('maHocSinh', '')
+        tsdc_cccd     = (ts.get('cccd') or '').strip()
+        tsdc_cccd_raw = tsdc_cccd.lstrip('0')   # TSDC CCCD bo so 0 dau
+        tsdc_ma_dd    = (ts.get('maDinhDanh') or '').strip()
+        dob    = (ts.get('ngaySinh') or '').strip()
+        name   = (ts.get('hoTen') or '').strip()
+        nv1    = ts.get('nv1', '')
+        nv2    = ts.get('nv2', '')
+        nv3    = ts.get('nv3', '')
+        trang  = ts.get('trangThai', '')
+        mahoso = ts.get('maHocSinh', '')  # Ma ho so TSDC (HSO2651...)
 
         student_id = None
         match_by   = None
 
-        # 1. Match by CCCD (chinh xac nhat)
-        if cccd and cccd in by_cccd:
-            student_id = by_cccd[cccd]
-            match_by   = 'cccd'
+        # 1. Ma_hoso (chinh xac nhat): ma_hoso trong DB == CCCD TSDC bo so 0 dau
+        if tsdc_cccd_raw and tsdc_cccd_raw in by_ma_hoso:
+            student_id = by_ma_hoso[tsdc_cccd_raw]
+            match_by   = f'ma_hoso={tsdc_cccd_raw}'
 
-        # 2. Match by DOB + normalized name
+        # 2. CCCD da luu trong DB
+        if not student_id and tsdc_cccd_raw and tsdc_cccd_raw in by_cccd_exact:
+            student_id = by_cccd_exact[tsdc_cccd_raw]
+            match_by   = f'cccd_stored={tsdc_cccd}'
+
+        # 3. DOB + ten (fallback)
         if not student_id and dob:
-            name_norm = _normalize_name(name)
-            key = dob + '|' + name_norm
+            key = dob + '|' + _normalize_name(name)
             if key in by_dob_name:
                 student_id = by_dob_name[key]
                 match_by   = 'dob+name'
@@ -1358,17 +1373,20 @@ def _tsdc_sync_students(tsdc_students):
         if student_id:
             conn.execute("""UPDATE students
                 SET tsdc_nv1=?, tsdc_nv2=?, tsdc_nv3=?,
-                    tsdc_trang_thai=?, tsdc_ma_hoso=?, tsdc_updated_at=?
+                    tsdc_trang_thai=?, tsdc_ma_hoso=?, tsdc_updated_at=?,
+                    cccd=COALESCE(NULLIF(?,  ''), cccd),
+                    ma_dinh_danh_gd=COALESCE(NULLIF(?, ''), ma_dinh_danh_gd)
                 WHERE id=?""",
-                (nv1, nv2, nv3, trang, mahoso, now_str, student_id))
-            if cccd:
-                conn.execute("UPDATE students SET cccd=? WHERE id=?", (cccd, student_id))
+                (nv1, nv2, nv3, trang, mahoso, now_str,
+                 tsdc_cccd, tsdc_ma_dd, student_id))
             updated += 1
-            print(f'[TSDC-SYNC] [{match_by}] Cap nhat: {name} ({dob}) NV1={nv1[:30] if nv1 else ""}', flush=True)
+            print(f'[TSDC-SYNC] [{match_by}] {name} ({dob}) NV1={nv1[:30] if nv1 else "N/A"}', flush=True)
+        else:
+            print(f'[TSDC-SYNC] ✗ Khong khop: "{name}" ({dob}) CCCD={tsdc_cccd}', flush=True)
 
     conn.commit()
     conn.close()
-    print(f'[TSDC-SYNC] Xong: {updated}/{len(tsdc_students)} hoc sinh duoc cap nhat', flush=True)
+    print(f'[TSDC-SYNC] Xong: {updated}/{len(tsdc_students)} hoc sinh cap nhat.', flush=True)
     return updated
 
 @app.route('/api/tsdc-sync-students', methods=['POST'])
@@ -1382,6 +1400,88 @@ def api_tsdc_sync_students():
         return jsonify({'error': 'Chua co du lieu TSDC trong cache'}), 404
     n = _tsdc_sync_students(students)
     return jsonify({'success': True, 'updated': n})
+
+@app.route('/api/tsdc-debug', methods=['POST'])
+def api_tsdc_debug():
+    """Debug: hien thi trang thai DB + thu match TSDC students vao DB.
+    Body: { token, students: [...TSDC data...] }
+    """
+    import unicodedata as _ud
+    body = request.get_json(force=True, silent=True) or {}
+    if body.get('token', '') != _TSDC_PUSH_TOKEN:
+        return jsonify({'error': 'Token khong hop le'}), 403
+
+    conn = get_db()
+    rows = conn.execute(
+        'SELECT id, ma_hoso, ho_ten, ho_ten_khong_dau, ngay_sinh, cccd, ma_dinh_danh_gd FROM students LIMIT 20'
+    ).fetchall()
+    conn.close()
+
+    # Hien thi DB state
+    db_sample = [dict(r) for r in rows]
+
+    # Thu match
+    tsdc_list = body.get('students', [])
+    match_log = []
+    if tsdc_list:
+        def _norm(name):
+            name = name.strip().lower()
+            name = _ud.normalize('NFD', name)
+            name = ''.join(c for c in name if _ud.category(c) != 'Mn')
+            return ' '.join(name.split())
+
+        conn2 = get_db()
+        all_stu = conn2.execute(
+            'SELECT id, ma_hoso, ho_ten, ho_ten_khong_dau, ngay_sinh, cccd FROM students'
+        ).fetchall()
+        conn2.close()
+
+        by_ma_hoso, by_cccd, by_dob_name = {}, {}, {}
+        for s in all_stu:
+            mhs = (s['ma_hoso'] or '').strip().lstrip('0')
+            if mhs and mhs.isdigit():
+                by_ma_hoso[mhs] = {'id': s['id'], 'ho_ten': s['ho_ten']}
+            if s['cccd']:
+                by_cccd[s['cccd'].strip().lstrip('0')] = {'id': s['id'], 'ho_ten': s['ho_ten']}
+            dob = (s['ngay_sinh'] or '').strip()
+            n1 = _norm(s['ho_ten'] or '')
+            by_dob_name[dob + '|' + n1] = {'id': s['id'], 'ho_ten': s['ho_ten']}
+            if s['ho_ten_khong_dau']:
+                by_dob_name[dob + '|' + _norm(s['ho_ten_khong_dau'])] = {'id': s['id'], 'ho_ten': s['ho_ten']}
+
+        for ts in tsdc_list:
+            cccd = (ts.get('cccd') or '').strip()
+            cccd_raw = cccd.lstrip('0')
+            dob = (ts.get('ngaySinh') or '').strip()
+            name = (ts.get('hoTen') or '').strip()
+            name_norm = _norm(name)
+            key = dob + '|' + name_norm
+
+            entry = {'tsdc_name': name, 'dob': dob, 'cccd': cccd,
+                     'name_norm': name_norm, 'key': key,
+                     'match': None, 'match_by': None}
+
+            m = by_ma_hoso.get(cccd_raw)
+            if m: entry['match'] = m; entry['match_by'] = f'ma_hoso({cccd_raw})'
+            if not m:
+                m = by_cccd.get(cccd_raw)
+                if m: entry['match'] = m; entry['match_by'] = f'cccd_stored'
+            if not m:
+                m = by_dob_name.get(key)
+                if m: entry['match'] = m; entry['match_by'] = f'dob+name'
+
+            # Tim ngay sinh tuong ung trong DB
+            dob_hits = [{'key': k, 'ho_ten': v['ho_ten']}
+                        for k, v in by_dob_name.items() if dob in k and dob]
+            entry['dob_hits_in_db'] = dob_hits[:5]
+            match_log.append(entry)
+
+    return jsonify({
+        'success': True,
+        'db_count': len(db_sample),
+        'db_sample': db_sample,
+        'match_log': match_log
+    })
 
 def create_dirs():
     """TÃ¡ÂºÂ¡o thÃ†Â° mÃ¡Â»Â¥c cÃ¡ÂºÂ§n thiÃ¡ÂºÂ¿t khi khÃ¡Â»Å¸i Ã„â€˜Ã¡Â»â„¢ng"""
