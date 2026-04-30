@@ -88,6 +88,29 @@ def init_db():
         c.execute("INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)", (key, val))
     conn.commit()
     conn.close()
+    migrate_db()  # Them cac cot moi neu chua co
+
+def migrate_db():
+    """Tu dong them cac cot moi vao bang students neu chua ton tai (safe migration)."""
+    conn = get_db()
+    c = conn.cursor()
+    existing = {row[1] for row in c.execute("PRAGMA table_info(students)").fetchall()}
+    migrations = [
+        ("cccd",              "TEXT"),
+        ("ma_dinh_danh_gd",   "TEXT"),
+        ("tsdc_ma_hoso",      "TEXT"),
+        ("tsdc_trang_thai",   "TEXT"),
+        ("tsdc_nv1",          "TEXT"),
+        ("tsdc_nv2",          "TEXT"),
+        ("tsdc_nv3",          "TEXT"),
+        ("tsdc_updated_at",   "TEXT"),
+    ]
+    for col, typ in migrations:
+        if col not in existing:
+            c.execute(f"ALTER TABLE students ADD COLUMN {col} {typ}")
+            print(f"[DB] Da them cot: {col}", flush=True)
+    conn.commit()
+    conn.close()
 
 def add_log(user_id, action, student_id=None, doc_type=None, detail=None):
     conn = get_db()

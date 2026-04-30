@@ -79,11 +79,28 @@ async def scrape_tsdc():
                 else: break
             except: await page.keyboard.press('Escape')
         await asyncio.sleep(0.4)
+        # Dong modal popup neu co (bootstrap-dialog chan click)
+        print('[PUSH] Dong modal neu co...', flush=True)
+        try:
+            modal = page.locator('.modal.in, .bootstrap-dialog.in')
+            if await modal.count() > 0:
+                close_btn = modal.locator('.close, .btn-default, button').first
+                if await close_btn.count() > 0:
+                    await close_btn.click()
+                else:
+                    await page.keyboard.press('Escape')
+                await asyncio.sleep(1)
+        except: pass
+        # Bam Escape de dam bao khong con popup nao
+        await page.keyboard.press('Escape'); await asyncio.sleep(0.5)
         # Tim kiem
         print('[PUSH] Tim kiem...', flush=True)
         btn = page.locator('button').filter(has_text='T\u00ecm ki\u1ebfm')
         if await btn.count() > 0:
-            await btn.first.click(); await asyncio.sleep(5.5)
+            # Scroll vao view va click bang JS (tranh bi chan boi overlay)
+            await btn.first.scroll_into_view_if_needed()
+            await page.evaluate("document.querySelector('button.el-button--primary').click()")
+            await asyncio.sleep(6)
         # Extract
         print('[PUSH] Extract data...', flush=True)
         JS = r"""
@@ -92,24 +109,33 @@ async def scrape_tsdc():
     var students = [];
     function isMaHS(t){return t.startsWith('HS')&&t.length>5&&t.charCodeAt(2)>=48&&t.charCodeAt(2)<=57;}
     function isDate(t){return t.length===10&&t.charAt(2)==='/'&&t.charAt(5)==='/';}
-    function isNVSchool(t){return t.indexOf('THPT')!==-1||t.indexOf('PTDT')!==-1||t.indexOf('Lien Viet')!==-1;}
+    function isCCCD(t){return /^\d{9}$/.test(t)||/^\d{12}$/.test(t);}
+    function isMaDinhDanh(t){return /^\d{9,10}$/.test(t);}
+    function isNVSchool(t){return t.indexOf('THPT')!==-1||t.indexOf('PTDT')!==-1||t.indexOf('Lien Viet')!==-1||t.indexOf('THCS')!==-1;}
     function isLop(t){if(t.length<2||t.length>5)return false;if(t.charAt(0)==='9'){var c=t.charCodeAt(1);return c>=65&&c<=90;}if(t.charAt(0)==='1'&&t.charAt(1)==='0'&&t.length>2){var c=t.charCodeAt(2);return c>=65&&c<=90;}return false;}
     rows.forEach(function(row){
         var cells=Array.from(row.querySelectorAll('td')).map(function(c){return c.innerText.trim();});
         if(!cells.some(function(t){return isMaHS(t);}))return;
-        var s={id:'',maHocSinh:'',hoTen:'',trangThai:'',ngaySinh:'',lop:'',nv1:'',nv2:'',nv3:''};
+        var s={maHocSinh:'',hoTen:'',trangThai:'',ngaySinh:'',lop:'',nv1:'',nv2:'',nv3:'',cccd:'',maDinhDanh:''};
         var nvs=[];
+        var numbers12=[], numbers9=[];
         cells.forEach(function(t){
             if(!t)return;
-            if(isMaHS(t)){s.maHocSinh=t;s.id=t;}
-            else if(isDate(t)){s.ngaySinh=t;}
-            else if(t==='Nam'){s.gioiTinh='Nam';}
-            else if(t==='\u0110\u00e3 ti\u1ebfp nh\u1eadn'||t.includes('ti\u1ebfp nh\u1eadn')){s.trangThai=t;}
-            else if(t.includes('xét duyệt')||t.includes('xet duyet')){s.trangThai=t;}
+            if(isMaHS(t)){s.maHocSinh=t;}
+            else if(isDate(t)&&!s.ngaySinh){s.ngaySinh=t;}
+            else if(t==='Nam'||t==='\u0110\u1ea1'){s.gioiTinh=t;}
+            else if(t.includes('ti\u1ebfp nh\u1eadn')||t.includes('Ti\u1ebfp nh\u1eadn')){s.trangThai=t;}
+            else if(t.includes('xét duyệt')||t.includes('Ch\u1edd xét')){s.trangThai=t;}
+            else if(t.includes('xet duyet')){s.trangThai=t;}
             else if(isLop(t)){s.lop=t;}
             else if(isNVSchool(t)){nvs.push(t);}
-            else if(!s.hoTen&&t.length>5&&!isNVSchool(t)&&!isMaHS(t)){s.hoTen=t;}
+            else if(/^\d{12}$/.test(t)){numbers12.push(t);}
+            else if(/^\d{9,10}$/.test(t)){numbers9.push(t);}
+            else if(!s.hoTen&&t.length>4&&!isNVSchool(t)&&!isMaHS(t)&&!/^\d+$/.test(t)){s.hoTen=t;}
         });
+        /* 12 so = CCCD, 9-10 so = Ma dinh danh giao duc */
+        if(numbers12.length>0) s.cccd=numbers12[0];
+        if(numbers9.length>0) s.maDinhDanh=numbers9[0];
         if(nvs[0])s.nv1=nvs[0];if(nvs[1])s.nv2=nvs[1];if(nvs[2])s.nv3=nvs[2];
         if(s.maHocSinh||s.hoTen)students.push(s);
     });

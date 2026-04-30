@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file, flash
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import os, io, shutil, openpyxl, threading, time as _time_mod
@@ -1276,10 +1276,104 @@ def api_tsdc_push():
         _tsdc_cache['data'] = data; _tsdc_cache['ts'] = _time_mod.time()
         total = data.get('total', 0)
         print(f'[TSDC-PUSH] {total} HS luc {pushed_at} tu {request.remote_addr}', flush=True)
+        # Sau khi luu cache, tu dong sync vao bang students
+        try:
+            _tsdc_sync_students(data.get('students', []))
+        except Exception as se:
+            print(f'[TSDC-SYNC] Loi sync: {se}', flush=True)
         return jsonify({'success': True, 'total': total, 'pushed_at': pushed_at})
     except Exception as e:
         import traceback; traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+def _normalize_name(name):
+    """Chuan hoa ten: bo dau, thuong, xoa khoang trang thua."""
+    import unicodedata
+    name = name.strip().lower()
+    name = unicodedata.normalize('NFD', name)
+    name = ''.join(c for c in name if unicodedata.category(c) != 'Mn')
+    return ' '.join(name.split())
+
+def _tsdc_sync_students(tsdc_students):
+    """Khop hoc sinh TSDC voi DB local theo CCCD hoac ten+ngay_sinh, cap nhat NV va trang thai."""
+    if not tsdc_students:
+        return 0
+    conn = get_db()
+    updated = 0
+    from database import migrate_db
+    migrate_db()  # Bao dam cac cot da ton tai
+    now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
+    # Load all local students
+    all_students = conn.execute(
+        "SELECT id, ho_ten, ho_ten_khong_dau, ngay_sinh, cccd FROM students"
+    ).fetchall()
+
+    # Build lookup maps
+    by_cccd = {}
+    by_dob_name = {}
+    for s in all_students:
+        if s['cccd']:
+            by_cccd[s['cccd'].strip()] = s['id']
+        # Key: ngay_sinh + normalized name (first 3 words)
+        dob = (s['ngay_sinh'] or '').strip()
+        name_norm = _normalize_name(s['ho_ten_khong_dau'] or s['ho_ten'] or '')
+        key = dob + '|' + name_norm
+        by_dob_name[key] = s['id']
+
+    for ts in tsdc_students:
+        cccd  = (ts.get('cccd') or '').strip()
+        dob   = (ts.get('ngaySinh') or '').strip()
+        name  = (ts.get('hoTen') or '').strip()
+        nv1   = ts.get('nv1', '')
+        nv2   = ts.get('nv2', '')
+        nv3   = ts.get('nv3', '')
+        trang = ts.get('trangThai', '')
+        mahoso= ts.get('maHocSinh', '')
+
+        student_id = None
+        match_by   = None
+
+        # 1. Match by CCCD (chinh xac nhat)
+        if cccd and cccd in by_cccd:
+            student_id = by_cccd[cccd]
+            match_by   = 'cccd'
+
+        # 2. Match by DOB + normalized name
+        if not student_id and dob:
+            name_norm = _normalize_name(name)
+            key = dob + '|' + name_norm
+            if key in by_dob_name:
+                student_id = by_dob_name[key]
+                match_by   = 'dob+name'
+
+        if student_id:
+            conn.execute("""UPDATE students
+                SET tsdc_nv1=?, tsdc_nv2=?, tsdc_nv3=?,
+                    tsdc_trang_thai=?, tsdc_ma_hoso=?, tsdc_updated_at=?
+                WHERE id=?""",
+                (nv1, nv2, nv3, trang, mahoso, now_str, student_id))
+            if cccd:
+                conn.execute("UPDATE students SET cccd=? WHERE id=?", (cccd, student_id))
+            updated += 1
+            print(f'[TSDC-SYNC] [{match_by}] Cap nhat: {name} ({dob}) NV1={nv1[:30] if nv1 else ""}', flush=True)
+
+    conn.commit()
+    conn.close()
+    print(f'[TSDC-SYNC] Xong: {updated}/{len(tsdc_students)} hoc sinh duoc cap nhat', flush=True)
+    return updated
+
+@app.route('/api/tsdc-sync-students', methods=['POST'])
+def api_tsdc_sync_students():
+    """Goi thu cong de sync du lieu TSDC vao bang students."""
+    body = request.get_json(force=True, silent=True) or {}
+    if body.get('token', '') != _TSDC_PUSH_TOKEN:
+        return jsonify({'error': 'Token khong hop le'}), 403
+    students = _tsdc_cache.get('data', {}).get('students', []) if _tsdc_cache else []
+    if not students:
+        return jsonify({'error': 'Chua co du lieu TSDC trong cache'}), 404
+    n = _tsdc_sync_students(students)
+    return jsonify({'success': True, 'updated': n})
 
 def create_dirs():
     """TÃ¡ÂºÂ¡o thÃ†Â° mÃ¡Â»Â¥c cÃ¡ÂºÂ§n thiÃ¡ÂºÂ¿t khi khÃ¡Â»Å¸i Ã„â€˜Ã¡Â»â„¢ng"""

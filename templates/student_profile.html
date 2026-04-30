@@ -23,6 +23,11 @@
       <span class="sp-overall-badge status-{{ student.status_overall }}">
         {{ OVERALL_LABELS.get(student.status_overall, student.status_overall) }}
       </span>
+      {% if student.tsdc_trang_thai %}
+      <span class="sp-tsdc-badge {% if 'xét duyệt' in student.tsdc_trang_thai or 'xet duyet' in student.tsdc_trang_thai.lower() %}tsdc-xetduyet{% else %}tsdc-chotiepnhan{% endif %}">
+        🏫 TSDC: {{ student.tsdc_trang_thai }}
+      </span>
+      {% endif %}
     </div>
     <div class="sp-header-actions">
       {% if session.get('role') in ['teacher','admin'] %}
@@ -31,6 +36,35 @@
       <a href="{{ url_for('api_download_hoso', student_id=student.id) }}" class="sp-btn-download">⬇ Tải hồ sơ</a>
     </div>
   </div>
+
+  {% if student.tsdc_nv1 or student.tsdc_nv2 or student.tsdc_nv3 %}
+  <div class="tsdc-info-card">
+    <div class="tsdc-info-title">📊 Thông tin đăng ký TSDC</div>
+    <div class="tsdc-info-grid">
+      {% if student.tsdc_nv1 %}
+      <div class="tsdc-nv-item nv1">
+        <span class="tsdc-nv-label">Nguyện vọng 1</span>
+        <span class="tsdc-nv-school">{{ student.tsdc_nv1 }}</span>
+      </div>
+      {% endif %}
+      {% if student.tsdc_nv2 %}
+      <div class="tsdc-nv-item nv2">
+        <span class="tsdc-nv-label">Nguyện vọng 2</span>
+        <span class="tsdc-nv-school">{{ student.tsdc_nv2 }}</span>
+      </div>
+      {% endif %}
+      {% if student.tsdc_nv3 %}
+      <div class="tsdc-nv-item nv3">
+        <span class="tsdc-nv-label">Nguyện vọng 3</span>
+        <span class="tsdc-nv-school">{{ student.tsdc_nv3 }}</span>
+      </div>
+      {% endif %}
+    </div>
+    {% if student.tsdc_updated_at %}
+    <div class="tsdc-info-updated">🕐 Cập nhật lúc: {{ student.tsdc_updated_at }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
 
   {# === ALERT ĐỦ HỒ SƠ === #}
   {% if student.status_overall == 'DU_HO_SO_CHINH_THUC' %}
@@ -318,4 +352,21 @@ function submitMulti(dt, sid) {
     }).catch(()=>{showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';});
 }
 </script>
+{% endblock %}
+{% block styles %}
+<style>
+.sp-tsdc-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;margin-top:6px;margin-left:4px}
+.tsdc-xetduyet{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
+.tsdc-chotiepnhan{background:#fff3e0;color:#e65100;border:1px solid #ffcc80}
+.tsdc-info-card{background:#fff;border:2px solid #e3f2fd;border-radius:14px;padding:18px 22px;margin:14px 0;box-shadow:0 2px 8px rgba(25,118,210,.08)}
+.tsdc-info-title{font-size:1rem;font-weight:700;color:#1565C0;margin-bottom:12px}
+.tsdc-info-grid{display:flex;gap:12px;flex-wrap:wrap}
+.tsdc-nv-item{flex:1;min-width:180px;padding:10px 14px;border-radius:10px;display:flex;flex-direction:column;gap:4px}
+.tsdc-nv-item.nv1{background:#e8f5e9;border-left:4px solid #43a047}
+.tsdc-nv-item.nv2{background:#e3f2fd;border-left:4px solid #1e88e5}
+.tsdc-nv-item.nv3{background:#fff8e1;border-left:4px solid #fb8c00}
+.tsdc-nv-label{font-size:.72rem;font-weight:700;text-transform:uppercase;opacity:.7}
+.tsdc-nv-school{font-size:.88rem;font-weight:600;color:#222}
+.tsdc-info-updated{margin-top:10px;font-size:.75rem;color:#888}
+</style>
 {% endblock %}
