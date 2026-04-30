@@ -202,7 +202,7 @@
 <div id="edit-modal" class="edit-modal-overlay hidden">
   <div class="edit-modal-box">
     <div class="edit-modal-title">✏️ Sửa thông tin học sinh</div>
-    <div class="form-group"><label>Họ tên</label>
+    <div class="form-group"><label>Họ tên <span style="color:#e53935">*</span></label>
       <input type="text" id="edit-hoten" class="form-control" value="{{ student.ho_ten }}"></div>
     <div class="form-group"><label>Ngày sinh</label>
       <input type="text" id="edit-ngaysinh" class="form-control" value="{{ student.ngay_sinh }}" placeholder="dd/mm/yyyy"></div>
@@ -210,6 +210,12 @@
       <input type="text" id="edit-lop" class="form-control" value="{{ student.lop }}"></div>
     <div class="form-group"><label>STT</label>
       <input type="number" id="edit-stt" class="form-control" value="{{ student.stt }}"></div>
+    <div style="display:flex;gap:10px">
+      <div class="form-group" style="flex:1"><label>🪪 CCCD / Số định danh</label>
+        <input type="text" id="edit-cccd" class="form-control" value="{{ student.cccd or '' }}" placeholder="012345678901" maxlength="12"></div>
+      <div class="form-group" style="flex:1"><label>🏫 Mã định danh GD</label>
+        <input type="text" id="edit-madinhdan" class="form-control" value="{{ student.ma_dinh_danh_gd or '' }}" placeholder="6272xxxxxxx" maxlength="10"></div>
+    </div>
     <div class="form-group"><label>Ghi chú</label>
       <input type="text" id="edit-ghichu" class="form-control" value="{{ student.note or '' }}"></div>
     <div class="edit-modal-actions">
@@ -303,16 +309,20 @@ function closeEditModal(){document.getElementById('edit-modal').classList.add('h
 function saveEdit(){
   const btn=document.getElementById('edit-save-btn');
   btn.disabled=true; btn.textContent='Đang lưu...';
-  const p={student_id:STUDENT_ID,
+  const p={
+    student_id:STUDENT_ID,
     ho_ten:document.getElementById('edit-hoten').value.trim(),
     ngay_sinh:document.getElementById('edit-ngaysinh').value.trim(),
     lop:document.getElementById('edit-lop').value.trim(),
     stt:document.getElementById('edit-stt').value.trim(),
-    ghi_chu:document.getElementById('edit-ghichu').value.trim()};
+    ghi_chu:document.getElementById('edit-ghichu').value.trim(),
+    cccd:document.getElementById('edit-cccd').value.trim(),
+    ma_dinh_danh_gd:document.getElementById('edit-madinhdan').value.trim()
+  };
   if(!p.ho_ten){showToast('Họ tên không được trống.','error');btn.disabled=false;btn.textContent='💾 Lưu thay đổi';return;}
   fetch('/api/edit-student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})
   .then(r=>r.json()).then(d=>{
-    if(d.success){showToast(d.message,'success');setTimeout(()=>location.reload(),1000);}
+    if(d.success){showToast(d.message||'Đã lưu!','success');setTimeout(()=>location.reload(),1000);}
     else{showToast(d.error||'Lỗi lưu.','error');btn.disabled=false;btn.textContent='💾 Lưu thay đổi';}
   }).catch(()=>{showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='💾 Lưu thay đổi';});
 }

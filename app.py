@@ -950,14 +950,17 @@ def api_edit_student():
     lop = (data.get('lop') or '').strip()
     stt = (data.get('stt') or '').strip()
     ghi_chu = (data.get('ghi_chu') or '').strip()
+    cccd = (data.get('cccd') or '').strip()
+    ma_dinh_danh_gd = (data.get('ma_dinh_danh_gd') or '').strip()
     if not ho_ten:
         return jsonify({'error': 'HÃ¡Â»Â tÃƒÂªn khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c Ã„â€˜Ã¡Â»Æ’ trÃ¡Â»â€˜ng.'}), 400
     ho_ten_khong_dau = to_ascii(ho_ten)
     try:
         conn = get_db()
         conn.execute("""UPDATE students SET ho_ten=?, ho_ten_khong_dau=?, ngay_sinh=?,
-                        lop=?, stt=?, note=?, updated_at=? WHERE id=?""",
+                        lop=?, stt=?, note=?, cccd=?, ma_dinh_danh_gd=?, updated_at=? WHERE id=?""",
                      (ho_ten, ho_ten_khong_dau, ngay_sinh, lop, stt, ghi_chu,
+                      cccd or None, ma_dinh_danh_gd or None,
                       datetime.now().isoformat(), student_id))
         conn.commit()
         conn.close()

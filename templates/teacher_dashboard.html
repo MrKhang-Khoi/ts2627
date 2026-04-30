@@ -58,7 +58,7 @@
           <td class="actions-cell">
             <button class="btn btn-sm btn-primary" onclick="openCheckPanel({{ s.id }}, '{{ s.ho_ten }}')">Kiểm tra</button>
             <a href="{{ url_for('student_profile', student_id=s.id) }}" class="btn btn-sm btn-secondary">Xem</a>
-            <button class="btn btn-sm btn-edit-row" onclick="openEditModal({{ s.id }}, '{{ s.ho_ten|e }}', '{{ s.ngay_sinh|default('') }}', '{{ s.lop }}', '{{ s.stt }}', '{{ s.note|default('')|e }}')">✏️ Sửa</button>
+            <button class="btn btn-sm btn-edit-row" onclick="openEditModal({{ s.id }}, '{{ s.ho_ten|e }}', '{{ s.ngay_sinh|default('') }}', '{{ s.lop }}', '{{ s.stt }}', '{{ s.note|default('')|e }}', '{{ s.cccd|default('')|e }}', '{{ s.ma_dinh_danh_gd|default('')|e }}')">✏️ Sửa</button>
             <button class="btn btn-sm btn-delete-row" onclick="deleteStudent({{ s.id }}, '{{ s.ho_ten|e }}')">🗑 Xóa</button>
           </td>
         </tr>
@@ -126,6 +126,16 @@
     <div class="form-group">
       <label>STT</label>
       <input type="number" id="edit-stt" class="form-control">
+    </div>
+    <div class="form-row" style="display:flex;gap:10px">
+      <div class="form-group" style="flex:1">
+        <label>🪪 CCCD / Số định danh</label>
+        <input type="text" id="edit-cccd" class="form-control" placeholder="012345678901" maxlength="12">
+      </div>
+      <div class="form-group" style="flex:1">
+        <label>🏫 Mã định danh GD</label>
+        <input type="text" id="edit-madinhdan" class="form-control" placeholder="6272xxxxxxx" maxlength="10">
+      </div>
     </div>
     <div class="form-group">
       <label>Ghi chú</label>
@@ -200,13 +210,15 @@ function saveNewStudent() {
 }
 
 // ===== SỬA HỌC SINH =====
-function openEditModal(id, ten, ngaysinh, lop, stt, ghichu) {
+function openEditModal(id, ten, ngaysinh, lop, stt, ghichu, cccd, madd) {
   document.getElementById('edit-id').value = id;
   document.getElementById('edit-hoten').value = ten;
   document.getElementById('edit-ngaysinh').value = ngaysinh;
   document.getElementById('edit-lop').value = lop;
   document.getElementById('edit-stt').value = stt;
   document.getElementById('edit-ghichu').value = ghichu || '';
+  document.getElementById('edit-cccd').value = cccd || '';
+  document.getElementById('edit-madinhdan').value = madd || '';
   document.getElementById('edit-modal').classList.remove('hidden');
 }
 function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
@@ -218,13 +230,15 @@ function saveEdit() {
   const lop = document.getElementById('edit-lop').value.trim();
   const stt = document.getElementById('edit-stt').value.trim();
   const ghi_chu = document.getElementById('edit-ghichu').value.trim();
+  const cccd = document.getElementById('edit-cccd').value.trim();
+  const ma_dinh_danh_gd = document.getElementById('edit-madinhdan').value.trim();
   if (!ho_ten) { showToast('Họ tên không được trống.', 'error'); return; }
   btn.disabled = true; btn.textContent = 'Đang lưu...';
   fetch('/api/edit-student', {method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({student_id: id, ho_ten, ngay_sinh, lop, stt, ghi_chu})})
+    body: JSON.stringify({student_id: id, ho_ten, ngay_sinh, lop, stt, ghi_chu, cccd, ma_dinh_danh_gd})})
   .then(r => r.json()).then(d => {
-    if (d.success) { showToast(d.message, 'success'); setTimeout(() => location.reload(), 1000); }
+    if (d.success) { showToast(d.message || 'Đã lưu!', 'success'); setTimeout(() => location.reload(), 1000); }
     else { showToast(d.error || 'Lỗi lưu.', 'error'); btn.disabled = false; btn.textContent = '💾 Lưu'; }
   }).catch(() => { showToast('Lỗi kết nối.', 'error'); btn.disabled = false; btn.textContent = '💾 Lưu'; });
 }
