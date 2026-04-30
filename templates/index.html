@@ -5,17 +5,74 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ts102627.pythonanywhere.com/">
 <meta property="og:title" content="Hướng Dẫn Đăng Ký Hồ Sơ Tuyển Sinh Lớp 10 – Năm học 2026-2027">
-<meta property="og:description" content="Trường THCS Chu Văn An – Đăk Hà: Hệ thống nộp hồ sơ tuyển sinh lớp 10 trực tuyến. Học sinh đăng ký và nộp giấy tờ dễ dàng qua điện thoại.">
+<meta property="og:description" content="Trường THCS Chu Văn An – Đăk Hà: Hệ thống nộp hồ sơ tuyển sinh lớp 10 trực tuyến.">
 <meta property="og:image" content="https://ts102627.pythonanywhere.com/static/og_thumbnail.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="vi_VN">
 <meta property="og:site_name" content="THCS Chu Văn An – Tuyển Sinh Lớp 10">
-<!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Hướng Dẫn Đăng Ký Hồ Sơ Tuyển Sinh Lớp 10 – Năm học 2026-2027">
 <meta name="twitter:description" content="Trường THCS Chu Văn An – Đăk Hà. Nộp hồ sơ tuyển sinh lớp 10 trực tuyến nhanh chóng qua điện thoại.">
 <meta name="twitter:image" content="https://ts102627.pythonanywhere.com/static/og_thumbnail.png">
+<style>
+/* ===== TSDC MODAL ===== */
+.tsdc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+.tsdc-overlay.active{opacity:1;pointer-events:all}
+.tsdc-box{background:#fff;border-radius:20px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3);transform:translateY(20px);transition:transform .3s}
+.tsdc-overlay.active .tsdc-box{transform:translateY(0)}
+.tsdc-head{background:linear-gradient(135deg,#1565C0,#0D47A1);color:#fff;padding:22px 24px 18px;border-radius:20px 20px 0 0;position:sticky;top:0;z-index:1}
+.tsdc-head h2{margin:0 0 4px;font-size:1.2rem;font-weight:700}
+.tsdc-head p{margin:0;font-size:.82rem;opacity:.8}
+.tsdc-close{position:absolute;top:16px;right:18px;background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;line-height:32px;text-align:center;transition:background .2s}
+.tsdc-close:hover{background:rgba(255,255,255,.35)}
+.tsdc-loading{padding:48px 24px;text-align:center}
+.tsdc-spinner{width:48px;height:48px;border:5px solid #e3eaf5;border-top-color:#1565C0;border-radius:50%;animation:tspin .8s linear infinite;margin:0 auto 16px}
+@keyframes tspin{to{transform:rotate(360deg)}}
+.tsdc-loading p{color:#666;font-size:.95rem;margin:0}
+.tsdc-body{padding:20px}
+.tsdc-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.tsdc-card{border-radius:14px;padding:16px 12px;text-align:center;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.tsdc-card.blue{background:linear-gradient(135deg,#1976D2,#1565C0)}
+.tsdc-card.teal{background:linear-gradient(135deg,#00897B,#00695C)}
+.tsdc-card.orange{background:linear-gradient(135deg,#F57C00,#E65100)}
+.tsdc-card-num{font-size:2rem;font-weight:800;line-height:1.1}
+.tsdc-card-lbl{font-size:.72rem;opacity:.9;margin-top:2px}
+.tsdc-section{margin-bottom:20px}
+.tsdc-section h3{font-size:.9rem;font-weight:700;color:#1565C0;margin:0 0 10px;display:flex;align-items:center;gap:6px}
+.status-list{display:flex;flex-direction:column;gap:6px}
+.status-row{display:flex;align-items:center;gap:10px}
+.status-label{font-size:.8rem;color:#444;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-bar-wrap{width:120px;height:8px;background:#e8edf5;border-radius:4px;flex-shrink:0}
+.status-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#1976D2,#42A5F5);transition:width .5s}
+.status-count{font-size:.8rem;font-weight:700;color:#1565C0;min-width:22px;text-align:right}
+.nv-tabs{display:flex;gap:6px;margin-bottom:12px}
+.nv-tab{padding:5px 14px;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;border:2px solid #1565C0;color:#1565C0;background:#fff;transition:all .2s}
+.nv-tab.active{background:#1565C0;color:#fff}
+.nv-panel{display:none}.nv-panel.active{display:block}
+.nv-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f0f3f8}
+.nv-school{font-size:.8rem;color:#333;flex:1;min-width:0}
+.nv-bar-wrap{width:100px;height:8px;background:#e8edf5;border-radius:4px;flex-shrink:0}
+.nv-bar{height:8px;border-radius:4px;transition:width .6s}
+.tsdc-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid #e0e7f0}
+.tsdc-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.tsdc-table th{background:#1565C0;color:#fff;padding:8px 10px;text-align:left;white-space:nowrap}
+.tsdc-table td{padding:7px 10px;border-bottom:1px solid #f0f3f8}
+.tsdc-table tr:last-child td{border-bottom:none}
+.tsdc-table tr:hover td{background:#f5f8ff}
+.st-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;white-space:nowrap}
+.st-badge.wait{background:#FFF3E0;color:#E65100}
+.st-badge.review{background:#E8F5E9;color:#2E7D32}
+.st-badge.other{background:#EEE;color:#555}
+.tsdc-footer{margin-top:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:14px;border-top:1px solid #e0e7f0}
+.tsdc-footer-ts{font-size:.75rem;color:#888}
+.tsdc-btn-refresh{padding:7px 18px;background:#1565C0;color:#fff;border:none;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s}
+.tsdc-btn-refresh:hover{background:#0D47A1}
+.tsdc-trigger{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:linear-gradient(135deg,#1976D2,#0D47A1);color:#fff;border:none;border-radius:30px;font-size:.9rem;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(21,101,192,.35);transition:all .25s}
+.tsdc-trigger:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(21,101,192,.45)}
+.tsdc-trigger-wrap{margin-top:12px;display:flex;justify-content:center}
+@media(max-width:500px){.tsdc-cards{grid-template-columns:1fr 1fr}.tsdc-card:first-child{grid-column:span 2}}
+</style>
 {% endblock %}
 {% block content %}
 <div class="hero">
@@ -28,7 +85,7 @@
 
 <div class="container">
 
-  <!-- BANNER HƯỚNG DẪN ĐĂNG KÝ NỔI BẬT -->
+  <!-- BANNER HƯỚNG DẪN -->
   <div class="guide-banner">
     <div class="guide-banner-inner">
       <div class="guide-banner-icon">📋</div>
@@ -37,6 +94,11 @@
       <a href="/static/huong_dan_tuyen_sinh.pdf" target="_blank" class="guide-banner-btn">
         📄 Xem thông báo chính thức (PDF)
       </a>
+      <div class="tsdc-trigger-wrap">
+        <button class="tsdc-trigger" id="tsdcBtn" onclick="openTsdc()">
+          📊 Tra cứu thông tin đăng ký TSDC
+        </button>
+      </div>
     </div>
   </div>
 
@@ -90,4 +152,215 @@
     </div>
   </div>
 </div>
+
+<!-- ===== TSDC STATS MODAL ===== -->
+<div class="tsdc-overlay" id="tsdcOverlay" onclick="closeTsdcOutside(event)">
+  <div class="tsdc-box">
+    <div class="tsdc-head">
+      <h2>📊 Thống Kê Hồ Sơ Đăng Ký TSDC</h2>
+      <p>Hệ thống qlts.tsdc.edu.vn – Trường THCS Chu Văn An – Đăk Hà</p>
+      <button class="tsdc-close" onclick="closeTsdc()">✕</button>
+    </div>
+
+    <!-- Loading -->
+    <div class="tsdc-loading" id="tsdcLoading">
+      <div class="tsdc-spinner"></div>
+      <p id="tsdcLoadMsg">Đang kết nối hệ thống TSDC...<br><small style="color:#aaa">Thường mất 30–60 giây lần đầu</small></p>
+    </div>
+
+    <!-- Error -->
+    <div class="tsdc-body" id="tsdcError" style="display:none">
+      <div style="text-align:center;padding:24px 0;color:#c62828">
+        <div style="font-size:2.5rem;margin-bottom:10px">❌</div>
+        <p id="tsdcErrMsg" style="margin:0 0 16px;font-weight:600"></p>
+        <button class="tsdc-btn-refresh" onclick="loadTsdc(true)" style="margin:0 auto">🔄 Thử lại</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="tsdc-body" id="tsdcResults" style="display:none">
+      <div class="tsdc-cards">
+        <div class="tsdc-card blue">
+          <div class="tsdc-card-num" id="statTotal">–</div>
+          <div class="tsdc-card-lbl">Tổng hồ sơ đã đăng ký</div>
+        </div>
+        <div class="tsdc-card teal">
+          <div class="tsdc-card-num" id="statTiepNhan">–</div>
+          <div class="tsdc-card-lbl">Chờ tiếp nhận</div>
+        </div>
+        <div class="tsdc-card orange">
+          <div class="tsdc-card-num" id="statXetDuyet">–</div>
+          <div class="tsdc-card-lbl">Chờ xét duyệt</div>
+        </div>
+      </div>
+
+      <div class="tsdc-section">
+        <h3>📋 Chi Tiết Trạng Thái</h3>
+        <div class="status-list" id="statusList"></div>
+      </div>
+
+      <div class="tsdc-section">
+        <h3>🏫 Thống Kê Nguyện Vọng Đăng Ký</h3>
+        <div class="nv-tabs">
+          <button class="nv-tab active" onclick="switchNv('nv1',this)">Nguyện vọng 1</button>
+          <button class="nv-tab" onclick="switchNv('nv2',this)">Nguyện vọng 2</button>
+          <button class="nv-tab" onclick="switchNv('nv3',this)">Nguyện vọng 3</button>
+        </div>
+        <div class="nv-panel active" id="panel-nv1"><div id="nv1List"></div></div>
+        <div class="nv-panel" id="panel-nv2"><div id="nv2List"></div></div>
+        <div class="nv-panel" id="panel-nv3"><div id="nv3List"></div></div>
+      </div>
+
+      <div class="tsdc-section">
+        <h3>👨‍🎓 Danh Sách Học Sinh Đã Đăng Ký</h3>
+        <div class="tsdc-table-wrap">
+          <table class="tsdc-table">
+            <thead><tr>
+              <th>#</th><th>Họ tên</th><th>Lớp</th><th>Trạng thái</th><th>Nguyện vọng 1</th>
+            </tr></thead>
+            <tbody id="tsdcStudentBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tsdc-footer">
+        <span class="tsdc-footer-ts">🕐 Cập nhật: <span id="tsdcUpdatedAt">–</span></span>
+        <button class="tsdc-btn-refresh" onclick="loadTsdc(true)">
+          🔄 Làm mới dữ liệu
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _tsdcLoaded = false;
+let _tsdcPollTimer = null;
+
+function openTsdc() {
+  document.getElementById('tsdcOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  loadTsdc(false);
+}
+function closeTsdc() {
+  document.getElementById('tsdcOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+  if (_tsdcPollTimer) { clearInterval(_tsdcPollTimer); _tsdcPollTimer = null; }
+}
+function closeTsdcOutside(e) {
+  if (e.target.id === 'tsdcOverlay') closeTsdc();
+}
+function _showLoading(msg) {
+  document.getElementById('tsdcLoading').style.display = '';
+  document.getElementById('tsdcResults').style.display = 'none';
+  document.getElementById('tsdcError').style.display   = 'none';
+  document.getElementById('tsdcLoadMsg').innerHTML = (msg || 'Đang kết nối...') +
+    '<br><small style="color:#aaa">Thường mất 30–60 giây lần đầu</small>';
+}
+function _showError(msg) {
+  document.getElementById('tsdcLoading').style.display = 'none';
+  document.getElementById('tsdcResults').style.display = 'none';
+  document.getElementById('tsdcErrMsg').textContent = msg;
+  document.getElementById('tsdcError').style.display = '';
+}
+function loadTsdc(force) {
+  if (!force && _tsdcLoaded) return;
+  if (_tsdcPollTimer) { clearInterval(_tsdcPollTimer); _tsdcPollTimer = null; }
+  _showLoading('Đang khởi động kết nối TSDC...');
+  fetch('/api/tsdc-stats' + (force ? '?force=1' : ''))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { renderTsdc(d); _tsdcLoaded = true; return; }
+      if (d.loading) {
+        var dots = 0;
+        _tsdcPollTimer = setInterval(function() {
+          dots = (dots + 1) % 4;
+          _showLoading('Đang lấy dữ liệu từ TSDC' + Array(dots + 2).join('.'));
+          fetch('/api/tsdc-status').then(function(r) { return r.json(); }).then(function(s) {
+            if (s.ready) {
+              clearInterval(_tsdcPollTimer); _tsdcPollTimer = null;
+              renderTsdc(s); _tsdcLoaded = true;
+            } else if (s.error) {
+              clearInterval(_tsdcPollTimer); _tsdcPollTimer = null;
+              _showError(s.error);
+            }
+          }).catch(function() {});
+        }, 5000);
+      } else if (d.error) { _showError(d.error); }
+    })
+    .catch(function(err) { _showError('Lỗi kết nối: ' + err.message); });
+}
+
+function renderTsdc(d) {
+  document.getElementById('statTotal').textContent = d.total || 0;
+  var st = d.status || {};
+  var tiepNhan = 0, xetDuyet = 0;
+  Object.keys(st).forEach(function(k) {
+    var v = st[k];
+    if (k.indexOf('ti') !== -1 && k.indexOf('p nh') !== -1) tiepNhan += v;
+    if (k.indexOf('t duy') !== -1) xetDuyet += v;
+  });
+  document.getElementById('statTiepNhan').textContent = tiepNhan;
+  document.getElementById('statXetDuyet').textContent = xetDuyet;
+
+  var total = d.total || 1;
+  var sl = document.getElementById('statusList');
+  sl.innerHTML = '';
+  Object.keys(st).forEach(function(label) {
+    var cnt = st[label];
+    var pct = Math.round(cnt / total * 100);
+    sl.innerHTML += '<div class="status-row"><span class="status-label" title="' + label + '">' + label + '</span>' +
+      '<div class="status-bar-wrap"><div class="status-bar" style="width:' + pct + '%"></div></div>' +
+      '<span class="status-count">' + cnt + '</span></div>';
+  });
+
+  renderNvList('nv1List', d.nv1 || [], '#1565C0');
+  renderNvList('nv2List', d.nv2 || [], '#00897B');
+  renderNvList('nv3List', d.nv3 || [], '#F57C00');
+
+  var tbody = document.getElementById('tsdcStudentBody');
+  tbody.innerHTML = '';
+  (d.students || []).forEach(function(s, i) {
+    var st2 = s.trangThai || '';
+    var cls = st2.indexOf('ti') !== -1 && st2.indexOf('p nh') !== -1 ? 'wait' :
+              st2.indexOf('t duy') !== -1 ? 'review' : 'other';
+    var nv1Short = (s.nv1 || '–').substring(0, 45);
+    tbody.innerHTML += '<tr><td>' + (i+1) + '</td><td><strong>' + s.hoTen + '</strong></td>' +
+      '<td><b>' + s.lop + '</b></td>' +
+      '<td><span class="st-badge ' + cls + '">' + (st2 || 'Đang xử lý') + '</span></td>' +
+      '<td style="font-size:.75rem;color:#555">' + nv1Short + '</td></tr>';
+  });
+
+  document.getElementById('tsdcUpdatedAt').textContent = d.updated_at || '–';
+  document.getElementById('tsdcResults').style.display = '';
+}
+
+function renderNvList(containerId, items, color) {
+  var el = document.getElementById(containerId);
+  if (!items || !items.length) {
+    el.innerHTML = '<p style="color:#aaa;font-size:.8rem;text-align:center;padding:12px 0">Không có dữ liệu</p>';
+    return;
+  }
+  var max = items[0][1] || 1;
+  el.innerHTML = items.map(function(item) {
+    var school = item[0]; var cnt = item[1];
+    var pct = Math.round(cnt / max * 100);
+    var short = school.length > 55 ? school.substring(0, 55) + '…' : school;
+    return '<div class="nv-row"><span class="nv-school" title="' + school + '">' + short + '</span>' +
+      '<div class="nv-bar-wrap"><div class="nv-bar" style="width:' + pct + '%;background:' + color + ';border-radius:4px"></div></div>' +
+      '<span style="font-size:.8rem;font-weight:700;color:' + color + ';min-width:22px;text-align:right">' + cnt + '</span></div>';
+  }).join('');
+}
+
+function switchNv(tab, btn) {
+  var tabs = document.querySelectorAll('.nv-tab');
+  var panels = document.querySelectorAll('.nv-panel');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+  for (var i = 0; i < panels.length; i++) panels[i].classList.remove('active');
+  btn.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTsdc(); });
+</script>
 {% endblock %}

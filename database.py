@@ -70,6 +70,12 @@ def init_db():
             detail TEXT,
             created_at TEXT
         );
+        CREATE TABLE IF NOT EXISTS tsdc_cache (
+            id INTEGER PRIMARY KEY DEFAULT 1,
+            data_json TEXT,
+            pushed_at TEXT,
+            pushed_by TEXT
+        );
     ''')
     # Tài khoản admin mặc định
     from werkzeug.security import generate_password_hash
