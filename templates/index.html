@@ -1,19 +1,33 @@
 {% extends "base.html" %}
-{% block title %}Trang Chủ - Nộp Hồ Sơ Tuyển Sinh Lớp 10{% endblock %}
+{% block title %}Hướng Dẫn Đăng Ký Hồ Sơ Tuyển Sinh Lớp 10 – THCS Chu Văn An{% endblock %}
+{% block head_extra %}
+<!-- Open Graph / SEO thumbnail -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ts102627.pythonanywhere.com/">
+<meta property="og:title" content="Hướng Dẫn Đăng Ký Hồ Sơ Tuyển Sinh Lớp 10 – Năm học 2026-2027">
+<meta property="og:description" content="Trường THCS Chu Văn An – Đăk Hà: Hệ thống nộp hồ sơ tuyển sinh lớp 10 trực tuyến. Học sinh đăng ký và nộp giấy tờ dễ dàng qua điện thoại.">
+<meta property="og:image" content="https://ts102627.pythonanywhere.com/static/og_thumbnail.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:site_name" content="THCS Chu Văn An – Tuyển Sinh Lớp 10">
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hướng Dẫn Đăng Ký Hồ Sơ Tuyển Sinh Lớp 10 – Năm học 2026-2027">
+<meta name="twitter:description" content="Trường THCS Chu Văn An – Đăk Hà. Nộp hồ sơ tuyển sinh lớp 10 trực tuyến nhanh chóng qua điện thoại.">
+<meta name="twitter:image" content="https://ts102627.pythonanywhere.com/static/og_thumbnail.png">
+{% endblock %}
 {% block content %}
 <div class="hero">
   <div class="hero-content">
     <div class="hero-school-badge">🏫 Trường THCS Chu Văn An – Đăk Hà, Kon Tum</div>
     <div class="hero-icon">🎓</div>
-    <h1 class="hero-title">HỆ THỐNG NỘP HỔ SƠ<br>TUYỂN SINH LớP 10</h1>
+    <h1 class="hero-title">HỆ THỐNG NỘP HỒ SƠ<br>TUYỂN SINH LỚP 10</h1>
     <p class="hero-subtitle">Năm học 2026 – 2027</p>
     <p class="hero-desc">Chọn lớp của em để bắt đầu nộp hồ sơ</p>
     <div class="hero-actions">
       <a href="/static/huong_dan_tuyen_sinh.pdf" target="_blank" class="hero-btn hero-btn-pdf">
         📄 Thông báo tuyển sinh
-      </a>
-      <a href="/huong-dan" class="hero-btn hero-btn-guide">
-        📖 Hướng dẫn nộp hồ sơ
       </a>
     </div>
   </div>
@@ -21,16 +35,17 @@
 
 <div class="container">
 
-  <!-- THÔNG BÁO TUYỂN SINH -->
-  <div class="notice-banner">
-    <div class="notice-icon">📢</div>
-    <div class="notice-body">
-      <div class="notice-title">Thông báo Đăng ký Thử Tuyển sinh vào Lớp 10</div>
-      <div class="notice-sub">Năm học 2026-2027 · Trường THCS Chu Văn An</div>
+  <!-- BANNER HƯỚNG DẪN ĐĂNG KÝ NỔI BẬT -->
+  <div class="guide-banner">
+    <div class="guide-banner-inner">
+      <div class="guide-banner-icon">📋</div>
+      <div class="guide-banner-title">HƯỚNG DẪN ĐĂNG KÝ HỒ SƠ TUYỂN SINH LỚP 10</div>
+      <div class="guide-banner-sub">NĂM HỌC 2026 – 2027 · TRƯỜNG THCS CHU VĂN AN</div>
+      <a href="/static/huong_dan_tuyen_sinh.pdf" target="_blank" class="guide-banner-btn">
+        📄 Xem thông báo chính thức (PDF)
+      </a>
+      <a href="/huong-dan" class="guide-banner-link">📖 Xem hướng dẫn nộp hồ sơ từng bước →</a>
     </div>
-    <a href="/static/huong_dan_tuyen_sinh.pdf" target="_blank" class="notice-btn">
-      📄 Xem PDF
-    </a>
   </div>
 
   <div class="card select-card">
