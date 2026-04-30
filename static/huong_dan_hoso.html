@@ -2,320 +2,226 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hướng Dẫn Nộp Hồ Sơ Tuyển Sinh Lớp 10</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Hướng Dẫn Nộp Hồ Sơ – THCS Chu Văn An</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',sans-serif;background:#f0f4ff;color:#1a1a2e;line-height:1.6}
-  .hero{background:linear-gradient(135deg,#1565C0,#0D47A1,#283593);color:#fff;padding:40px 20px 60px;text-align:center;position:relative;overflow:hidden}
-  .hero::after{content:'';position:absolute;bottom:-30px;left:0;right:0;height:60px;background:#f0f4ff;border-radius:50% 50% 0 0}
-  .hero-icon{font-size:56px;margin-bottom:12px;animation:bounce 2s infinite}
-  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-  .hero h1{font-size:1.6rem;font-weight:800;margin-bottom:8px}
-  .hero p{font-size:1rem;opacity:.9}
-  .hero .url-badge{display:inline-block;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.5);border-radius:30px;padding:8px 20px;margin-top:14px;font-size:.95rem;font-weight:600;word-break:break-all}
-  .container{max-width:640px;margin:0 auto;padding:20px 16px 60px}
-  .section-title{font-size:1.2rem;font-weight:800;color:#1565C0;margin:28px 0 14px;display:flex;align-items:center;gap:8px}
-  /* STEP CARDS */
-  .step-card{background:#fff;border-radius:18px;padding:20px;margin-bottom:14px;box-shadow:0 2px 12px rgba(21,101,192,.1);border-left:5px solid #1565C0;position:relative;overflow:hidden}
-  .step-card::before{content:attr(data-num);position:absolute;top:-10px;right:10px;font-size:80px;font-weight:900;color:#e8efff;line-height:1}
-  .step-num{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;background:#1565C0;color:#fff;border-radius:50%;font-weight:800;font-size:1rem;margin-bottom:10px;flex-shrink:0}
-  .step-title{font-size:1.05rem;font-weight:700;color:#1a237e;margin-bottom:8px;display:flex;align-items:center;gap:10px}
-  .step-body{font-size:.95rem;color:#333}
-  .step-body ol,.step-body ul{padding-left:20px;margin-top:6px}
-  .step-body li{margin-bottom:6px}
-  /* TIP BOX */
-  .tip{background:#e3f2fd;border-radius:12px;padding:12px 16px;margin-top:10px;font-size:.9rem;color:#0d47a1}
-  .tip-icon{font-size:1.1rem;margin-right:6px}
-  .warn{background:#fff3e0;border-radius:12px;padding:12px 16px;margin-top:10px;font-size:.9rem;color:#e65100}
-  /* DOC TABLE */
-  .doc-table{width:100%;border-collapse:collapse;margin-top:10px}
-  .doc-table th{background:#1565C0;color:#fff;padding:10px 8px;font-size:.85rem;text-align:left}
-  .doc-table td{padding:10px 8px;font-size:.9rem;border-bottom:1px solid #e3e8ff;vertical-align:top}
-  .doc-table tr:nth-child(even) td{background:#f5f7ff}
-  .badge-req{background:#c8e6c9;color:#1b5e20;padding:2px 8px;border-radius:10px;font-size:.78rem;font-weight:700}
-  .badge-opt{background:#fff9c4;color:#f57f17;padding:2px 8px;border-radius:10px;font-size:.78rem;font-weight:700}
-  .badge-p2{background:#fce4ec;color:#880e4f;padding:2px 8px;border-radius:10px;font-size:.78rem;font-weight:700}
-  /* FAQ */
-  .faq{background:#fff;border-radius:16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-  .faq summary{padding:14px 16px;font-weight:700;cursor:pointer;font-size:.95rem;list-style:none;display:flex;justify-content:space-between;align-items:center;color:#1565C0}
-  .faq summary::after{content:'▼';font-size:.75rem;transition:.3s}
-  .faq[open] summary::after{transform:rotate(180deg)}
-  .faq-body{padding:0 16px 14px;font-size:.9rem;color:#333;border-top:1px solid #e8efff}
-  .faq-body p,.faq-body ul{margin-top:8px}
-  .faq-body ul{padding-left:18px}
-  /* PHOTO TIP */
-  .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-  .photo-tip{background:#f5f7ff;border-radius:12px;padding:12px;text-align:center;font-size:.85rem}
-  .photo-tip .icon{font-size:2.2rem;margin-bottom:6px}
-  .photo-tip.good{border:2px solid #4CAF50}
-  .photo-tip.bad{border:2px solid #f44336}
-  /* STATUS BADGE */
-  .status-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-  .status-item{display:flex;align-items:center;gap:10px;font-size:.9rem}
-  .dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
-  /* CONTACT */
-  .contact-card{background:linear-gradient(135deg,#1565C0,#283593);color:#fff;border-radius:18px;padding:20px;text-align:center;margin-top:20px}
-  .contact-card h3{margin-bottom:8px;font-size:1.1rem}
-  .contact-card p{opacity:.9;font-size:.9rem}
-  /* HIGHLIGHT */
-  .hl{background:#fff9c4;padding:0 4px;border-radius:4px;font-weight:700}
-  strong{color:#1565C0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f4ff;color:#1a1a2e;line-height:1.6}
+/* HERO */
+.hero{background:linear-gradient(135deg,#0D47A1,#1565C0,#1976D2);color:#fff;padding:36px 20px 70px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:rgba(255,255,255,.06);border-radius:50%}
+.hero::after{content:'';position:absolute;bottom:-32px;left:0;right:0;height:64px;background:#f0f4ff;border-radius:50% 50% 0 0}
+.school-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);border-radius:30px;padding:6px 18px;font-size:.88rem;font-weight:600;margin-bottom:18px}
+.hero-icon{font-size:52px;margin-bottom:10px;animation:bounce 2s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.hero h1{font-size:1.55rem;font-weight:900;letter-spacing:.5px;margin-bottom:6px;text-shadow:0 2px 8px rgba(0,0,0,.2)}
+.hero p{font-size:.95rem;opacity:.88;margin-bottom:4px}
+.url-pill{display:inline-block;background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.55);border-radius:30px;padding:7px 22px;margin-top:12px;font-size:.93rem;font-weight:700;letter-spacing:.3px}
+/* LAYOUT */
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 60px}
+.sec-title{font-size:1.15rem;font-weight:800;color:#1565C0;margin:30px 0 14px;display:flex;align-items:center;gap:8px;border-left:4px solid #1565C0;padding-left:10px}
+/* STEP */
+.step{background:#fff;border-radius:18px;padding:20px;margin-bottom:14px;box-shadow:0 2px 14px rgba(21,101,192,.1);position:relative;overflow:hidden}
+.step::after{content:attr(data-n);position:absolute;bottom:-12px;right:10px;font-size:90px;font-weight:900;color:#eef2ff;line-height:1;pointer-events:none}
+.snum{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;border-radius:50%;font-weight:800;font-size:.95rem;flex-shrink:0}
+.stitle{display:flex;align-items:center;gap:10px;font-size:1.02rem;font-weight:700;color:#1a237e;margin-bottom:10px}
+.sbody{font-size:.93rem;color:#333}
+.sbody ol,.sbody ul{padding-left:18px;margin-top:6px}
+.sbody li{margin-bottom:5px}
+.tip{background:#e3f2fd;border-radius:10px;padding:11px 14px;margin-top:10px;font-size:.88rem;color:#0d47a1}
+.warn{background:#fff3e0;border-radius:10px;padding:11px 14px;margin-top:10px;font-size:.88rem;color:#bf360c}
+/* TABLE */
+.doc-table{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.doc-table th{background:#1565C0;color:#fff;padding:10px 8px;font-size:.83rem;text-align:left}
+.doc-table td{padding:10px 8px;font-size:.9rem;border-bottom:1px solid #e8efff;vertical-align:top}
+.doc-table tr:nth-child(even) td{background:#f8f9ff}
+.br{background:#c8e6c9;color:#1b5e20;padding:2px 8px;border-radius:8px;font-size:.77rem;font-weight:700;white-space:nowrap}
+.bp2{background:#fce4ec;color:#880e4f;padding:2px 8px;border-radius:8px;font-size:.77rem;font-weight:700;white-space:nowrap}
+.bo{background:#fff9c4;color:#f57f17;padding:2px 8px;border-radius:8px;font-size:.77rem;font-weight:700;white-space:nowrap}
+/* PHOTO */
+.photo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.photo-box{background:#f5f7ff;border-radius:12px;padding:14px;text-align:center;font-size:.85rem}
+.photo-box .ic{font-size:2rem;margin-bottom:6px}
+.photo-box.ok{border:2px solid #43A047}
+.photo-box.no{border:2px solid #e53935}
+/* STATUS */
+.st-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.st-item{display:flex;align-items:center;gap:10px;font-size:.9rem}
+.dot{width:13px;height:13px;border-radius:50%;flex-shrink:0}
+/* FAQ */
+details{background:#fff;border-radius:14px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
+summary{padding:14px 16px;font-weight:700;cursor:pointer;font-size:.93rem;list-style:none;display:flex;justify-content:space-between;color:#1565C0}
+summary::after{content:'▼';font-size:.7rem;margin-top:2px;transition:.25s}
+details[open] summary::after{transform:rotate(180deg)}
+.faqb{padding:0 16px 14px;font-size:.9rem;color:#333;border-top:1px solid #eef2ff}
+.faqb p,.faqb ul{margin-top:8px}
+.faqb ul{padding-left:18px}
+/* PDF SECTION */
+.pdf-section{background:#fff;border-radius:20px;padding:20px;box-shadow:0 4px 20px rgba(21,101,192,.12);margin-bottom:20px}
+.pdf-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.pdf-icon-box{width:52px;height:52px;background:linear-gradient(135deg,#e53935,#c62828);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0}
+.pdf-header h2{font-size:1rem;font-weight:800;color:#1a237e;line-height:1.4}
+.pdf-header p{font-size:.82rem;color:#666;margin-top:2px}
+.pdf-viewer{width:100%;border:none;border-radius:12px;background:#f5f5f5;display:block}
+.pdf-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.btn-down{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border-radius:12px;font-weight:700;font-size:.9rem;text-decoration:none;transition:.2s}
+.btn-down.primary{background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;box-shadow:0 3px 10px rgba(21,101,192,.35)}
+.btn-down.secondary{background:#f0f4ff;color:#1565C0;border:2px solid #bbdefb}
+.btn-down:hover{transform:translateY(-2px)}
+.mobile-note{background:#fff8e1;border-radius:10px;padding:10px 14px;margin-top:12px;font-size:.85rem;color:#f57f17;display:flex;align-items:flex-start;gap:8px}
+/* CONTACT */
+.contact{background:linear-gradient(135deg,#1565C0,#0D47A1);color:#fff;border-radius:20px;padding:22px;text-align:center;margin-top:20px}
+.contact h3{font-size:1.1rem;margin-bottom:8px}
+.contact p{opacity:.88;font-size:.9rem;margin-bottom:4px}
+/* FOOTER */
+footer{background:#1a237e;color:#90CAF9;text-align:center;padding:22px 16px;font-size:.85rem;margin-top:30px}
+footer strong{color:#fff;display:block;font-size:.95rem;margin-bottom:4px}
+footer a{color:#90CAF9;text-decoration:none;margin-top:6px;display:inline-block}
 </style>
 </head>
 <body>
 
 <div class="hero">
+  <div class="school-badge">🏫 Trường THCS Chu Văn An – Đăk Hà, Kon Tum</div>
   <div class="hero-icon">🎓</div>
   <h1>HƯỚNG DẪN NỘP HỒ SƠ<br>TUYỂN SINH LỚP 10</h1>
-  <p>Năm học 2025 – 2026 · Dành cho học sinh lớp 9</p>
-  <div class="url-badge">🌐 ts102627.pythonanywhere.com</div>
+  <p>Năm học 2026 – 2027</p>
+  <div class="url-pill">🌐 ts102627.pythonanywhere.com</div>
 </div>
 
-<div class="container">
+<div class="wrap">
+
+  <!-- PDF THÔNG BÁO TUYỂN SINH -->
+  <div class="sec-title">📢 Thông báo tuyển sinh chính thức</div>
+  <div class="pdf-section">
+    <div class="pdf-header">
+      <div class="pdf-icon-box">📄</div>
+      <div>
+        <h2>Hướng Dẫn Đăng Ký Thử Tuyển Sinh Vào Lớp 10</h2>
+        <p>Năm học 2026-2027 · Trường THCS Chu Văn An</p>
+      </div>
+    </div>
+    <!-- Viewer cho desktop/tablet -->
+    <iframe class="pdf-viewer" src="huong_dan_tuyen_sinh.pdf" height="500" title="Hướng dẫn tuyển sinh"></iframe>
+    <div class="pdf-actions">
+      <a href="huong_dan_tuyen_sinh.pdf" download class="btn-down primary">⬇ Tải về máy</a>
+      <a href="huong_dan_tuyen_sinh.pdf" target="_blank" class="btn-down secondary">🔎 Xem toàn màn hình</a>
+    </div>
+    <div class="mobile-note">
+      <span>📱</span>
+      <span>Trên điện thoại: nhấn <strong>"Xem toàn màn hình"</strong> để đọc rõ hơn, hoặc <strong>"Tải về máy"</strong> để lưu.</span>
+    </div>
+  </div>
 
   <!-- TỔNG QUAN -->
-  <div class="section-title">📋 Tổng quan các bước</div>
+  <div class="sec-title">📋 Quy trình nộp hồ sơ — 5 bước</div>
+  <div class="step" data-n="1"><div class="stitle"><div class="snum">1</div>Chuẩn bị & chụp ảnh giấy tờ</div><div class="sbody">Chụp ảnh rõ nét tất cả giấy tờ trước khi vào trang web.</div></div>
+  <div class="step" data-n="2"><div class="stitle"><div class="snum">2</div>Truy cập trang web & chọn lớp</div><div class="sbody">Vào <strong>ts102627.pythonanywhere.com</strong> → chọn lớp của em.</div></div>
+  <div class="step" data-n="3"><div class="stitle"><div class="snum">3</div>Chọn tên & nhập mã bảo mật</div><div class="sbody">Nhập đúng <strong>12 số CCCD</strong> làm mã bảo mật.</div></div>
+  <div class="step" data-n="4"><div class="stitle"><div class="snum">4</div>Nộp từng loại giấy tờ</div><div class="sbody">Nhấn <strong>Tải lên</strong> cho từng tài liệu, đợi thông báo thành công.</div></div>
+  <div class="step" data-n="5"><div class="stitle"><div class="snum">5</div>Chờ giáo viên xác nhận</div><div class="sbody">Giáo viên kiểm tra và đổi trạng thái thành <span style="color:green;font-weight:700">✅ Đạt</span>.</div></div>
 
-  <div class="step-card" data-num="1">
-    <div class="step-title"><div class="step-num">1</div> Chuẩn bị giấy tờ & chụp ảnh</div>
-    <div class="step-body">Chụp ảnh rõ nét tất cả giấy tờ cần nộp trước khi vào trang web.</div>
-  </div>
-  <div class="step-card" data-num="2">
-    <div class="step-title"><div class="step-num">2</div> Vào trang web & chọn lớp</div>
-    <div class="step-body">Truy cập link bên trên, chọn đúng lớp của em.</div>
-  </div>
-  <div class="step-card" data-num="3">
-    <div class="step-title"><div class="step-num">3</div> Chọn tên & nhập mã bảo mật</div>
-    <div class="step-body">Tìm tên em trong danh sách, nhập đúng <strong>12 số CCCD</strong> làm mã bảo mật.</div>
-  </div>
-  <div class="step-card" data-num="4">
-    <div class="step-title"><div class="step-num">4</div> Nộp từng loại giấy tờ</div>
-    <div class="step-body">Nhấn <strong>Tải lên</strong> cho từng loại tài liệu, đợi xác nhận thành công.</div>
-  </div>
-  <div class="step-card" data-num="5">
-    <div class="step-title"><div class="step-num">5</div> Chờ giáo viên xác nhận</div>
-    <div class="step-body">Giáo viên sẽ kiểm tra và xác nhận từng giấy tờ. Em có thể vào xem lại bất cứ lúc nào.</div>
-  </div>
-
-  <!-- GIẤY TỜ CẦN NỘP -->
-  <div class="section-title">📄 Giấy tờ cần chuẩn bị</div>
-
+  <!-- GIẤY TỜ -->
+  <div class="sec-title">📄 Danh sách giấy tờ cần nộp</div>
   <table class="doc-table">
     <tr><th>Tài liệu</th><th>Giai đoạn</th><th>Lưu ý</th></tr>
-    <tr>
-      <td>📋 Bản sao Giấy khai sinh</td>
-      <td><span class="badge-req">Bắt buộc GĐ1</span></td>
-      <td>Chụp rõ cả tờ</td>
-    </tr>
-    <tr>
-      <td>🪪 CCCD / Mã định danh</td>
-      <td><span class="badge-req">Bắt buộc GĐ1</span></td>
-      <td>Chụp <strong>2 mặt</strong>, chọn 2 ảnh cùng lúc</td>
-    </tr>
-    <tr>
-      <td>📚 Học bạ (lớp 6 – 9)</td>
-      <td><span class="badge-req">Bắt buộc GĐ1</span></td>
-      <td>Chụp <strong>từng trang</strong>, có thể thêm nhiều ảnh</td>
-    </tr>
-    <tr>
-      <td>🏅 Chứng nhận tốt nghiệp THCS</td>
-      <td><span class="badge-p2">Giai đoạn 2</span></td>
-      <td>Bản sao có công chứng</td>
-    </tr>
-    <tr>
-      <td>🖼️ Ảnh thẻ 4×6</td>
-      <td><span class="badge-opt">Không bắt buộc</span></td>
-      <td>Ảnh chụp thẻ nền trắng/xanh</td>
-    </tr>
-    <tr>
-      <td>⭐ Giấy ưu tiên (nếu có)</td>
-      <td><span class="badge-opt">Không bắt buộc</span></td>
-      <td>Nếu em có diện ưu tiên</td>
-    </tr>
+    <tr><td>📋 Bản sao Giấy khai sinh</td><td><span class="br">Bắt buộc GĐ1</span></td><td>Chụp rõ cả tờ</td></tr>
+    <tr><td>🪪 CCCD / Mã định danh</td><td><span class="br">Bắt buộc GĐ1</span></td><td>Chụp <strong>2 mặt</strong>, chọn cùng lúc</td></tr>
+    <tr><td>📚 Học bạ (lớp 6–9)</td><td><span class="br">Bắt buộc GĐ1</span></td><td>Chụp <strong>từng trang</strong>, thêm nhiều lần</td></tr>
+    <tr><td>🏅 Chứng nhận TN THCS</td><td><span class="bp2">Giai đoạn 2</span></td><td>Bản sao có công chứng</td></tr>
+    <tr><td>🖼️ Ảnh thẻ 4×6</td><td><span class="bo">Không bắt buộc</span></td><td>Nền trắng hoặc xanh</td></tr>
+    <tr><td>⭐ Giấy ưu tiên (nếu có)</td><td><span class="bo">Không bắt buộc</span></td><td>Chỉ nộp nếu có diện ưu tiên</td></tr>
   </table>
 
-  <!-- HƯỚNG DẪN CHI TIẾT TỪNG BƯỚC -->
-  <div class="section-title">📱 Hướng dẫn chi tiết từng bước</div>
+  <!-- HƯỚNG DẪN CHI TIẾT -->
+  <div class="sec-title">📱 Chi tiết từng bước</div>
 
-  <!-- BƯỚC 1 -->
-  <div class="step-card" data-num="1">
-    <div class="step-title"><div class="step-num">1</div> Chụp ảnh giấy tờ đúng cách</div>
-    <div class="step-body">
-      <div class="photo-grid">
-        <div class="photo-tip good">
-          <div class="icon">✅</div>
-          <strong>Đúng</strong><br>Rõ nét, đủ 4 góc, đủ sáng, chữ đọc được
-        </div>
-        <div class="photo-tip bad">
-          <div class="icon">❌</div>
-          <strong>Sai</strong><br>Mờ, bị che, tối, nghiêng nhiều, thiếu góc
-        </div>
+  <div class="step" data-n="1">
+    <div class="stitle"><div class="snum">1</div>Cách chụp ảnh đúng chuẩn</div>
+    <div class="sbody">
+      <div class="photo-row">
+        <div class="photo-box ok"><div class="ic">✅</div><strong>Đúng</strong><br>Rõ, đủ 4 góc, đủ sáng, đọc được chữ</div>
+        <div class="photo-box no"><div class="ic">❌</div><strong>Sai</strong><br>Mờ, tối, che góc, nghiêng nhiều</div>
       </div>
-      <div class="tip">
-        <span class="tip-icon">💡</span>
-        <strong>Mẹo:</strong> Đặt giấy tờ trên nền tối (bàn gỗ, nền đen), chụp từ thẳng bên trên, bật đèn flash nếu tối.
-      </div>
-      <div class="tip" style="margin-top:8px">
-        <span class="tip-icon">📁</span>
-        Chấp nhận file: <strong>PDF, JPG, JPEG, PNG</strong> — tối đa <strong>20MB/file</strong>
-      </div>
+      <div class="tip">💡 Mẹo: Đặt giấy tờ trên nền tối, chụp thẳng từ trên xuống, bật đèn flash nếu thiếu sáng.</div>
+      <div class="tip" style="margin-top:8px">📁 Chấp nhận: <strong>PDF, JPG, PNG</strong> — tối đa <strong>20MB/file</strong></div>
     </div>
   </div>
 
-  <!-- BƯỚC 2 -->
-  <div class="step-card" data-num="2">
-    <div class="step-title"><div class="step-num">2</div> Truy cập trang web</div>
-    <div class="step-body">
-      <ol>
-        <li>Mở trình duyệt Chrome hoặc Safari trên điện thoại</li>
-        <li>Nhập địa chỉ: <span class="hl">ts102627.pythonanywhere.com</span></li>
-        <li>Nhấn vào <strong>lớp của em</strong> (ví dụ: Lớp 9A1)</li>
-        <li>Tìm tên em trong danh sách → nhấn vào tên</li>
-      </ol>
-      <div class="tip"><span class="tip-icon">🔍</span> Nếu không thấy tên, dùng ô tìm kiếm phía trên danh sách.</div>
-    </div>
-  </div>
-
-  <!-- BƯỚC 3 -->
-  <div class="step-card" data-num="3">
-    <div class="step-title"><div class="step-num">3</div> Nhập mã bảo mật</div>
-    <div class="step-body">
-      <p>Hệ thống sẽ hiện hộp thoại yêu cầu nhập <strong>mã bảo mật</strong>.</p>
+  <div class="step" data-n="3">
+    <div class="stitle"><div class="snum">3</div>Mã bảo mật là gì?</div>
+    <div class="sbody">
+      <p>Mã bảo mật = <strong>12 số trên thẻ CCCD</strong> của em.</p>
       <ul style="margin-top:8px">
-        <li>Mã bảo mật chính là <strong>12 số trên thẻ CCCD</strong> của em</li>
-        <li>Ví dụ: <span class="hl">064311012345</span></li>
-        <li>Chỉ nhập số, <strong>không có chữ, không có khoảng trắng</strong></li>
-        <li>Phải đủ đúng 12 số mới xác nhận được</li>
+        <li>Chỉ nhập số, không có chữ, không có khoảng trắng</li>
+        <li>Ví dụ: <span style="background:#fff9c4;padding:0 6px;border-radius:4px;font-weight:700">064311012345</span></li>
+        <li>Phải đủ đúng <strong>12 số</strong></li>
       </ul>
-      <div class="warn">⚠️ Nếu nhập sai → <strong>báo giáo viên</strong> để được hỗ trợ. Không được đoán mò.</div>
+      <div class="warn">⚠️ Nhập sai → báo giáo viên để được hỗ trợ.</div>
     </div>
   </div>
 
-  <!-- BƯỚC 4: CÁC LOẠI TÀI LIỆU -->
-  <div class="step-card" data-num="4">
-    <div class="step-title"><div class="step-num">4a</div> Nộp Giấy khai sinh</div>
-    <div class="step-body">
+  <div class="step" data-n="4">
+    <div class="stitle"><div class="snum">4a</div>Nộp CCCD — phải chọn 2 mặt cùng lúc</div>
+    <div class="sbody">
       <ol>
-        <li>Nhìn vào thẻ <strong>"Bản sao Giấy khai sinh"</strong></li>
-        <li>Nhấn nút <strong>🗂 Chọn file</strong></li>
-        <li>Chọn ảnh/PDF giấy khai sinh từ điện thoại</li>
+        <li>Nhấn nút <strong>🗂 Chọn ảnh</strong> tại thẻ CCCD</li>
+        <li><strong>iPhone:</strong> nhấn ảnh mặt trước → nhấn tiếp ảnh mặt sau → cả 2 có dấu ✓ xanh</li>
+        <li><strong>Android:</strong> nhấn giữ ảnh đầu → tích ảnh thứ 2 → nhấn Chọn</li>
         <li>Nhấn <strong>⬆ Tải lên</strong></li>
-        <li>Chờ thông báo <span style="color:green;font-weight:700">✅ Thành công</span></li>
       </ol>
     </div>
   </div>
 
-  <div class="step-card" data-num="4">
-    <div class="step-title"><div class="step-num">4b</div> Nộp CCCD (chụp 2 mặt)</div>
-    <div class="step-body">
-      <p>⚠️ CCCD có 2 mặt — em cần chọn <strong>cả 2 ảnh cùng lúc</strong>:</p>
-      <ol style="margin-top:8px">
-        <li>Nhìn vào thẻ <strong>"CCCD / Mã định danh"</strong></li>
-        <li>Nhấn nút <strong>🗂 Chọn ảnh</strong></li>
-        <li>Trong thư viện ảnh: <strong>nhấn giữ</strong> rồi chọn ảnh mặt trước</li>
-        <li>Tiếp tục chọn thêm ảnh mặt sau (chọn nhiều)</li>
+  <div class="step" data-n="4">
+    <div class="stitle"><div class="snum">4b</div>Nộp Học bạ — có thể thêm nhiều lần</div>
+    <div class="sbody">
+      <ol>
+        <li>Nhấn <strong>🗂 Tải lên</strong> tại thẻ Học bạ</li>
+        <li>Chọn tất cả ảnh các trang (từ đầu đến cuối)</li>
         <li>Nhấn <strong>⬆ Tải lên</strong></li>
+        <li>Nếu quên trang nào: nhấn <strong>➕ Thêm trang</strong> để nộp bổ sung</li>
       </ol>
-      <div class="tip"><span class="tip-icon">💡</span> Trên iPhone: nhấn ảnh đầu → nhấn tiếp ảnh thứ 2 → cả 2 sẽ có dấu tích xanh.</div>
-      <div class="tip" style="margin-top:8px"><span class="tip-icon">📱</span> Trên Android: nhấn giữ ảnh đầu → tích chọn ảnh thứ 2 → nhấn Chọn/Done.</div>
+      <div class="tip">📌 Chụp theo đúng thứ tự trang để hệ thống ghép đúng.</div>
     </div>
   </div>
 
-  <div class="step-card" data-num="4">
-    <div class="step-title"><div class="step-num">4c</div> Nộp Học bạ (nhiều trang)</div>
-    <div class="step-body">
-      <p>Học bạ có thể có <strong>nhiều trang</strong> — em có thể tải lên từng đợt:</p>
-      <ol style="margin-top:8px">
-        <li>Nhìn vào thẻ <strong>"Học bạ (lớp 6-9)"</strong></li>
-        <li>Nhấn <strong>🗂 Tải lên</strong></li>
-        <li>Chọn tất cả ảnh các trang học bạ (có thể chọn nhiều)</li>
-        <li>Nhấn <strong>⬆ Tải lên</strong></li>
-        <li>Nếu muốn thêm trang: nhấn <strong>➕ Thêm trang</strong> và chọn thêm ảnh</li>
-      </ol>
-      <div class="tip"><span class="tip-icon">📌</span> Thứ tự trang: chụp lần lượt từ đầu đến cuối để hệ thống ghép đúng thứ tự.</div>
-    </div>
-  </div>
-
-  <!-- BƯỚC 5 -->
-  <div class="step-card" data-num="5">
-    <div class="step-title"><div class="step-num">5</div> Kiểm tra trạng thái hồ sơ</div>
-    <div class="step-body">
-      <p>Sau khi nộp, mỗi giấy tờ sẽ hiện trạng thái:</p>
-      <div class="status-list">
-        <div class="status-item"><div class="dot" style="background:#9e9e9e"></div> <span><strong>Chưa nộp</strong> — Em chưa tải lên</span></div>
-        <div class="status-item"><div class="dot" style="background:#2196F3"></div> <span><strong>Đã nộp – Chờ kiểm tra</strong> — Đã nộp, chờ GV xem</span></div>
-        <div class="status-item"><div class="dot" style="background:#4CAF50"></div> <span><strong>Đạt ✅</strong> — GV đã xác nhận hợp lệ</span></div>
-        <div class="status-item"><div class="dot" style="background:#f44336"></div> <span><strong>File mờ / Cần nộp lại</strong> — Nộp lại file rõ hơn</span></div>
+  <div class="step" data-n="5">
+    <div class="stitle"><div class="snum">5</div>Trạng thái hồ sơ</div>
+    <div class="sbody">
+      <div class="st-list">
+        <div class="st-item"><div class="dot" style="background:#9e9e9e"></div><span><strong>Chưa nộp</strong> – Em chưa tải lên</span></div>
+        <div class="st-item"><div class="dot" style="background:#2196F3"></div><span><strong>Đã nộp – Chờ kiểm tra</strong> – GV chưa xem</span></div>
+        <div class="st-item"><div class="dot" style="background:#4CAF50"></div><span><strong>Đạt ✅</strong> – GV đã xác nhận hợp lệ</span></div>
+        <div class="st-item"><div class="dot" style="background:#f44336"></div><span><strong>Cần nộp lại</strong> – File mờ hoặc sai, nhấn <strong>Thay thế</strong></span></div>
       </div>
-      <div class="tip" style="margin-top:10px"><span class="tip-icon">🔄</span> Nếu GV yêu cầu nộp lại: nhấn <strong>🔄 Thay thế</strong> và chọn file mới.</div>
     </div>
   </div>
 
-  <!-- HỎI ĐÁP -->
-  <div class="section-title">❓ Câu hỏi thường gặp</div>
+  <!-- FAQ -->
+  <div class="sec-title">❓ Câu hỏi thường gặp</div>
 
-  <details class="faq">
-    <summary>Quên số CCCD thì làm sao?</summary>
-    <div class="faq-body"><p>Xem số CCCD trên mặt trước của thẻ căn cước — đây là dãy 12 chữ số dưới tên em. Nếu chưa có thẻ, liên hệ giáo viên chủ nhiệm.</p></div>
-  </details>
-
-  <details class="faq">
-    <summary>Không thấy tên mình trong danh sách?</summary>
-    <div class="faq-body">
-      <ul>
-        <li>Dùng ô tìm kiếm, nhập một phần họ tên</li>
-        <li>Kiểm tra lại đúng lớp chưa</li>
-        <li>Báo giáo viên để được thêm vào hệ thống</li>
-      </ul>
-    </div>
-  </details>
-
-  <details class="faq">
-    <summary>Nộp nhầm file, sửa lại được không?</summary>
-    <div class="faq-body"><p>Được. Nhấn nút <strong>🔄 Thay thế</strong> trên thẻ tài liệu muốn sửa, rồi chọn file đúng. Hệ thống sẽ thay thế file cũ.</p></div>
-  </details>
-
-  <details class="faq">
-    <summary>File ảnh quá lớn, không tải lên được?</summary>
-    <div class="faq-body">
-      <p>Giảm dung lượng ảnh bằng cách:</p>
-      <ul>
-        <li>Dùng app <strong>Photo Compress</strong> hoặc <strong>Squoosh</strong> để nén ảnh</li>
-        <li>Hoặc chụp ảnh rồi nhấn <em>Sửa ảnh → Cắt bớt viền thừa</em></li>
-        <li>Giới hạn: <strong>20MB mỗi file</strong></li>
-      </ul>
-    </div>
-  </details>
-
-  <details class="faq">
-    <summary>CCCD chưa có, nộp bằng gì?</summary>
-    <div class="faq-body"><p>Dùng <strong>Mã định danh cá nhân</strong> (12 số) trong sổ hộ khẩu hoặc giấy xác nhận của địa phương. Báo giáo viên để được hỗ trợ.</p></div>
-  </details>
-
-  <details class="faq">
-    <summary>Học bạ có bao nhiêu trang phải nộp?</summary>
-    <div class="faq-body">
-      <ul>
-        <li>Nộp <strong>tất cả các trang</strong> có điểm và nhận xét</li>
-        <li>Bao gồm: trang bìa, các trang điểm lớp 6, 7, 8, (và 9 nếu GĐ2)</li>
-        <li>Không cần trang trắng</li>
-      </ul>
-    </div>
-  </details>
-
-  <details class="faq">
-    <summary>Nộp xong thì giáo viên biết ngay không?</summary>
-    <div class="faq-body"><p>Có. Giáo viên thấy ngay trong hệ thống. Sau khi xem xét, GV sẽ đổi trạng thái thành <strong>Đạt ✅</strong> hoặc yêu cầu nộp lại. Em có thể vào xem lại lúc nào cũng được.</p></div>
-  </details>
+  <details><summary>Quên số CCCD thì làm sao? <span></span></summary><div class="faqb"><p>Xem 12 số trên mặt trước thẻ căn cước. Chưa có thẻ → liên hệ giáo viên chủ nhiệm.</p></div></details>
+  <details><summary>Không thấy tên trong danh sách? <span></span></summary><div class="faqb"><ul><li>Dùng ô tìm kiếm, nhập một phần họ tên</li><li>Kiểm tra đúng lớp chưa</li><li>Báo giáo viên để được thêm vào hệ thống</li></ul></div></details>
+  <details><summary>Nộp nhầm file, sửa lại được không? <span></span></summary><div class="faqb"><p>Được. Nhấn <strong>🔄 Thay thế</strong> trên thẻ tài liệu đó, chọn file đúng. Hệ thống sẽ thay thế file cũ.</p></div></details>
+  <details><summary>File quá lớn, không tải lên được? <span></span></summary><div class="faqb"><ul><li>Dùng app <strong>Photo Compress</strong> hoặc <strong>Squoosh.app</strong> để nén ảnh</li><li>Hoặc cắt bỏ viền trắng thừa quanh ảnh</li><li>Giới hạn: <strong>20MB mỗi file</strong></li></ul></div></details>
+  <details><summary>CCCD chưa có, nộp bằng gì? <span></span></summary><div class="faqb"><p>Dùng <strong>Mã định danh cá nhân 12 số</strong> trong sổ hộ khẩu. Liên hệ giáo viên để được hỗ trợ thêm.</p></div></details>
+  <details><summary>Học bạ cần nộp bao nhiêu trang? <span></span></summary><div class="faqb"><ul><li>Nộp <strong>tất cả trang có điểm và nhận xét</strong> (lớp 6, 7, 8 và trang bìa)</li><li>Giai đoạn 2 bổ sung thêm học bạ lớp 9</li><li>Không cần trang trắng</li></ul></div></details>
 
   <!-- LIÊN HỆ -->
-  <div class="contact-card">
-    <h3>📞 Cần hỗ trợ?</h3>
-    <p>Liên hệ giáo viên chủ nhiệm hoặc bộ phận tuyển sinh<br>khi gặp khó khăn trong quá trình nộp hồ sơ.</p>
-    <p style="margin-top:12px;opacity:.8;font-size:.85rem">🌐 ts102627.pythonanywhere.com</p>
+  <div class="contact">
+    <h3>🏫 Trường THCS Chu Văn An – Đăk Hà</h3>
+    <p>Phòng Tuyển sinh – Năm học 2026-2027</p>
+    <p style="margin-top:10px;opacity:.75;font-size:.82rem">🌐 ts102627.pythonanywhere.com</p>
   </div>
 
-</div>
+</div><!-- /wrap -->
+
+<footer>
+  <strong>🏫 Trường THCS Chu Văn An – Đăk Hà, Kon Tum</strong>
+  Hệ thống Nộp Hồ Sơ Tuyển Sinh Lớp 10 &nbsp;|&nbsp; Năm học 2026-2027<br>
+  <a href="/">← Về trang nộp hồ sơ</a>
+</footer>
+
 </body>
 </html>
