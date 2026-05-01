@@ -81,6 +81,29 @@
 .tsdc-trigger:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(21,101,192,.45)}
 .tsdc-trigger-wrap{margin-top:12px;display:flex;justify-content:center}
 @media(max-width:500px){.tsdc-cards{grid-template-columns:1fr 1fr}.tsdc-card:first-child{grid-column:span 2}}
+/* CTA dang ky TSDC noi bat tren trang chu */
+@keyframes idx-pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.5),0 6px 24px rgba(229,57,53,.35)}55%{box-shadow:0 0 0 12px rgba(229,57,53,0),0 6px 24px rgba(229,57,53,.35)}}
+@keyframes idx-arrow{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+.idx-dkts-wrap{padding:0 16px 8px;margin-top:-10px}
+.idx-dkts-btn{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  width:100%;padding:16px 20px;
+  background:linear-gradient(135deg,#e53935 0%,#ff6f00 100%);
+  border-radius:16px;text-decoration:none;color:#fff;
+  font-weight:800;font-size:1rem;letter-spacing:.02em;
+  box-shadow:0 6px 24px rgba(229,57,53,.4);
+  animation:idx-pulse 2s infinite;
+  transition:transform .15s,opacity .15s;
+  border:2px solid rgba(255,255,255,.25);
+  position:relative;overflow:hidden;
+}
+.idx-dkts-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 55%);pointer-events:none}
+.idx-dkts-btn:hover{opacity:.92;transform:translateY(-2px) scale(1.01);color:#fff}
+.idx-dkts-icon{font-size:1.6rem;flex-shrink:0}
+.idx-dkts-text{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.idx-dkts-main{font-size:1rem;font-weight:800;line-height:1.2}
+.idx-dkts-sub{font-size:.75rem;font-weight:500;opacity:.88}
+.idx-dkts-arrow{font-size:1.3rem;animation:idx-arrow 1s infinite;flex-shrink:0}
 </style>
 {% endblock %}
 {% block content %}
@@ -90,6 +113,20 @@
     <h1 class="hero-title">HỆ THỐNG NỘP HỒ SƠ<br>TUYỂN SINH LỚP 10</h1>
     <p class="hero-subtitle">Năm học 2026 – 2027</p>
   </div>
+</div>
+
+{# === CTA DANG KY TSDC === #}
+<div class="idx-dkts-wrap">
+  <a href="https://quangngai.tsdc.edu.vn/dang-ky-ho-so-tuyen-sinh"
+     target="_blank" rel="noopener"
+     class="idx-dkts-btn">
+    <span class="idx-dkts-icon">&#128276;</span>
+    <span class="idx-dkts-text">
+      <span class="idx-dkts-main">&#127979; Đăng ký tuyển sinh lớp 10 trực tuyến</span>
+      <span class="idx-dkts-sub">Bấm vào đây &mdash; Năm học 2026&ndash;2027 &middot; qlts.tsdc.edu.vn</span>
+    </span>
+    <span class="idx-dkts-arrow">&#8594;</span>
+  </a>
 </div>
 
 <div class="container">
