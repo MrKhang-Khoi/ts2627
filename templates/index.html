@@ -305,8 +305,20 @@ function loadTsdc(force) {
 }
 
 function renderTsdc(d) {
-  document.getElementById('statTotal').textContent = d.total || 0;
-  var st = d.status || {};
+  /* Loc truoc: chi giu hoc sinh co ho ten that */
+  var realStudents = (d.students || []).filter(function(s) {
+    return s.hoTen && s.hoTen.trim() !== '';
+  });
+  var realTotal = realStudents.length;
+
+  /* Thong ke trang thai chi tinh tu realStudents (chinh xac) */
+  var st = {};
+  realStudents.forEach(function(s) {
+    var tt = s.trangThai || 'Không rõ';
+    st[tt] = (st[tt] || 0) + 1;
+  });
+
+  document.getElementById('statTotal').textContent = realTotal;
   var tiepNhan = 0, xetDuyet = 0;
   Object.keys(st).forEach(function(k) {
     var v = st[k];
@@ -316,12 +328,12 @@ function renderTsdc(d) {
   document.getElementById('statTiepNhan').textContent = tiepNhan;
   document.getElementById('statXetDuyet').textContent = xetDuyet;
 
-  var total = d.total || 1;
+  var bar_total = realTotal || 1;
   var sl = document.getElementById('statusList');
   sl.innerHTML = '';
   Object.keys(st).forEach(function(label) {
     var cnt = st[label];
-    var pct = Math.round(cnt / total * 100);
+    var pct = Math.round(cnt / bar_total * 100);
     sl.innerHTML += '<div class="status-row"><span class="status-label" title="' + label + '">' + label + '</span>' +
       '<div class="status-bar-wrap"><div class="status-bar" style="width:' + pct + '%"></div></div>' +
       '<span class="status-count">' + cnt + '</span></div>';
@@ -333,9 +345,6 @@ function renderTsdc(d) {
 
   var tbody = document.getElementById('tsdcStudentBody');
   tbody.innerHTML = '';
-  var realStudents = (d.students || []).filter(function(s) {
-    return s.hoTen && s.hoTen.trim() !== '';
-  });
   if (realStudents.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Chưa có học sinh đăng ký</td></tr>';
   } else {
