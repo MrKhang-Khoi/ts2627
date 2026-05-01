@@ -255,14 +255,13 @@ async def scrape_tsdc():
             page_size_chosen = False
             for sel in reversed(all_selects_now):
                 try:
-                    # Lay text hien thi cua select nay
                     inner = await sel.query_selector('.el-input__inner')
                     if not inner:
                         continue
                     cur_val = await inner.input_value()
                     print(f'[PUSH]   el-select gia tri: "{cur_val}"', flush=True)
-                    # Neu la select co gia tri so (page size) thi click
-                    if cur_val.strip().isdigit() or cur_val.strip() == '':
+                    # Chi chon khi gia tri la so NGUYEN (10, 20, 50, 100...) - tranh chon --Chon--
+                    if cur_val.strip().isdigit():
                         await inner.click()
                         await asyncio.sleep(1)
                         opt = page.locator('.el-select-dropdown__item').filter(has_text='500')
