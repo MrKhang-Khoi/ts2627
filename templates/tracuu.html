@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Tra cứu TSDC – THCS Chu Văn An</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b1120;
+      --bg2:       #131c2e;
+      --surface:   rgba(255,255,255,0.05);
+      --border:    rgba(255,255,255,0.10);
+      --accent:    #38bdf8;
+      --accent2:   #818cf8;
+      --gold:      #fbbf24;
+      --silver:    #94a3b8;
+      --bronze:    #f97316;
+      --green:     #4ade80;
+      --green-dim: rgba(74,222,128,0.15);
+      --yellow-dim:rgba(251,191,36,0.15);
+      --red:       #f87171;
+      --red-dim:   rgba(248,113,113,0.15);
+      --text:      #e2e8f0;
+      --text2:     #94a3b8;
+      --radius:    16px;
+      --radius-sm: 10px;
+      --shadow:    0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    html { height: 100%; }
+
+    body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND BLOBS ── */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #6366f1, transparent 70%);
+      top: -120px; left: -100px;
+      animation: drift1 12s ease-in-out infinite alternate;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, #38bdf8, transparent 70%);
+      bottom: -80px; right: -80px;
+      animation: drift2 15s ease-in-out infinite alternate;
+    }
+    @keyframes drift1 { to { transform: translate(40px, 30px) scale(1.1); } }
+    @keyframes drift2 { to { transform: translate(-30px, -20px) scale(1.08); } }
+
+    /* ── WRAPPER ── */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      padding: 24px 16px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      text-align: center;
+      padding-top: 12px;
+    }
+    .header .logo-ring {
+      width: 72px; height: 72px;
+      margin: 0 auto 14px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #38bdf8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px;
+      box-shadow: 0 0 0 4px rgba(99,102,241,0.2), 0 8px 24px rgba(56,189,248,0.3);
+      animation: pulse-ring 3s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%,100% { box-shadow: 0 0 0 4px rgba(99,102,241,0.2), 0 8px 24px rgba(56,189,248,0.3); }
+      50%      { box-shadow: 0 0 0 8px rgba(99,102,241,0.10), 0 8px 32px rgba(56,189,248,0.4); }
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.25;
+      background: linear-gradient(135deg, #e2e8f0 30%, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header p {
+      font-size: 13px;
+      color: var(--text2);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* ── INPUT BOX ── */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .input-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .input-wrap {
+      position: relative;
+    }
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    #cccdInput {
+      width: 100%;
+      padding: 14px 14px 14px 44px;
+      font-size: 18px;
+      font-family: 'Be Vietnam Pro', sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none;
+      appearance: none;
+      caret-color: var(--accent);
+    }
+    #cccdInput::placeholder { color: rgba(255,255,255,0.25); font-weight: 400; letter-spacing: 0; }
+    #cccdInput:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.15);
+    }
+    #cccdInput.error  { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
+    #cccdInput.shake  { animation: shake .4s ease; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    /* ── BUTTON ── */
+    #searchBtn {
+      width: 100%;
+      padding: 15px;
+      font-family: 'Be Vietnam Pro', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #6366f1, #38bdf8);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    #searchBtn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.12), transparent);
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    #searchBtn:hover::after { opacity: 1; }
+    #searchBtn:active { transform: scale(0.97); }
+    #searchBtn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .btn-inner { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── HINT TEXT ── */
+    .hint {
+      font-size: 12px;
+      color: var(--text2);
+      text-align: center;
+      margin-top: -4px;
+    }
+
+    /* ── RESULT CARD ── */
+    #resultBox { display: none; }
+    #resultBox.show { display: flex; flex-direction: column; gap: 14px; }
+
+    .result-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .student-avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #38bdf8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .student-info { flex: 1; min-width: 0; }
+    .student-name {
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .student-sub {
+      font-size: 13px;
+      color: var(--text2);
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .tag-lop {
+      background: rgba(99,102,241,0.18);
+      color: var(--accent2);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      width: 100%;
+    }
+    .status-badge.waiting  { background: var(--yellow-dim); color: var(--gold);   border: 1px solid rgba(251,191,36,0.25); }
+    .status-badge.approved { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(74,222,128,0.25); }
+    .status-badge.rejected { background: var(--red-dim);    color: var(--red);    border: 1px solid rgba(248,113,113,0.25); }
+    .status-badge.default  { background: rgba(255,255,255,0.06); color: var(--text2); border: 1px solid var(--border); }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.waiting  { background: var(--gold);  box-shadow: 0 0 6px var(--gold); }
+    .status-dot.approved { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.rejected { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    .status-dot.default  { background: var(--text2); }
+
+    /* NV rows */
+    .nv-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 10px;
+    }
+    .nv-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .nv-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .nv-row:first-of-type { padding-top: 0; }
+
+    .nv-badge {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .nv-badge.nv1 { background: rgba(251,191,36,0.18); }
+    .nv-badge.nv2 { background: rgba(148,163,184,0.18); }
+    .nv-badge.nv3 { background: rgba(249,115,22,0.18); }
+    .nv-badge.empty { background: rgba(255,255,255,0.05); }
+
+    .nv-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 2px;
+    }
+    .nv-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .nv-value.empty { color: var(--text2); font-weight: 400; font-style: italic; }
+
+    /* info row */
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      gap: 12px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-key {
+      font-size: 12px;
+      color: var(--text2);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .info-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
+      word-break: break-all;
+    }
+
+    /* timestamp */
+    .timestamp {
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .timestamp::before { content: '🕐'; font-size: 12px; }
+
+    /* ERROR STATE */
+    .error-box {
+      text-align: center;
+      padding: 24px 16px;
+    }
+    .error-box .icon { font-size: 40px; margin-bottom: 12px; }
+    .error-box p    { font-size: 14px; color: var(--text2); line-height: 1.6; }
+    .error-box strong { color: var(--red); }
+
+    /* footer */
+    footer {
+      position: relative; z-index: 1;
+      text-align: center;
+      padding: 0 16px 24px;
+      font-size: 12px;
+      color: rgba(148,163,184,0.6);
+      line-height: 1.7;
+    }
+
+    /* ANIMATE IN */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeUp .4s ease forwards; }
+    .delay-1 { animation-delay: .08s; opacity: 0; }
+    .delay-2 { animation-delay: .16s; opacity: 0; }
+    .delay-3 { animation-delay: .24s; opacity: 0; }
+    .delay-4 { animation-delay: .32s; opacity: 0; }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <div class="header animate-in">
+    <div class="logo-ring">🎓</div>
+    <h1>Tra cứu tuyển sinh lớp 10<br>THCS Chu Văn An</h1>
+    <p>Nhập số CCCD/CMND của học sinh<br>để xem thông tin đăng ký nguyện vọng</p>
+  </div>
+
+  <!-- SEARCH CARD -->
+  <div class="card animate-in delay-1">
+    <div class="input-group">
+      <label class="input-label" for="cccdInput">Số CCCD / CMND</label>
+      <div class="input-wrap">
+        <span class="input-icon">🪪</span>
+        <input
+          id="cccdInput"
+          type="tel"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          maxlength="12"
+          placeholder="Nhập số CCCD hoặc CMND..."
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+        />
+      </div>
+      <button id="searchBtn" onclick="doSearch()">
+        <span class="btn-inner" id="btnText">
+          <span>🔍</span><span>Tra cứu ngay</span>
+        </span>
+      </button>
+      <p class="hint">Dữ liệu cập nhật tự động từ hệ thống TSDC</p>
+    </div>
+  </div>
+
+  <!-- RESULT BOX -->
+  <div id="resultBox"></div>
+
+</div>
+
+<footer>
+  THCS Chu Văn An · Hệ thống hỗ trợ tuyển sinh 2026<br>
+  Dữ liệu được đồng bộ từ tsdc.edu.vn
+</footer>
+
+<script>
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIxSlNum5oRdASLpAKRgnt_GYefUx2uwtCmu9OzKmtpKr0Zi3AnYyKOhaDSunvhsxC/exec';
+
+  const input  = document.getElementById('cccdInput');
+  const btn    = document.getElementById('searchBtn');
+  const btnTxt = document.getElementById('btnText');
+  const box    = document.getElementById('resultBox');
+
+  /* Enter key trigger */
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+  input.addEventListener('input', () => {
+    input.classList.remove('error', 'shake');
+  });
+
+  function setLoading(on) {
+    btn.disabled = on;
+    btnTxt.innerHTML = on
+      ? '<div class="spinner"></div><span>Đang tìm...</span>'
+      : '<span>🔍</span><span>Tra cứu ngay</span>';
+  }
+
+  function statusClass(s) {
+    const t = (s || '').toLowerCase();
+    if (t.includes('chờ') || t.includes('tiếp nhận')) return 'waiting';
+    if (t.includes('duyệt') || t.includes('hợp lệ') || t.includes('xác nhận')) return 'approved';
+    if (t.includes('từ chối') || t.includes('không hợp lệ') || t.includes('hủy')) return 'rejected';
+    return 'default';
+  }
+  function statusIcon(cls) {
+    return { waiting:'⏳', approved:'✅', rejected:'❌', default:'📄' }[cls];
+  }
+
+  function renderStudent(s) {
+    const sc   = statusClass(s.trangThai);
+    const icon = statusIcon(sc);
+    const nvs  = [
+      { key:'nv1', label:'Nguyện vọng 1', cls:'nv1', emoji:'🥇' },
+      { key:'nv2', label:'Nguyện vọng 2', cls:'nv2', emoji:'🥈' },
+      { key:'nv3', label:'Nguyện vọng 3', cls:'nv3', emoji:'🥉' },
+    ];
+
+    /* Check any NV exists */
+    const hasNV = nvs.some(n => s[n.key]);
+
+    let nvHtml = nvs.map(n => {
+      const val = s[n.key];
+      return `
+        <div class="nv-row animate-in delay-3">
+          <div class="nv-badge ${val ? n.cls : 'empty'}">${val ? n.emoji : '—'}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="nv-label">${n.label}</div>
+            <div class="nv-value ${val ? '' : 'empty'}">${val || 'Chưa đăng ký'}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    /* Extra info */
+    let extraRows = '';
+    const extras = [
+      { k:'ngaySinh',    label:'Ngày sinh',     icon:'📅' },
+      { k:'gioiTinh',    label:'Giới tính',      icon:'👤' },
+      { k:'maHoSo',      label:'Mã hồ sơ',       icon:'🗂️' },
+      { k:'maHocSinh',   label:'Mã học sinh',    icon:'🆔' },
+      { k:'soDienThoai', label:'SĐT liên hệ',    icon:'📞' },
+    ];
+    extras.forEach(({ k, label, icon }) => {
+      if (s[k]) {
+        extraRows += `
+          <div class="info-row">
+            <span class="info-key">${icon} ${label}</span>
+            <span class="info-val">${s[k]}</span>
+          </div>`;
+      }
+    });
+
+    return `
+      <!-- Student header -->
+      <div class="card animate-in">
+        <div class="result-header">
+          <div class="student-avatar">👦</div>
+          <div class="student-info">
+            <div class="student-name">${s.hoTen || '—'}</div>
+            <div class="student-sub">
+              <span class="tag-lop">Lớp ${s.lop || '—'}</span>
+              <span style="color:var(--text2);font-size:12px;">${s.maHocSinh || ''}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="card animate-in delay-1">
+        <div class="nv-section-title">Trạng thái hồ sơ</div>
+        <div class="status-badge ${sc}">
+          <span class="status-dot ${sc}"></span>
+          <span>${icon} ${s.trangThai || 'Chưa cập nhật'}</span>
+        </div>
+      </div>
+
+      <!-- NV -->
+      <div class="card animate-in delay-2">
+        <div class="nv-section-title">Nguyện vọng đăng ký</div>
+        ${nvHtml}
+      </div>
+
+      <!-- Extra info -->
+      ${extraRows ? `
+      <div class="card animate-in delay-3">
+        <div class="nv-section-title">Thông tin học sinh</div>
+        ${extraRows}
+      </div>` : ''}
+
+      <!-- Timestamp -->
+      <div class="timestamp animate-in delay-4">
+        Dữ liệu cập nhật lúc ${s.updated_at || '—'}
+      </div>`;
+  }
+
+  function renderError(msg) {
+    return `
+      <div class="card animate-in">
+        <div class="error-box">
+          <div class="icon">🔎</div>
+          <p>${msg}</p>
+        </div>
+      </div>`;
+  }
+
+  async function doSearch() {
+    const raw = input.value.trim().replace(/\s/g, '');
+
+    /* Validate */
+    if (!raw || !/^\d{9,12}$/.test(raw)) {
+      input.classList.add('error', 'shake');
+      setTimeout(() => input.classList.remove('shake'), 400);
+      box.className = 'show';
+      box.innerHTML = renderError('<strong>Số không hợp lệ.</strong><br>Vui lòng nhập đúng số CCCD/CMND (9–12 chữ số).');
+      return;
+    }
+
+    setLoading(true);
+    box.className  = '';
+    box.innerHTML  = '';
+
+    try {
+      const url  = `${APPS_SCRIPT_URL}?action=search&q=${encodeURIComponent(raw)}`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      const students = data.students || [];
+
+      if (!students.length) {
+        box.innerHTML = renderError(
+          `<strong>Không tìm thấy học sinh</strong> với số CCCD: <b>${raw}</b><br><br>` +
+          'Vui lòng kiểm tra lại số hoặc liên hệ giáo viên chủ nhiệm.'
+        );
+      } else {
+        const s = students[0];
+        /* Attach updated_at from top-level if not in student */
+        if (!s.updated_at && data.updated_at) s.updated_at = data.updated_at;
+        box.innerHTML = renderStudent(s);
+      }
+    } catch (err) {
+      box.innerHTML = renderError(
+        '⚠️ Hệ thống đang bận hoặc mất kết nối.<br>Vui lòng thử lại sau ít phút.'
+      );
+    } finally {
+      setLoading(false);
+      box.className = 'show';
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+</script>
+</body>
+</html>
