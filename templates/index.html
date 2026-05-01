@@ -473,38 +473,41 @@ function renderTsdc(d) {
   renderNvList('nv2List', d.nv2 || [], '#00897B', 'nv2');
   renderNvList('nv3List', d.nv3 || [], '#F57C00', 'nv3');
 
+  /* Student list - only rendered if element exists (teacher/admin only) */
   var tbody = document.getElementById('tsdcStudentBody');
-  tbody.innerHTML = '';
-  if (realStudents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Chưa có học sinh đăng ký</td></tr>';
-  } else {
-    realStudents.forEach(function(s, i) {
-      var st2 = s.trangThai || '';
-      var cls = st2.indexOf('ti') !== -1 && st2.indexOf('p nh') !== -1 ? 'wait' :
-                st2.indexOf('t duy') !== -1 ? 'review' : 'other';
-      /* Hien thi day du NV1/NV2/NV3 */
-      var nvHtml = '';
-      if (s.nv1) nvHtml += '<div class="nv-line"><span class="nv-tag nv1-tag">NV1</span><span>' + s.nv1 + '</span></div>';
-      if (s.nv2) nvHtml += '<div class="nv-line"><span class="nv-tag nv2-tag">NV2</span><span>' + s.nv2 + '</span></div>';
-      if (s.nv3) nvHtml += '<div class="nv-line"><span class="nv-tag nv3-tag">NV3</span><span>' + s.nv3 + '</span></div>';
-      if (!nvHtml) nvHtml = '<span style="color:#bbb">–</span>';
-      tbody.innerHTML += '<tr>' +
-        '<td class="num-col">' + (i+1) + '</td>' +
-        '<td class="name-col">' + s.hoTen + '</td>' +
-        '<td class="lop-col">' + (s.lop || '–') + '</td>' +
-        '<td><span class="st-badge ' + cls + '">' + (st2 || '–') + '</span></td>' +
-        '<td class="nv-wrap">' + nvHtml + '</td>' +
-        '</tr>';
-    });
+  if (tbody) {
+    tbody.innerHTML = '';
+    if (realStudents.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Chưa có học sinh đăng ký</td></tr>';
+    } else {
+      realStudents.forEach(function(s, i) {
+        var st2 = s.trangThai || '';
+        var cls = st2.indexOf('ti') !== -1 && st2.indexOf('p nh') !== -1 ? 'wait' :
+                  st2.indexOf('t duy') !== -1 ? 'review' : 'other';
+        var nvHtml = '';
+        if (s.nv1) nvHtml += '<div class="nv-line"><span class="nv-tag nv1-tag">NV1</span><span>' + s.nv1 + '</span></div>';
+        if (s.nv2) nvHtml += '<div class="nv-line"><span class="nv-tag nv2-tag">NV2</span><span>' + s.nv2 + '</span></div>';
+        if (s.nv3) nvHtml += '<div class="nv-line"><span class="nv-tag nv3-tag">NV3</span><span>' + s.nv3 + '</span></div>';
+        if (!nvHtml) nvHtml = '<span style="color:#bbb">–</span>';
+        tbody.innerHTML += '<tr>' +
+          '<td class="num-col">' + (i+1) + '</td>' +
+          '<td class="name-col">' + s.hoTen + '</td>' +
+          '<td class="lop-col">' + (s.lop || '–') + '</td>' +
+          '<td><span class="st-badge ' + cls + '">' + (st2 || '–') + '</span></td>' +
+          '<td class="nv-wrap">' + nvHtml + '</td>' +
+          '</tr>';
+      });
+    }
   }
 
   document.getElementById('tsdcUpdatedAt').textContent = d.updated_at || '–';
   document.getElementById('tsdcResults').style.display = '';
 
-  /* Class stats */
-  if (d.classCounts) {
+  /* Class stats - only rendered if element exists (teacher/admin only) */
+  var clsSec = document.getElementById('clsStatsSection');
+  if (clsSec && d.classCounts) {
     renderClassStats(realStudents, d.classCounts);
-    document.getElementById('clsStatsSection').style.display = '';
+    clsSec.style.display = '';
   }
 }
 
