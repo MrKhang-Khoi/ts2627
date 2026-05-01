@@ -166,6 +166,50 @@ def huong_dan():
 
 
 
+def _bg_auto_sync_from_sheets():
+
+    """Background thread: fetch tu Apps Script va sync tat ca HS vao DB."""
+
+    global _last_auto_sync_ts
+
+    try:
+
+        import requests as _req, json as _jj
+
+        resp = _req.get(APPS_SCRIPT_URL_ALL, allow_redirects=True, timeout=45)
+
+        data = resp.json()
+
+        students = data.get('students', [])
+
+        if not students:
+
+            return
+
+        pushed_at = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
+        conn2 = get_db()
+
+        conn2.execute('INSERT OR REPLACE INTO tsdc_cache (id,data_json,pushed_at,pushed_by) VALUES (1,?,?,?)',
+
+                     (_jj.dumps(data, ensure_ascii=False), pushed_at, 'auto-bg'))
+
+        conn2.commit(); conn2.close()
+
+        _tsdc_cache['data'] = data; _tsdc_cache['ts'] = _time_mod.time()
+
+        n = _tsdc_sync_students(students)
+
+        _last_auto_sync_ts = _time_mod.time()
+
+        print(f'[AUTO-SYNC] Done: {n}/{len(students)} HS, luc {pushed_at}', flush=True)
+
+    except Exception as e:
+
+        print(f'[AUTO-SYNC] Loi: {e}', flush=True)
+
+
+
 @app.route('/class/<class_name>')
 
 def student_list(class_name):
@@ -175,6 +219,20 @@ def student_list(class_name):
     students = conn.execute("SELECT * FROM students WHERE lop=? ORDER BY CAST(stt AS INTEGER)", (class_name,)).fetchall()
 
     conn.close()
+
+    # AUTO-SYNC: Trigger background sync neu du thoi gian (khong block response)
+
+    global _last_auto_sync_ts
+
+    import socket as _sk
+
+    _on_pa = 'pythonanywhere' in _sk.gethostname().lower() or os.path.exists('/home/ts102627')
+
+    if _on_pa and (_time_mod.time() - _last_auto_sync_ts) > _AUTO_SYNC_INTERVAL:
+
+        threading.Thread(target=_bg_auto_sync_from_sheets, daemon=True).start()
+
+
 
     students = enrich_students(students)
 
@@ -2165,6 +2223,12 @@ def view_file(student_id, doc_type):
 _tsdc_cache = {'data': None, 'ts': 0, 'fetching': False}
 
 _TSDC_TTL   = 300  # cache 5 phut
+
+_last_auto_sync_ts = 0  # timestamp lan dong bo tu dong gan nhat
+
+_AUTO_SYNC_INTERVAL = 300  # Chi dong bo neu qua 5 phut ke tu lan cuoi
+
+APPS_SCRIPT_URL_ALL = 'https://script.google.com/macros/s/AKfycbzIxSlNum5oRdASLpAKRgnt_GYefUx2uwtCmu9OzKmtpKr0Zi3AnYyKOhaDSunvhsxC/exec?action=all'
 
 
 
