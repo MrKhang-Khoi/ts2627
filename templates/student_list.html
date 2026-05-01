@@ -6,6 +6,31 @@
 .tsdc-list-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:10px;font-size:.7rem;font-weight:700;margin-left:6px;vertical-align:middle;white-space:nowrap}
 .tsdc-list-badge.dk{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
 .tsdc-list-badge.chua-dk{background:#fafafa;color:#9e9e9e;border:1px solid #e0e0e0}
+/* Card thong ke TSDC */
+.tsdc-stat-card{background:#fff;border-radius:16px;border:1.5px solid #90caf9;box-shadow:0 4px 20px rgba(21,101,192,.1);margin-bottom:18px;overflow:hidden}
+.tsdc-stat-head{background:linear-gradient(90deg,#1565C0,#1976D2);color:#fff;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.tsdc-stat-head-title{font-weight:700;font-size:.9rem;letter-spacing:.02em}
+.tsdc-stat-head-sub{font-size:.75rem;opacity:.82}
+.tsdc-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border-bottom:1px solid #e8f0ff}
+.tsdc-stat-grid-wide{grid-template-columns:repeat(4,1fr)}
+@media(max-width:600px){.tsdc-stat-grid-wide{grid-template-columns:repeat(2,1fr)}}
+.tsdc-stat-item{padding:14px 16px;text-align:center;border-right:1px solid #e8f0ff;border-bottom:1px solid #e8f0ff}
+.tsdc-stat-item:last-child{border-right:none}
+.tsdc-stat-num{font-size:1.8rem;font-weight:800;line-height:1}
+.tsdc-stat-lbl{font-size:.7rem;color:#666;margin-top:4px;font-weight:600;letter-spacing:.02em}
+.tsdc-stat-num.green{color:#2e7d32}.tsdc-stat-num.red{color:#c62828}.tsdc-stat-num.blue{color:#1565C0}.tsdc-stat-num.teal{color:#00695c}.tsdc-stat-num.orange{color:#e65100}
+.tsdc-nv-section{padding:14px 18px}
+.tsdc-nv-stat-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f3f8}
+.tsdc-nv-stat-row:last-child{border-bottom:none}
+.tsdc-nv-stat-label{font-size:.78rem;color:#444;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tsdc-nv-stat-bar-wrap{flex:2;height:7px;background:#e8edf5;border-radius:4px}
+.tsdc-nv-stat-bar{height:7px;border-radius:4px;transition:width .5s}
+.tsdc-nv-stat-count{font-size:.78rem;font-weight:700;color:#333;min-width:28px;text-align:right}
+.tsdc-nv-section-title{font-size:.8rem;font-weight:700;color:#1565C0;margin:0 0 8px;display:flex;align-items:center;gap:6px}
+.tsdc-nv-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:600px){.tsdc-nv-cols{grid-template-columns:1fr}}
+.tsdc-nv-col-head{font-size:.75rem;font-weight:800;padding:3px 8px;border-radius:6px;display:inline-block;margin-bottom:8px;color:#fff}
+.nv1-head-bg{background:#43a047}.nv2-head-bg{background:#1976d2}.nv3-head-bg{background:#f9a825}
 </style>
 {% endblock %}
 
@@ -18,19 +43,104 @@
   </div>
 
   <div class="search-bar-wrap">
-    <input type="text" id="sl-search" class="search-input" placeholder="🔍 Tìm theo tên hoặc số thứ tự...">
+    <input type="text" id="sl-search" class="search-input" placeholder="&#128269; Tìm theo tên hoặc số thứ tự...">
     <div class="filter-tabs">
       <button class="filter-tab active" data-filter="all">Tất cả</button>
       <button class="filter-tab" data-filter="DU_HO_SO_CHINH_THUC">Đủ hồ sơ</button>
       <button class="filter-tab" data-filter="CHUA_NOP">Chưa nộp</button>
       <button class="filter-tab" data-filter="CHUA_DU">Chưa đủ</button>
       <button class="filter-tab" data-filter="CAN_SUA">Cần sửa</button>
+      <button class="filter-tab" data-filter="tsdc-da_dk" style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7">&#10003; Đã ĐK TSDC</button>
+      <button class="filter-tab" data-filter="tsdc-chua_dk" style="background:#fff3e0;color:#e65100;border-color:#ffcc80">&#9888; Chưa ĐK TSDC</button>
     </div>
   </div>
 
+  {# === CARD THONG KE TSDC - CHI HIEN VOI TEACHER/ADMIN === #}
+  {% if session.get('role') in ['teacher','admin'] %}
+  {% set ns = namespace(da_dk=0, chua_dk=0, nv1=0, nv2=0, nv3=0) %}
+  {% for s in students %}
+    {% if s.tsdc_trang_thai %}{% set ns.da_dk = ns.da_dk + 1 %}{% else %}{% set ns.chua_dk = ns.chua_dk + 1 %}{% endif %}
+    {% if s.tsdc_nv1 %}{% set ns.nv1 = ns.nv1 + 1 %}{% endif %}
+    {% if s.tsdc_nv2 %}{% set ns.nv2 = ns.nv2 + 1 %}{% endif %}
+    {% if s.tsdc_nv3 %}{% set ns.nv3 = ns.nv3 + 1 %}{% endif %}
+  {% endfor %}
+  <div class="tsdc-stat-card">
+    <div class="tsdc-stat-head">
+      <span class="tsdc-stat-head-title">&#128202; Thống kê ĐKTS lớp 10 &mdash; Lớp {{ class_name }}</span>
+      <span class="tsdc-stat-head-sub">Năm học 2026&ndash;2027</span>
+    </div>
+    <div class="tsdc-stat-grid tsdc-stat-grid-wide">
+      <div class="tsdc-stat-item">
+        <div class="tsdc-stat-num blue">{{ students|length }}</div>
+        <div class="tsdc-stat-lbl">TỔNG HỌC SINH</div>
+      </div>
+      <div class="tsdc-stat-item">
+        <div class="tsdc-stat-num green">{{ ns.da_dk }}</div>
+        <div class="tsdc-stat-lbl">ĐÃ ĐĂNG KÝ TSDC</div>
+      </div>
+      <div class="tsdc-stat-item">
+        <div class="tsdc-stat-num red">{{ ns.chua_dk }}</div>
+        <div class="tsdc-stat-lbl">CHƯA ĐĂNG KÝ</div>
+      </div>
+      <div class="tsdc-stat-item" style="border-right:none">
+        <div class="tsdc-stat-num" style="color:#1565C0;font-size:1.3rem">
+          {% if students|length > 0 %}{{ (ns.da_dk / students|length * 100)|round|int }}%{% else %}0%{% endif %}
+        </div>
+        <div class="tsdc-stat-lbl">TỶ LỆ ĐĂNG KÝ</div>
+      </div>
+    </div>
+    <div class="tsdc-nv-section">
+      <div class="tsdc-nv-cols">
+        <div>
+          <div class="tsdc-nv-col-head nv1-head-bg">Nguyện Vọng 1 &mdash; {{ ns.nv1 }} HS</div>
+          {% set nv1_max = ns.nv1 if ns.nv1 > 0 else 1 %}
+          {% set nv1_schools = namespace(seen=[]) %}
+          {% for s in students %}{% if s.tsdc_nv1 and s.tsdc_nv1 not in nv1_schools.seen %}{% set nv1_schools.seen = nv1_schools.seen + [s.tsdc_nv1] %}{% endif %}{% endfor %}
+          {% for school in nv1_schools.seen %}
+            {% set cnt = namespace(v=0) %}{% for s in students %}{% if s.tsdc_nv1 == school %}{% set cnt.v = cnt.v + 1 %}{% endif %}{% endfor %}
+            <div class="tsdc-nv-stat-row">
+              <span class="tsdc-nv-stat-label" title="{{ school }}">{{ school }}</span>
+              <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt.v/nv1_max*100)|round|int }}%;background:#43a047"></div></div>
+              <span class="tsdc-nv-stat-count">{{ cnt.v }}</span>
+            </div>
+          {% else %}<p style="color:#aaa;font-size:.75rem">Chưa có dữ liệu</p>{% endfor %}
+        </div>
+        <div>
+          <div class="tsdc-nv-col-head nv2-head-bg">Nguyện Vọng 2 &mdash; {{ ns.nv2 }} HS</div>
+          {% set nv2_max = ns.nv2 if ns.nv2 > 0 else 1 %}
+          {% set nv2_schools = namespace(seen=[]) %}
+          {% for s in students %}{% if s.tsdc_nv2 and s.tsdc_nv2 not in nv2_schools.seen %}{% set nv2_schools.seen = nv2_schools.seen + [s.tsdc_nv2] %}{% endif %}{% endfor %}
+          {% for school in nv2_schools.seen %}
+            {% set cnt = namespace(v=0) %}{% for s in students %}{% if s.tsdc_nv2 == school %}{% set cnt.v = cnt.v + 1 %}{% endif %}{% endfor %}
+            <div class="tsdc-nv-stat-row">
+              <span class="tsdc-nv-stat-label" title="{{ school }}">{{ school }}</span>
+              <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt.v/nv2_max*100)|round|int }}%;background:#1976d2"></div></div>
+              <span class="tsdc-nv-stat-count">{{ cnt.v }}</span>
+            </div>
+          {% else %}<p style="color:#aaa;font-size:.75rem">Chưa có dữ liệu</p>{% endfor %}
+        </div>
+        <div>
+          <div class="tsdc-nv-col-head nv3-head-bg">Nguyện Vọng 3 &mdash; {{ ns.nv3 }} HS</div>
+          {% set nv3_max = ns.nv3 if ns.nv3 > 0 else 1 %}
+          {% set nv3_schools = namespace(seen=[]) %}
+          {% for s in students %}{% if s.tsdc_nv3 and s.tsdc_nv3 not in nv3_schools.seen %}{% set nv3_schools.seen = nv3_schools.seen + [s.tsdc_nv3] %}{% endif %}{% endfor %}
+          {% for school in nv3_schools.seen %}
+            {% set cnt = namespace(v=0) %}{% for s in students %}{% if s.tsdc_nv3 == school %}{% set cnt.v = cnt.v + 1 %}{% endif %}{% endfor %}
+            <div class="tsdc-nv-stat-row">
+              <span class="tsdc-nv-stat-label" title="{{ school }}">{{ school }}</span>
+              <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt.v/nv3_max*100)|round|int }}%;background:#f9a825"></div></div>
+              <span class="tsdc-nv-stat-count">{{ cnt.v }}</span>
+            </div>
+          {% else %}<p style="color:#aaa;font-size:.75rem">Chưa có dữ liệu</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="student-list" id="student-list">
     {% for s in students %}
-    <div class="student-item" data-name="{{ s.ho_ten|lower }}" data-stt="{{ s.stt }}" data-status="{{ s.status_overall }}">
+    <div class="student-item" data-name="{{ s.ho_ten|lower }}" data-stt="{{ s.stt }}" data-status="{{ s.status_overall }}" data-tsdc="{{ 'da_dk' if s.tsdc_trang_thai else 'chua_dk' }}">
       <div class="student-stt">{{ s.stt }}</div>
       <div class="student-info">
         <div class="student-name">{{ s.ho_ten }}</div>
@@ -127,11 +237,15 @@
   function applyFilter() {
     const q = searchEl.value.toLowerCase();
     studentItems.forEach(item => {
-      const name = item.dataset.name || '';
-      const stt  = item.dataset.stt  || '';
-      const st   = item.dataset.status || '';
+      const name   = item.dataset.name   || '';
+      const stt    = item.dataset.stt    || '';
+      const st     = item.dataset.status || '';
+      const tsdc   = item.dataset.tsdc   || '';
       const okSearch = !q || name.includes(q) || stt.includes(q);
-      const okFilter = activeFilter === 'all' || st === activeFilter;
+      let okFilter = false;
+      if (activeFilter === 'all') okFilter = true;
+      else if (activeFilter.startsWith('tsdc-')) okFilter = tsdc === activeFilter.replace('tsdc-','');
+      else okFilter = st === activeFilter;
       item.style.display = okSearch && okFilter ? '' : 'none';
     });
   }
