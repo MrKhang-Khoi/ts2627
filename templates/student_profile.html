@@ -24,6 +24,10 @@
 .tsdc-warn-icon{font-size:1.8rem;flex-shrink:0}
 .tsdc-warn-title{font-size:.92rem;font-weight:700;color:#f57f17}
 .tsdc-warn-sub{font-size:.78rem;color:#888;margin-top:3px}
+/* Link dang ky tuyen sinh */
+.tsdc-link-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0 16px;padding:12px 18px;background:linear-gradient(90deg,#0d47a1,#1565C0);border-radius:12px;text-decoration:none;color:#fff;font-weight:700;font-size:.88rem;box-shadow:0 3px 12px rgba(13,71,161,.25);transition:opacity .15s,transform .15s}
+.tsdc-link-row:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+.tsdc-link-arrow{font-size:1rem;margin-left:2px}
 </style>
 {% endblock %}
 {% block content %}
@@ -116,6 +120,13 @@
   </div>
   {% endif %}
 
+  {# === LINK DANG KY TUYEN SINH CHO TAT CA HS === #}
+  <a href="https://quangngai.tsdc.edu.vn/dang-ky-ho-so-tuyen-sinh"
+     target="_blank" rel="noopener"
+     class="tsdc-link-row">
+    &#127979; Đăng ký tuyển sinh lớp 10 trực tuyến &mdash; Năm học 2026&ndash;2027
+    <span class="tsdc-link-arrow">&#8594;</span>
+  </a>
 
   {# === ALERT ĐỦ HỒ SƠ === #}
   {% if student.status_overall == 'DU_HO_SO_CHINH_THUC' %}
