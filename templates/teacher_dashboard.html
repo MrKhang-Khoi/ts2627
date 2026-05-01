@@ -28,7 +28,12 @@
     <a href="/api/download-class-zip/{{ selected_class }}" class="btn btn-zip">📦 Tải ZIP lớp</a>
     <button class="btn btn-merge" onclick="mergeClass('{{ selected_class }}')">🔗 Nối học bạ cả lớp</button>
     <button class="btn btn-add-student" onclick="openAddModal()">➕ Thêm học sinh</button>
+    <button class="btn" id="sync-tsdc-btn" onclick="syncTsdcFromSheets()"
+      style="background:#1565C0;color:#fff;border:none;padding:7px 14px;border-radius:7px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;gap:5px">
+      🔄 Đồng bộ TSDC
+    </button>
   </div>
+  <div id="sync-tsdc-status" style="display:none;margin:8px 0;padding:8px 14px;border-radius:7px;font-size:.85rem"></div>
 
   <div class="table-wrap">
     <table class="data-table" id="teacher-table">
@@ -322,6 +327,41 @@ function mergeOne(studentId) {
     .then(r => r.json()).then(d => {
       if (d.success) { showToast(d.message, 'success'); location.reload(); }
       else showToast(d.error, 'error');
+    });
+}
+
+// ===== ĐỒNG BỘ TSDC TỪ GOOGLE SHEETS =====
+function syncTsdcFromSheets() {
+  const btn = document.getElementById('sync-tsdc-btn');
+  const status = document.getElementById('sync-tsdc-status');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Đang đồng bộ...';
+  status.style.display = '';
+  status.style.background = '#e3f0ff';
+  status.style.color = '#1565C0';
+  status.textContent = '🔄 Đang kết nối Google Sheets và cập nhật dữ liệu TSDC... (có thể mất 30-45 giây)';
+  fetch('/api/tsdc-fetch-sync', {method:'POST'})
+    .then(r => r.json())
+    .then(d => {
+      btn.disabled = false;
+      btn.innerHTML = '🔄 Đồng bộ TSDC';
+      if (d.success) {
+        status.style.background = '#e8f5e9';
+        status.style.color = '#2e7d32';
+        status.textContent = `✅ Đồng bộ thành công! Cập nhật ${d.updated}/${d.total} học sinh. Lúc: ${d.synced_at}`;
+        setTimeout(() => location.reload(), 2000);
+      } else {
+        status.style.background = '#ffebee';
+        status.style.color = '#c62828';
+        status.textContent = `❌ Lỗi: ${d.error}`;
+      }
+    })
+    .catch(e => {
+      btn.disabled = false;
+      btn.innerHTML = '🔄 Đồng bộ TSDC';
+      status.style.background = '#ffebee';
+      status.style.color = '#c62828';
+      status.textContent = `❌ Không thể kết nối server: ${e.message}`;
     });
 }
 </script>

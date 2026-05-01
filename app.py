@@ -2904,11 +2904,135 @@ def api_tsdc_sync_students():
 
     n = _tsdc_sync_students(students)
 
+
+
     return jsonify({'success': True, 'updated': n})
 
 
 
+
+
+
+
+@app.route('/api/tsdc-fetch-sync', methods=['POST'])
+
+
+
+def api_tsdc_fetch_sync():
+
+
+
+    """Server tu fetch tu Google Apps Script URL va sync vao DB.
+
+
+
+    Chi giao vien/admin moi co the goi. Khong can Playwright, chi dung requests.
+
+
+
+    """
+
+
+
+    if session.get('role') not in ('teacher', 'admin'):
+
+
+
+        return jsonify({'error': 'Unauthorized'}), 403
+
+
+
+    APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIxSlNum5oRdASLpAKRgnt_GYefUx2uwtCmu9OzKmtpKr0Zi3AnYyKOhaDSunvhsxC/exec'
+
+
+
+    try:
+
+
+
+        import requests as _requests, json as _json
+
+
+
+        resp = _requests.get(APPS_SCRIPT_URL + '?action=all', allow_redirects=True, timeout=45)
+
+
+
+        data = resp.json()
+
+
+
+    except Exception as e:
+
+
+
+        return jsonify({'error': f'Khong the ket noi Google Sheets: {e}'}), 503
+
+
+
+    students = data.get('students', [])
+
+
+
+    if not students:
+
+
+
+        return jsonify({'error': 'Khong co du lieu hoc sinh tu Google Sheets'}), 404
+
+
+
+    # Luu vao tsdc_cache
+
+
+
+    import json as _json2
+
+
+
+    pushed_at = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
+
+
+    conn = get_db()
+
+
+
+    conn.execute('INSERT OR REPLACE INTO tsdc_cache (id,data_json,pushed_at,pushed_by) VALUES (1,?,?,?)',
+
+
+
+                 (_json2.dumps(data, ensure_ascii=False), pushed_at, 'server-fetch'))
+
+
+
+    conn.commit(); conn.close()
+
+
+
+    _tsdc_cache['data'] = data; _tsdc_cache['ts'] = _time_mod.time()
+
+
+
+    # Sync vao bang students
+
+
+
+    updated = _tsdc_sync_students(students)
+
+
+
+    return jsonify({'success': True, 'total': len(students), 'updated': updated, 'synced_at': pushed_at})
+
+
+
+
+
+
+
 @app.route('/api/tsdc-debug', methods=['POST'])
+
+
 
 def api_tsdc_debug():
 
