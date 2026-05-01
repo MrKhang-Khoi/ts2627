@@ -255,6 +255,28 @@
         <div class="nv-panel" id="panel-nv3"><div id="nv3List"></div></div>
       </div>
 
+      <!-- Filter result panel -->
+      <div id="tsdcFilterPanel" style="display:none">
+        <div class="tsdc-section">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px">
+            <h3 style="margin:0" id="tsdcFilterTitle">Danh sách học sinh</h3>
+            <button onclick="closeTsdcFilter()" style="border:1px solid #ccc;background:#f5f5f5;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px">&#10005; Đóng</button>
+          </div>
+          <div class="tsdc-table-wrap">
+            <table class="tsdc-table">
+              <thead><tr>
+                <th class="num-col">#</th>
+                <th>Họ tên</th>
+                <th>Lớp</th>
+                <th>Trạng thái</th>
+                <th>Các nguyện vọng khác</th>
+              </tr></thead>
+              <tbody id="tsdcFilterBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div class="tsdc-section">
         <h3>👨‍🎓 Danh Sách Học Sinh Đã Đăng Ký</h3>
         <div class="tsdc-table-wrap">
@@ -372,6 +394,7 @@ function renderTsdc(d) {
   var realStudents = (d.students || []).filter(function(s) {
     return s.hoTen && s.hoTen.trim() !== '';
   });
+  window._tsdcStudents = realStudents; /* luu cho filter */
   var realTotal = realStudents.length;
 
   /* Thong ke trang thai chi tinh tu realStudents (chinh xac) */
@@ -402,9 +425,9 @@ function renderTsdc(d) {
       '<span class="status-count">' + cnt + '</span></div>';
   });
 
-  renderNvList('nv1List', d.nv1 || [], '#1565C0');
-  renderNvList('nv2List', d.nv2 || [], '#00897B');
-  renderNvList('nv3List', d.nv3 || [], '#F57C00');
+  renderNvList('nv1List', d.nv1 || [], '#1565C0', 'nv1');
+  renderNvList('nv2List', d.nv2 || [], '#00897B', 'nv2');
+  renderNvList('nv3List', d.nv3 || [], '#F57C00', 'nv3');
 
   var tbody = document.getElementById('tsdcStudentBody');
   tbody.innerHTML = '';
@@ -435,20 +458,25 @@ function renderTsdc(d) {
   document.getElementById('tsdcResults').style.display = '';
 }
 
-function renderNvList(containerId, items, color) {
+function renderNvList(containerId, items, color, nvKey) {
   var el = document.getElementById(containerId);
   if (!items || !items.length) {
     el.innerHTML = '<p style="color:#aaa;font-size:.8rem;text-align:center;padding:12px 0">Không có dữ liệu</p>';
     return;
   }
   var max = items[0][1] || 1;
+  var total = items.reduce(function(s,x){return s+x[1];},0)||1;
   el.innerHTML = items.map(function(item) {
     var school = item[0]; var cnt = item[1];
     var pct = Math.round(cnt / max * 100);
     var short = school.length > 55 ? school.substring(0, 55) + '…' : school;
-    return '<div class="nv-row"><span class="nv-school" title="' + school + '">' + short + '</span>' +
+    return '<div class="nv-row" style="cursor:pointer" onclick="filterTsdcBySchool(' +
+      JSON.stringify(nvKey) + ',' + JSON.stringify(school) + ',this)" title="Click để xem danh sách học sinh">' +
+      '<span class="nv-school">' + short + '</span>' +
       '<div class="nv-bar-wrap"><div class="nv-bar" style="width:' + pct + '%;background:' + color + ';border-radius:4px"></div></div>' +
-      '<span style="font-size:.8rem;font-weight:700;color:' + color + ';min-width:22px;text-align:right">' + cnt + '</span></div>';
+      '<span style="font-size:.8rem;font-weight:700;color:' + color + ';min-width:22px;text-align:right">' + cnt + '</span>' +
+      '<span style="margin-left:4px;font-size:.75rem;color:#90a4ae">&#128269;</span>' +
+      '</div>';
   }).join('');
 }
 
@@ -459,6 +487,55 @@ function switchNv(tab, btn) {
   for (var i = 0; i < panels.length; i++) panels[i].classList.remove('active');
   btn.classList.add('active');
   document.getElementById('panel-' + tab).classList.add('active');
+  closeTsdcFilter();
+}
+
+window._tsdcStudents = [];
+window._tsdcSelRow   = null;
+
+function filterTsdcBySchool(nv, school, rowEl) {
+  /* Toggle: click same row again -> close */
+  if (window._tsdcSelRow === rowEl) { closeTsdcFilter(); return; }
+  if (window._tsdcSelRow) window._tsdcSelRow.style.background = '';
+  window._tsdcSelRow = rowEl;
+  rowEl.style.background = 'rgba(21,101,192,0.08)';
+
+  var nvLabel = {nv1:'Nguyện vọng 1', nv2:'Nguyện vọng 2', nv3:'Nguyện vọng 3'}[nv] || nv;
+  var students = (window._tsdcStudents||[]).filter(function(s){ return s[nv]===school; });
+
+  document.getElementById('tsdcFilterTitle').innerHTML =
+    '🎫 ' + nvLabel + ': <b>' + school + '</b> &nbsp;' +
+    '<span style="font-weight:400;font-size:.85rem;color:#666">(' + students.length + ' học sinh)</span>';
+
+  var tbody = document.getElementById('tsdcFilterBody');
+  if (!students.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:16px">Không có học sinh</td></tr>';
+  } else {
+    tbody.innerHTML = students.map(function(s, i) {
+      var st2 = s.trangThai || '';
+      var cls = st2.indexOf('ti') !== -1 && st2.indexOf('p nh') !== -1 ? 'wait' :
+                st2.indexOf('t duy') !== -1 ? 'review' : 'other';
+      var others = ['nv1','nv2','nv3'].filter(function(k){ return k!==nv && s[k]; }).map(function(k){
+        var tag = {nv1:'NV1',nv2:'NV2',nv3:'NV3'}[k];
+        var tagColor = {nv1:'#1565C0',nv2:'#00897B',nv3:'#F57C00'}[k];
+        return '<div class="nv-line"><span class="nv-tag" style="background:' + tagColor + ';color:#fff">' + tag + '</span><span>' + s[k] + '</span></div>';
+      }).join('');
+      return '<tr>' +
+        '<td class="num-col">' + (i+1) + '</td>' +
+        '<td class="name-col">' + (s.hoTen||'–') + '</td>' +
+        '<td class="lop-col">' + (s.lop||'–') + '</td>' +
+        '<td><span class="st-badge ' + cls + '">' + (st2||'–') + '</span></td>' +
+        '<td class="nv-wrap">' + (others||'<span style="color:#bbb">–</span>') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+  document.getElementById('tsdcFilterPanel').style.display = '';
+  document.getElementById('tsdcFilterPanel').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function closeTsdcFilter() {
+  document.getElementById('tsdcFilterPanel').style.display = 'none';
+  if (window._tsdcSelRow) { window._tsdcSelRow.style.background = ''; window._tsdcSelRow = null; }
 }
 
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTsdc(); });
