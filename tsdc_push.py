@@ -64,6 +64,13 @@ _JS_EXTRACT = r"""
     function isNVSchool(t) {
         return t.indexOf('THPT')!==-1 || t.indexOf('PTDT')!==-1;
     }
+    function isPhone(t) {
+        /* SĐT Viet Nam: 10 chu so, bat dau 0, loai tru CCCD 12 chu so */
+        var clean = t.replace(/[\s\-\.]/g,'');
+        if (clean.length!==10 && clean.length!==11) return false;
+        if (clean.charAt(0)!=='0') return false;
+        return allDigits(clean);
+    }
     function getHSO(row) {
         var cells = Array.from(row.querySelectorAll('td')).map(function(c){ return c.innerText.trim(); });
         for (var i=0; i<cells.length; i++) {
@@ -78,8 +85,8 @@ _JS_EXTRACT = r"""
         if (!cells.some(isMaHS)) continue;
 
         var s = {maHoSo:'',maHocSinh:'',hoTen:'',trangThai:'',
-                 ngaySinh:'',gioiTinh:'',maDinhDanh:'',soCCCD:'',lop:'',
-                 nv1:'',nv2:'',nv3:''};
+                 ngaySinh:'',gioiTinh:'',soDienThoai:'',email:'',
+                 maDinhDanh:'',soCCCD:'',lop:'',nv1:'',nv2:'',nv3:''};
         var afterLop=false, nvs=[];
 
         cells.forEach(function(t) {
@@ -88,7 +95,8 @@ _JS_EXTRACT = r"""
             else if (isDate(t))          { s.ngaySinh=t; }
             else if (t==='\u0110\u1ea1'||t==='N\u1eef') { s.gioiTinh=t; }
             else if (t==='Nam')          { s.gioiTinh='Nam'; }
-            else if (t.indexOf('@')!==-1) { /* skip email */ }
+            else if (t.indexOf('@')!==-1) { s.email=t; }
+            else if (isPhone(t))         { s.soDienThoai=t.replace(/[\s\-\.]/g,''); }
             else if (isIdOrCCCD(t)) {
                 if (!s.maDinhDanh) s.maDinhDanh=t; else s.soCCCD=t;
             }
@@ -310,6 +318,9 @@ def build_stats(students):
         'nv2': sorted(nv2.items(), key=lambda x: -x[1]),
         'nv3': sorted(nv3.items(), key=lambda x: -x[1]),
         'students': [{'hoTen':s.get('hoTen',''),'lop':s.get('lop',''),
+                      'gioiTinh':s.get('gioiTinh',''),
+                      'soDienThoai':s.get('soDienThoai',''),
+                      'email':s.get('email',''),
                       'trangThai':s.get('trangThai',''),
                       'ngaySinh':s.get('ngaySinh',''),
                       'soCCCD':s.get('soCCCD',''),
