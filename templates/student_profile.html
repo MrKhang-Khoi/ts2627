@@ -1,5 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Hồ Sơ - {{ student.ho_ten }}{% endblock %}
+{% block head_extra %}
+<style>
+/* TSDC Card — Student Profile */
+.sp-badges-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.tsdc-block{border-radius:16px;overflow:hidden;margin:14px 0;box-shadow:0 4px 20px rgba(21,101,192,.12);border:2px solid #90caf9}
+.tsdc-block-head{background:linear-gradient(90deg,#1565C0,#1976D2);color:#fff;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.tsdc-block-title{font-size:.9rem;font-weight:700;letter-spacing:.02em}
+.tsdc-block-status{padding:3px 12px;border-radius:20px;font-size:.75rem;font-weight:700;border:1.5px solid rgba(255,255,255,.45);background:rgba(255,255,255,.15);color:#fff;white-space:nowrap}
+.tsdc-block-body{background:#fff;padding:14px 18px}
+.tsdc-nv-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:10px;margin-bottom:8px;line-height:1.5}
+.tsdc-nv-item:last-child{margin-bottom:0}
+.tsdc-nv-item.nv1{background:#e8f5e9;border-left:4px solid #43a047}
+.tsdc-nv-item.nv2{background:#e3f2fd;border-left:4px solid #1976d2}
+.tsdc-nv-item.nv3{background:#fff8e1;border-left:4px solid #f9a825}
+.tsdc-nv-tag{display:inline-block;font-size:.68rem;font-weight:800;padding:2px 7px;border-radius:5px;flex-shrink:0;margin-top:2px;color:#fff;letter-spacing:.03em}
+.tsdc-nv-tag.t1{background:#43a047}.tsdc-nv-tag.t2{background:#1976d2}.tsdc-nv-tag.t3{background:#f9a825}
+.tsdc-nv-school{font-size:.875rem;font-weight:600;color:#1a1a2e;flex:1}
+.tsdc-block-foot{background:#f0f7ff;padding:10px 18px;border-top:1px solid #bbdefb;display:flex;flex-wrap:wrap;gap:16px;font-size:.78rem;color:#555}
+.tsdc-block-foot strong{color:#1565C0;font-family:monospace;font-size:.82rem}
+</style>
+{% endblock %}
 {% block content %}
 <div class="sp-container">
 
@@ -24,59 +45,49 @@
         <span class="sp-overall-badge status-{{ student.status_overall }}">
           {{ OVERALL_LABELS.get(student.status_overall, student.status_overall) }}
         </span>
-        {% if student.tsdc_trang_thai %}
-        <span class="sp-tsdc-badge {% if 'xét duyệt' in student.tsdc_trang_thai or 'xet duyet' in student.tsdc_trang_thai.lower() %}tsdc-xetduyet{% elif 'tiếp nhận' in student.tsdc_trang_thai or 'tiep nhan' in student.tsdc_trang_thai.lower() %}tsdc-chotiepnhan{% else %}tsdc-other{% endif %}">
-          🏫 TSDC: {{ student.tsdc_trang_thai }}
-        </span>
-        {% endif %}
       </div>
     </div>
     <div class="sp-header-actions">
       {% if session.get('role') in ['teacher','admin'] %}
-      <button class="sp-btn-edit" onclick="openEditModal()">✏️ Sửa</button>
+      <button class="sp-btn-edit" onclick="openEditModal()">&#9998; Sửa</button>
       {% endif %}
-      <a href="{{ url_for('api_download_hoso', student_id=student.id) }}" class="sp-btn-download">⬇ Tải hồ sơ</a>
+      <a href="{{ url_for('api_download_hoso', student_id=student.id) }}" class="sp-btn-download">&#8595; Tải hồ sơ</a>
     </div>
   </div>
 
   {% if student.tsdc_nv1 or student.tsdc_nv2 or student.tsdc_nv3 or student.tsdc_trang_thai %}
-  <div class="tsdc-info-card">
-    <!-- Header xanh -->
-    <div class="tsdc-card-head">
-      <span class="tsdc-card-head-title">&#128202; Thông tin đăng ký TSDC</span>
+  <div class="tsdc-block">
+    <div class="tsdc-block-head">
+      <span class="tsdc-block-title">&#128202; Thông tin đăng ký TSDC</span>
       {% if student.tsdc_trang_thai %}
-      <span class="tsdc-card-status">{{ student.tsdc_trang_thai }}</span>
+      <span class="tsdc-block-status">{{ student.tsdc_trang_thai }}</span>
       {% endif %}
     </div>
-    <!-- Body -->
-    <div class="tsdc-card-body">
-      {% if student.tsdc_nv1 or student.tsdc_nv2 or student.tsdc_nv3 %}
-      <div class="tsdc-nv-list">
-        {% if student.tsdc_nv1 %}
-        <div class="tsdc-nv-row nv1-row">
-          <span class="tsdc-nv-badge">NV1</span>
-          <span class="tsdc-nv-text">{{ student.tsdc_nv1 }}</span>
-        </div>
-        {% endif %}
-        {% if student.tsdc_nv2 %}
-        <div class="tsdc-nv-row nv2-row">
-          <span class="tsdc-nv-badge nv2-badge">NV2</span>
-          <span class="tsdc-nv-text">{{ student.tsdc_nv2 }}</span>
-        </div>
-        {% endif %}
-        {% if student.tsdc_nv3 %}
-        <div class="tsdc-nv-row nv3-row">
-          <span class="tsdc-nv-badge nv3-badge">NV3</span>
-          <span class="tsdc-nv-text">{{ student.tsdc_nv3 }}</span>
-        </div>
-        {% endif %}
+    <div class="tsdc-block-body">
+      {% if student.tsdc_nv1 %}
+      <div class="tsdc-nv-item nv1">
+        <span class="tsdc-nv-tag t1">NV1</span>
+        <span class="tsdc-nv-school">{{ student.tsdc_nv1 }}</span>
       </div>
-      {% else %}
+      {% endif %}
+      {% if student.tsdc_nv2 %}
+      <div class="tsdc-nv-item nv2">
+        <span class="tsdc-nv-tag t2">NV2</span>
+        <span class="tsdc-nv-school">{{ student.tsdc_nv2 }}</span>
+      </div>
+      {% endif %}
+      {% if student.tsdc_nv3 %}
+      <div class="tsdc-nv-item nv3">
+        <span class="tsdc-nv-tag t3">NV3</span>
+        <span class="tsdc-nv-school">{{ student.tsdc_nv3 }}</span>
+      </div>
+      {% endif %}
+      {% if not student.tsdc_nv1 and not student.tsdc_nv2 and not student.tsdc_nv3 %}
       <p style="color:#aaa;font-size:.85rem;margin:4px 0">Chưa có nguyện vọng đăng ký.</p>
       {% endif %}
     </div>
-    <!-- Footer: CCCD + timestamp -->
-    <div class="tsdc-info-footer">
+    {% if student.cccd or student.ma_dinh_danh_gd or student.tsdc_updated_at %}
+    <div class="tsdc-block-foot">
       {% if student.cccd %}
       <span>&#129426; CCCD: <strong>{{ student.cccd }}</strong></span>
       {% endif %}
@@ -87,8 +98,10 @@
       <span>&#128336; Cập nhật: {{ student.tsdc_updated_at }}</span>
       {% endif %}
     </div>
+    {% endif %}
   </div>
   {% endif %}
+
 
   {# === ALERT ĐỦ HỒ SƠ === #}
   {% if student.status_overall == 'DU_HO_SO_CHINH_THUC' %}
@@ -250,127 +263,6 @@
 </div>
 {% endblock %}
 
-{% block styles %}
-<style>
-/* =========================================
-   TSDC SECTION — Student Profile
-   ========================================= */
-
-/* Badge hàng trong header card */
-.sp-badges-row {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 6px !important;
-  align-items: center !important;
-  margin-top: 6px !important;
-}
-.sp-tsdc-badge {
-  display: inline-flex !important;
-  align-items: center !important;
-  padding: 4px 12px !important;
-  border-radius: 20px !important;
-  font-size: .78rem !important;
-  font-weight: 700 !important;
-  white-space: nowrap !important;
-}
-.tsdc-xetduyet  { background: #e8f5e9 !important; color: #2e7d32 !important; border: 1.5px solid #a5d6a7 !important; }
-.tsdc-chotiepnhan{ background: #fff3e0 !important; color: #e65100 !important; border: 1.5px solid #ffcc80 !important; }
-.tsdc-other     { background: #eeeeee !important; color: #555    !important; border: 1.5px solid #ccc    !important; }
-
-/* === Card TSDC info === */
-.tsdc-info-card {
-  background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%) !important;
-  border: 2px solid #90caf9 !important;
-  border-radius: 16px !important;
-  padding: 0 !important;
-  margin: 14px 0 !important;
-  box-shadow: 0 4px 16px rgba(25,118,210,.10) !important;
-  overflow: hidden !important;
-}
-.tsdc-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px 18px;
-  background: linear-gradient(90deg, #1565C0 0%, #1976D2 100%);
-  color: #fff;
-}
-.tsdc-card-head-title {
-  font-size: .9rem;
-  font-weight: 700;
-  letter-spacing: .02em;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.tsdc-card-status {
-  display: inline-block;
-  padding: 3px 12px;
-  border-radius: 20px;
-  font-size: .75rem;
-  font-weight: 700;
-  border: 1.5px solid rgba(255,255,255,.5);
-  background: rgba(255,255,255,.15);
-  color: #fff;
-}
-.tsdc-card-body {
-  padding: 14px 18px;
-}
-
-/* NV rows */
-.tsdc-nv-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-}
-.tsdc-nv-row {
-  display: flex !important;
-  align-items: flex-start !important;
-  gap: 10px !important;
-  padding: 10px 14px !important;
-  border-radius: 10px !important;
-  line-height: 1.5 !important;
-}
-.nv1-row { background: #e8f5e9 !important; border-left: 4px solid #43a047 !important; }
-.nv2-row { background: #e3f2fd !important; border-left: 4px solid #1e88e5 !important; }
-.nv3-row { background: #fff8e1 !important; border-left: 4px solid #fb8c00 !important; }
-.tsdc-nv-badge {
-  display: inline-block !important;
-  font-size: .68rem !important;
-  font-weight: 800 !important;
-  padding: 2px 7px !important;
-  border-radius: 5px !important;
-  flex-shrink: 0 !important;
-  margin-top: 2px !important;
-  background: #43a047 !important;
-  color: #fff !important;
-  letter-spacing: .03em !important;
-}
-.nv2-badge { background: #1e88e5 !important; }
-.nv3-badge { background: #fb8c00 !important; }
-.tsdc-nv-text {
-  font-size: .875rem !important;
-  font-weight: 600 !important;
-  color: #1a1a2e !important;
-  flex: 1 !important;
-}
-
-/* Footer CCCD + time */
-.tsdc-info-footer {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 16px !important;
-  padding: 10px 18px !important;
-  border-top: 1px solid #e3f2fd !important;
-  font-size: .78rem !important;
-  color: #555 !important;
-  background: #f8faff !important;
-}
-.tsdc-info-footer strong { color: #1565C0 !important; font-family: monospace !important; font-size: .82rem !important; }
-</style>
-{% endblock %}
 {% block scripts %}
 <script>
 const STUDENT_ID = {{ student.id }};
