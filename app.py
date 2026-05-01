@@ -983,29 +983,29 @@ def api_delete_student():
     row = conn.execute("SELECT * FROM students WHERE id=?", (student_id,)).fetchone()
     if not row:
         conn.close()
-        return jsonify({'error': 'KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y hÃ¡Â»Âc sinh.'}), 404
-    # XÃƒÂ³a document records + backup file_path (tuÃ¡Â»Â³ chÃ¡Â»Ân Ã¢â‚¬â€œ chÃ¡Â»â€° xÃƒÂ³a record, giÃ¡Â»Â¯ file)
+        return jsonify({'error': 'KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y hÃ¡Â»Â c sinh.'}), 404
+    # XÃƒÂ³a document records + backup file_path (tuÃ¡Â»Â³ chÃ¡Â»Â n Ã¢â‚¬â€œ chÃ¡Â»â€° xÃƒÂ³a record, giÃ¡Â»Â¯ file)
     conn.execute("DELETE FROM documents WHERE student_id=?", (student_id,))
     conn.execute("DELETE FROM students WHERE id=?", (student_id,))
     conn.commit()
     conn.close()
     add_log(session.get('user_id'), 'DELETE_STUDENT', student_id, None,
             f"XÃƒÂ³a HS: {row['ho_ten']} - LÃ¡Â»â€ºp {row['lop']}")
-    return jsonify({'success': True, 'message': f"Ã„ÂÃƒÂ£ xÃƒÂ³a hÃ¡Â»Âc sinh {row['ho_ten']}."})
+    return jsonify({'success': True, 'message': f"Ã„Â ÃƒÂ£ xÃƒÂ³a hÃ¡Â»Â c sinh {row['ho_ten']}."})
 
 @app.route('/api/add-student', methods=['POST'])
 @login_required
 def api_add_student():
-    """ThÃƒÂªm hÃ¡Â»Âc sinh thÃ¡Â»Â§ cÃƒÂ´ng (chÃ¡Â»â€° teacher/admin)."""
+    """ThÃƒÂªm hÃ¡Â»Â c sinh thÃ¡Â»Â§ cÃƒÂ´ng (chÃ¡Â»â€° teacher/admin)."""
     if session.get('role') not in ('teacher', 'admin'):
-        return jsonify({'error': 'BÃ¡ÂºÂ¡n khÃƒÂ´ng cÃƒÂ³ quyÃ¡Â»Ân thÃƒÂªm hÃ¡Â»Âc sinh.'}), 403
+        return jsonify({'error': 'BÃ¡ÂºÂ¡n khÃƒÂ´ng cÃƒÂ³ quyÃ¡Â»Â n thÃƒÂªm hÃ¡Â»Â c sinh.'}), 403
     data = request.get_json(force=True) or {}
     ho_ten = (data.get('ho_ten') or '').strip()
     lop = (data.get('lop') or '').strip()
     stt = (data.get('stt') or '1').strip()
     ngay_sinh = (data.get('ngay_sinh') or '').strip()
     if not ho_ten or not lop:
-        return jsonify({'error': 'HÃ¡Â»Â tÃƒÂªn vÃƒÂ  lÃ¡Â»â€ºp khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c Ã„â€˜Ã¡Â»Æ’ trÃ¡Â»â€˜ng.'}), 400
+        return jsonify({'error': 'HÃ¡Â»Â  tÃƒÂªn vÃƒÂ  lÃ¡Â»â€ºp khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c Ã„â€˜Ã¡Â»Æ’ trÃ¡Â»â€˜ng.'}), 400
     ho_ten_khong_dau = to_ascii(ho_ten)
     now = datetime.now().isoformat()
     # TÃ¡ÂºÂ¡o mÃƒÂ£ hÃ¡Â»â€œ sÃ†Â¡ tÃ¡Â»Â± Ã„â€˜Ã¡Â»â„¢ng: LOP_STT_HOTENKD
@@ -1022,18 +1022,18 @@ def api_add_student():
         conn.close()
         add_log(session.get('user_id'), 'ADD_STUDENT', new_id, None,
                 f"ThÃƒÂªm HS: {ho_ten} - LÃ¡Â»â€ºp {lop}")
-        return jsonify({'success': True, 'message': f"Ã„ÂÃƒÂ£ thÃƒÂªm hÃ¡Â»Âc sinh {ho_ten}.", 'id': new_id})
+        return jsonify({'success': True, 'message': f"Ã„Â ÃƒÂ£ thÃƒÂªm hÃ¡Â»Â c sinh {ho_ten}.", 'id': new_id})
     except Exception as e:
         return jsonify({'error': f'LÃ¡Â»â€”i: {str(e)}'}), 500
 
 @app.route('/view-file/<int:student_id>/<doc_type>')
 def view_file(student_id, doc_type):
-    """Xem file PDF Ã¢â‚¬â€ redirect sang Drive URL nÃ¡ÂºÂ¿u lÃƒÂ  Drive file."""
+    """Xem file PDF Ã¢â‚¬â€  redirect sang Drive URL nÃ¡ÂºÂ¿u lÃƒÂ  Drive file."""
     student, doc_map = get_student_with_docs(student_id)
     doc = doc_map.get(doc_type.upper(), {})
     fp  = doc.get('file_path')
     if not fp:
-        return '<p style="font-family:sans-serif;padding:20px">Ã¢ÂÅ’ File chÃ†Â°a Ã„â€˜Ã†Â°Ã¡Â»Â£c nÃ¡Â»â„¢p. Vui lÃƒÂ²ng nÃ¡Â»â„¢p lÃ¡ÂºÂ¡i.</p>', 404
+        return '<p style="font-family:sans-serif;padding:20px">Ã¢Â Å’ File chÃ†Â°a Ã„â€˜Ã†Â°Ã¡Â»Â£c nÃ¡Â»â„¢p. Vui lÃƒÂ²ng nÃ¡Â»â„¢p lÃ¡ÂºÂ¡i.</p>', 404
     import drive_utils
     if drive_utils.is_drive(fp):
         return redirect(drive_utils.view_url(fp))
@@ -1051,8 +1051,9 @@ _TSDC_JS = r"""
     var rows = Array.from(document.querySelectorAll('tbody tr'));
     var students = [];
     function isMaHS(t) {
-        return t.startsWith('HS') && !t.startsWith('HSO') &&
-               t.length > 5 && t.charCodeAt(2) >= 48 && t.charCodeAt(2) <= 57;
+        if(t.startsWith('HSO') && t.length > 8) return true;
+        return t.startsWith('HS') && t.length > 5 &&
+               t.charCodeAt(2) >= 48 && t.charCodeAt(2) <= 57;
     }
     function isDate(t) { return t.length===10&&t.charAt(2)==='/'&&t.charAt(5)==='/'; }
     function allDigits(t) {
@@ -1077,8 +1078,9 @@ _TSDC_JS = r"""
     rows.forEach(function(row) {
         var cells=Array.from(row.querySelectorAll('td')).map(function(c){return c.innerText.trim();});
         if(!cells.some(function(t){return isMaHS(t);})) return;
-        var s={id:'',maHocSinh:'',hoTen:'',trangThai:'',ngaySinh:'',gioiTinh:'',lop:'',nv1:'',nv2:'',nv3:''};
-        var afterLop=false,nvs=[];
+        var s={id:'',maHocSinh:'',hoTen:'',trangThai:'',ngaySinh:'',gioiTinh:'',lop:'',
+               nv1:'',nv2:'',nv3:'',cccd:'',maDinhDanh:''};
+        var afterLop=false,nvs=[],nums12=[],nums10=[],nums9=[];
         cells.forEach(function(t) {
             if(!t) return;
             if(isMaHS(t)){s.maHocSinh=t;s.id=t;}
@@ -1086,7 +1088,12 @@ _TSDC_JS = r"""
             else if(t==='Nam'){s.gioiTinh='Nam';}
             else if(t==='NÃ¡Â»Â¯'){s.gioiTinh='NÃ¡Â»Â¯';}
             else if(t.indexOf('@')!==-1){}
-            else if(isIdOrCCCD(t)){}
+            else if(isIdOrCCCD(t)){
+                /* 12 so = CCCD; 10 so = Ma dinh danh GD; 9 so = CMND */
+                if(/^\d{12}$/.test(t)) nums12.push(t);
+                else if(/^\d{10}$/.test(t)) nums10.push(t);
+                else if(/^\d{9}$/.test(t)) nums9.push(t);
+            }
             else if(t.indexOf('xÃƒÂ©t duyÃ¡Â»â€¡t')!==-1||t.indexOf('tiÃ¡ÂºÂ¿p nhÃ¡ÂºÂ­n')!==-1||t.indexOf('ChÃ¡Â»Â')!==-1){s.trangThai=t;}
             else if(isLop(t)){s.lop=t;afterLop=true;}
             else if(afterLop&&isNVSchool(t)){nvs.push(t.substring(0,80));}
@@ -1100,6 +1107,9 @@ _TSDC_JS = r"""
                 if(!s.hoTen) s.hoTen=t;
             }
         }
+        if(nums12.length>0) s.cccd=nums12[0];
+        if(nums10.length>0) s.maDinhDanh=nums10[0];
+        else if(nums9.length>0) s.maDinhDanh=nums9[0];
         if(nvs[0]) s.nv1=nvs[0];
         if(nvs[1]) s.nv2=nvs[1];
         if(nvs[2]) s.nv3=nvs[2];
@@ -1211,6 +1221,10 @@ def _fetch_tsdc_data_sync():
                 'nv3': sorted(nv3_map.items(), key=lambda x: -x[1]),
                 'students': [{'hoTen':s.get('hoTen',''),'lop':s.get('lop',''),
                               'trangThai':s.get('trangThai',''),
+                              'ngaySinh':s.get('ngaySinh',''),
+                              'cccd':s.get('cccd',''),
+                              'maDinhDanh':s.get('maDinhDanh',''),
+                              'maHocSinh':s.get('maHocSinh',''),
                               'nv1':s.get('nv1',''),'nv2':s.get('nv2',''),'nv3':s.get('nv3','')}
                              for s in students],
                 'updated_at': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
