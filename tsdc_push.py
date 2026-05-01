@@ -29,7 +29,6 @@ TSDC_PASSWORD = 'QuangNgai@06'
 _JS_EXTRACT = r"""
 () => {
     var rows = Array.from(document.querySelectorAll('tbody tr'));
-    var students = [];
 
     function isMaHS(t) {
         return t.startsWith('HS') && !t.startsWith('HSO') &&
@@ -54,26 +53,38 @@ _JS_EXTRACT = r"""
         return false;
     }
     function isNVSchool(t) {
-        return t.indexOf('THPT')!==-1 || t.indexOf('PTDT')!==-1 ||
-               t.indexOf('Lien Viet')!==-1 || t.indexOf('Lien Viet')!==-1;
+        return t.indexOf('THPT')!==-1 || t.indexOf('PTDT')!==-1;
     }
 
-    rows.forEach(function(row) {
+    /* PASS 1: Pre-parse tung row, xac dinh loai row */
+    var parsed = rows.map(function(row) {
         var cells = Array.from(row.querySelectorAll('td')).map(function(c){ return c.innerText.trim(); });
-        if (!cells.some(function(t){ return isMaHS(t); })) return;
+        var hasHS  = cells.some(isMaHS);
+        /* Tim HSO trong row nay (row expand) */
+        var hsoCode = '';
+        cells.forEach(function(t) {
+            if (!hsoCode && t.startsWith('HSO') && t.length > 8) hsoCode = t;
+        });
+        return { cells: cells, hasHS: hasHS, hsoCode: hsoCode, text: row.innerText || '' };
+    });
 
-        var s = {id:'',maHoSo:'',maHocSinh:'',hoTen:'',trangThai:'',
+    /* PASS 2: Voi moi student row, lay HSO tu row expand ke tiep */
+    var students = [];
+    for (var i = 0; i < parsed.length; i++) {
+        if (!parsed[i].hasHS) continue;
+        var cells = parsed[i].cells;
+
+        var s = {maHoSo:'',maHocSinh:'',hoTen:'',trangThai:'',
                  ngaySinh:'',gioiTinh:'',maDinhDanh:'',soCCCD:'',lop:'',
                  nv1:'',nv2:'',nv3:''};
         var afterLop=false, nvs=[];
 
         cells.forEach(function(t) {
             if (!t) return;
-            if (isMaHS(t))               { s.maHocSinh=t; s.id=t; }
-            else if (t.startsWith('HSO')){ s.maHoSo=t; }
+            if (isMaHS(t))               { s.maHocSinh=t; }
             else if (isDate(t))          { s.ngaySinh=t; }
-            else if (t==='Nam')          { s.gioiTinh='Nam'; }
             else if (t==='\u0110\u1ea1'||t==='N\u1eef') { s.gioiTinh=t; }
+            else if (t==='Nam')          { s.gioiTinh='Nam'; }
             else if (t.indexOf('@')!==-1) { /* skip email */ }
             else if (isIdOrCCCD(t)) {
                 if (!s.maDinhDanh) s.maDinhDanh=t; else s.soCCCD=t;
@@ -86,8 +97,8 @@ _JS_EXTRACT = r"""
         });
 
         /* Tim ho ten */
-        for (var i=0; i<cells.length; i++) {
-            var t=cells[i];
+        for (var j=0; j<cells.length; j++) {
+            var t=cells[j];
             if (t&&t.length>2&&!t.startsWith('HS')&&!isDate(t)&&!isIdOrCCCD(t)&&
                 t!=='Nam'&&t!=='\u0110\u1ea1'&&t!=='N\u1eef'&&t.indexOf('@')===-1&&
                 t.indexOf('Tr\u01b0\u1eddng')===-1&&t.indexOf('THPT')===-1&&t.indexOf('PTDT')===-1&&
@@ -100,26 +111,28 @@ _JS_EXTRACT = r"""
         if (nvs[0]) s.nv1=nvs[0];
         if (nvs[1]) s.nv2=nvs[1];
         if (nvs[2]) s.nv3=nvs[2];
-        /* Chi lay HS cua truong Chu Van An */
-        if ((s.maHocSinh||s.hoTen)) students.push(s);
-    });
-    /* Loc theo truong cap duoi = "Chu Van An" trong row DOM */
-    /* Doc lai row DOM de kiem tra ten truong */
+
+        /* Tim HSO tu cac row ke tiep (expand rows, toi da 3 row) */
+        for (var k=i+1; k<Math.min(i+4, parsed.length); k++) {
+            if (parsed[k].hasHS) break; /* gap student moi, dung */
+            if (parsed[k].hsoCode) { s.maHoSo = parsed[k].hsoCode; break; }
+        }
+
+        if (s.maHocSinh || s.hoTen) students.push(s);
+    }
+
+    /* Loc theo truong Chu Van An (check trong text cua row) */
     var filtered = [];
-    for (var i=0; i<rows.length; i++) {
-        var rowText = rows[i].innerText || '';
-        if (rowText.indexOf('Chu V\u0103n An') === -1) continue;
-        /* Row nay chua "Chu Van An" - kiem tra xem co HS nao khop */
-        var cells = Array.from(rows[i].querySelectorAll('td')).map(function(c){ return c.innerText.trim(); });
-        for (var s of students) {
-            if (s.maHocSinh && cells.indexOf(s.maHocSinh) >= 0) {
-                if (!filtered.some(function(f){ return f.maHocSinh === s.maHocSinh; })) {
-                    filtered.push(s);
-                }
-            }
+    for (var i=0; i<parsed.length; i++) {
+        if (!parsed[i].hasHS) continue;
+        if (parsed[i].text.indexOf('Chu V\u0103n An') === -1) continue;
+        var hs = students.find(function(s) {
+            return s.maHocSinh && parsed[i].cells.indexOf(s.maHocSinh) >= 0;
+        });
+        if (hs && !filtered.some(function(f){ return f.maHocSinh === hs.maHocSinh; })) {
+            filtered.push(hs);
         }
     }
-    /* Neu filter qua kenh thi lay tat ca (fallback) */
     if (filtered.length === 0) filtered = students;
     return {students:filtered, rowCount:rows.length, total:students.length};
 }
