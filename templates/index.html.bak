@@ -1,0 +1,440 @@
+﻿{% extends "base.html" %}
+{% block title %}H╞░ß╗¢ng Dß║½n ─É─âng K├╜ Hß╗ô S╞í Tuyß╗ân Sinh Lß╗¢p 10 ΓÇô THCS Chu V─ân An{% endblock %}
+{% block head_extra %}
+<!-- Open Graph / SEO thumbnail -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ts102627.pythonanywhere.com/">
+<meta property="og:title" content="H╞░ß╗¢ng Dß║½n ─É─âng K├╜ Hß╗ô S╞í Tuyß╗ân Sinh Lß╗¢p 10 ΓÇô N─âm hß╗ìc 2026-2027">
+<meta property="og:description" content="Tr╞░ß╗¥ng THCS Chu V─ân An ΓÇô ─É─âk H├á: Hß╗ç thß╗æng nß╗Öp hß╗ô s╞í tuyß╗ân sinh lß╗¢p 10 trß╗▒c tuyß║┐n.">
+<meta property="og:image" content="https://ts102627.pythonanywhere.com/static/og_thumbnail.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:site_name" content="THCS Chu V─ân An ΓÇô Tuyß╗ân Sinh Lß╗¢p 10">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="H╞░ß╗¢ng Dß║½n ─É─âng K├╜ Hß╗ô S╞í Tuyß╗ân Sinh Lß╗¢p 10 ΓÇô N─âm hß╗ìc 2026-2027">
+<meta name="twitter:description" content="Tr╞░ß╗¥ng THCS Chu V─ân An ΓÇô ─É─âk H├á. Nß╗Öp hß╗ô s╞í tuyß╗ân sinh lß╗¢p 10 trß╗▒c tuyß║┐n nhanh ch├│ng qua ─æiß╗çn thoß║íi.">
+<meta name="twitter:image" content="https://ts102627.pythonanywhere.com/static/og_thumbnail.png">
+<style>
+.tsdc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+.tsdc-overlay.active{opacity:1;pointer-events:all}
+.tsdc-box{background:#fff;border-radius:20px;width:100%;max-width:760px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3);transform:translateY(20px);transition:transform .3s}
+.tsdc-overlay.active .tsdc-box{transform:translateY(0)}
+.tsdc-head{background:linear-gradient(135deg,#1565C0,#0D47A1);color:#fff;padding:22px 24px 18px;border-radius:20px 20px 0 0;position:sticky;top:0;z-index:1}
+.tsdc-head h2{margin:0 0 4px;font-size:1.15rem;font-weight:700}
+.tsdc-head p{margin:0;font-size:.8rem;opacity:.8}
+.tsdc-close{position:absolute;top:16px;right:18px;background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;line-height:32px;text-align:center;transition:background .2s}
+.tsdc-close:hover{background:rgba(255,255,255,.35)}
+.tsdc-loading{padding:48px 24px;text-align:center}
+.tsdc-spinner{width:48px;height:48px;border:5px solid #e3eaf5;border-top-color:#1565C0;border-radius:50%;animation:tspin .8s linear infinite;margin:0 auto 16px}
+@keyframes tspin{to{transform:rotate(360deg)}}
+.tsdc-loading p{color:#666;font-size:.95rem;margin:0}
+.tsdc-body{padding:20px}
+.tsdc-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.tsdc-card{border-radius:14px;padding:16px 12px;text-align:center;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.tsdc-card.blue{background:linear-gradient(135deg,#1976D2,#1565C0)}
+.tsdc-card.teal{background:linear-gradient(135deg,#00897B,#00695C)}
+.tsdc-card.orange{background:linear-gradient(135deg,#F57C00,#E65100)}
+.tsdc-card-num{font-size:2rem;font-weight:800;line-height:1.1}
+.tsdc-card-lbl{font-size:.7rem;opacity:.9;margin-top:2px}
+.tsdc-section{margin-bottom:20px}
+.tsdc-section h3{font-size:.88rem;font-weight:700;color:#1565C0;margin:0 0 10px;display:flex;align-items:center;gap:6px}
+.status-list{display:flex;flex-direction:column;gap:6px}
+.status-row{display:flex;align-items:center;gap:10px}
+.status-label{font-size:.8rem;color:#444;flex:1;min-width:0}
+.status-bar-wrap{width:120px;height:8px;background:#e8edf5;border-radius:4px;flex-shrink:0}
+.status-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#1976D2,#42A5F5);transition:width .5s}
+.status-count{font-size:.8rem;font-weight:700;color:#1565C0;min-width:24px;text-align:right}
+.nv-tabs{display:flex;gap:6px;margin-bottom:12px}
+.nv-tab{padding:5px 14px;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;border:2px solid #1565C0;color:#1565C0;background:#fff;transition:all .2s}
+.nv-tab.active{background:#1565C0;color:#fff}
+.nv-panel{display:none}.nv-panel.active{display:block}
+.nv-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f3f8}
+.nv-school{font-size:.82rem;color:#333;flex:1;min-width:0;line-height:1.4}
+.nv-bar-wrap{width:90px;height:8px;background:#e8edf5;border-radius:4px;flex-shrink:0}
+.nv-bar{height:8px;border-radius:4px;transition:width .6s}
+/* Student table */
+.tsdc-table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #e0e7f0}
+.tsdc-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.tsdc-table th{background:#1565C0;color:#fff;padding:9px 10px;text-align:left;font-size:.75rem;letter-spacing:.02em}
+.tsdc-table td{padding:8px 10px;border-bottom:1px solid #f0f3f8;vertical-align:top}
+.tsdc-table tr:last-child td{border-bottom:none}
+.tsdc-table tr:hover td{background:#f5f8ff}
+.tsdc-table .num-col{color:#888;font-size:.75rem;width:28px}
+.tsdc-table .name-col{font-weight:700;color:#1a237e}
+.tsdc-table .lop-col{font-weight:600;color:#1565C0;white-space:nowrap}
+.tsdc-table .nv-wrap{font-size:.76rem;color:#444;line-height:1.5}
+.tsdc-table .nv-line{display:flex;gap:4px;align-items:baseline;flex-wrap:wrap}
+.tsdc-table .nv-tag{font-size:.68rem;font-weight:700;padding:1px 5px;border-radius:4px;flex-shrink:0;white-space:nowrap}
+.nv-tag.nv1-tag{background:#e8f5e9;color:#2e7d32}
+.nv-tag.nv2-tag{background:#e3f2fd;color:#1565C0}
+.nv-tag.nv3-tag{background:#fff3e0;color:#e65100}
+.st-badge{display:inline-block;padding:3px 9px;border-radius:10px;font-size:.72rem;font-weight:600;white-space:nowrap}
+.st-badge.wait{background:#FFF3E0;color:#E65100}
+.st-badge.review{background:#E8F5E9;color:#2E7D32}
+.st-badge.other{background:#EEE;color:#555}
+.tsdc-footer{margin-top:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:14px;border-top:1px solid #e0e7f0}
+.tsdc-footer-ts{font-size:.75rem;color:#888}
+.tsdc-btn-refresh{padding:8px 18px;background:#1565C0;color:#fff;border:none;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s}
+.tsdc-btn-refresh:hover{background:#0D47A1}
+.tsdc-trigger{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:linear-gradient(135deg,#1976D2,#0D47A1);color:#fff;border:none;border-radius:30px;font-size:.9rem;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(21,101,192,.35);transition:all .25s}
+.tsdc-trigger:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(21,101,192,.45)}
+.tsdc-trigger-wrap{margin-top:12px;display:flex;justify-content:center}
+@media(max-width:500px){.tsdc-cards{grid-template-columns:1fr 1fr}.tsdc-card:first-child{grid-column:span 2}}
+/* CTA dang ky TSDC noi bat tren trang chu */
+@keyframes idx-pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.5),0 6px 24px rgba(229,57,53,.35)}55%{box-shadow:0 0 0 12px rgba(229,57,53,0),0 6px 24px rgba(229,57,53,.35)}}
+@keyframes idx-arrow{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+.idx-dkts-wrap{padding:0 16px 8px;margin-top:-10px}
+.idx-dkts-btn{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  width:100%;padding:16px 20px;
+  background:linear-gradient(135deg,#e53935 0%,#ff6f00 100%);
+  border-radius:16px;text-decoration:none;color:#fff;
+  font-weight:800;font-size:1rem;letter-spacing:.02em;
+  box-shadow:0 6px 24px rgba(229,57,53,.4);
+  animation:idx-pulse 2s infinite;
+  transition:transform .15s,opacity .15s;
+  border:2px solid rgba(255,255,255,.25);
+  position:relative;overflow:hidden;
+}
+.idx-dkts-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 55%);pointer-events:none}
+.idx-dkts-btn:hover{opacity:.92;transform:translateY(-2px) scale(1.01);color:#fff}
+.idx-dkts-icon{font-size:1.6rem;flex-shrink:0}
+.idx-dkts-text{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.idx-dkts-main{font-size:1rem;font-weight:800;line-height:1.2}
+.idx-dkts-sub{font-size:.75rem;font-weight:500;opacity:.88}
+.idx-dkts-arrow{font-size:1.3rem;animation:idx-arrow 1s infinite;flex-shrink:0}
+</style>
+{% endblock %}
+{% block content %}
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-icon">≡ƒÄô</div>
+    <h1 class="hero-title">Hß╗å THß╗ÉNG Nß╗ÿP Hß╗Æ S╞á<br>TUYß╗éN SINH Lß╗ÜP 10</h1>
+    <p class="hero-subtitle">N─âm hß╗ìc 2026 ΓÇô 2027</p>
+  </div>
+</div>
+
+{# === CTA DANG KY TSDC === #}
+<div class="idx-dkts-wrap">
+  <a href="https://quangngai.tsdc.edu.vn/dang-ky-ho-so-tuyen-sinh"
+     target="_blank" rel="noopener"
+     class="idx-dkts-btn">
+    <span class="idx-dkts-icon">&#128276;</span>
+    <span class="idx-dkts-text">
+      <span class="idx-dkts-main">&#127979; ─É─âng k├╜ tuyß╗ân sinh lß╗¢p 10 trß╗▒c tuyß║┐n</span>
+      <span class="idx-dkts-sub">Bß║Ñm v├áo ─æ├óy &mdash; N─âm hß╗ìc 2026&ndash;2027 &middot; qlts.tsdc.edu.vn</span>
+    </span>
+    <span class="idx-dkts-arrow">&#8594;</span>
+  </a>
+</div>
+
+<div class="container">
+
+  <!-- BANNER H╞»ß╗ÜNG Dß║¬N -->
+  <div class="guide-banner">
+    <div class="guide-banner-inner">
+      <div class="guide-banner-icon">≡ƒôï</div>
+      <div class="guide-banner-title">H╞»ß╗ÜNG Dß║¬N ─É─éNG K├¥ Hß╗Æ S╞á TUYß╗éN SINH Lß╗ÜP 10</div>
+      <div class="guide-banner-sub">N─éM Hß╗îC 2026 ΓÇô 2027 ┬╖ TR╞»ß╗£NG THCS CHU V─éN AN</div>
+      <a href="/static/huong_dan_tuyen_sinh.pdf" target="_blank" class="guide-banner-btn">
+        ≡ƒôä Xem th├┤ng b├ío ch├¡nh thß╗⌐c (PDF)
+      </a>
+      <div class="tsdc-trigger-wrap">
+        <button class="tsdc-trigger" id="tsdcBtn" onclick="openTsdc()">
+          ≡ƒôè Tra cß╗⌐u th├┤ng tin ─æ─âng k├╜ TSDC
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card select-card">
+    <h2 class="card-title">≡ƒôÜ B╞░ß╗¢c 1: Chß╗ìn lß╗¢p cß╗ºa em</h2>
+    <div class="class-grid">
+      {% for cls in classes %}
+      <a href="{{ url_for('student_list', class_name=cls) }}" class="class-btn">
+        <span class="class-icon">≡ƒÅ½</span>
+        <span class="class-name">Lß╗¢p {{ cls }}</span>
+      </a>
+      {% else %}
+      <div class="empty-state">
+        <p>ΓÜá∩╕Å Ch╞░a c├│ danh s├ích lß╗¢p. Vui l├▓ng li├¬n hß╗ç gi├ío vi├¬n.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="info-cards">
+    <div class="info-card">
+      <div class="info-icon">≡ƒôä</div>
+      <h3>C├íc giß║Ñy tß╗¥ cß║ºn nß╗Öp</h3>
+      <ul>
+        <li>Γ£à Giß║Ñy khai sinh</li>
+        <li>Γ£à CCCD / M├ú ─æß╗ïnh danh</li>
+        <li>Γ£à Hß╗ìc bß║í lß╗¢p 6-8</li>
+        <li>Γ£à Hß╗ìc bß║í lß╗¢p 9 <em>(giai ─æoß║ín 2)</em></li>
+        <li>Γ£à Chß╗⌐ng nhß║¡n tß╗æt nghiß╗çp THCS <em>(giai ─æoß║ín 2)</em></li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <div class="info-icon">≡ƒô▒</div>
+      <h3>H╞░ß╗¢ng dß║½n nß╗Öp file</h3>
+      <ol>
+        <li>Chß╗Ñp ß║únh r├╡ n├⌐t hoß║╖c scan t├ái liß╗çu</li>
+        <li>Chß╗ìn lß╗¢p ΓåÆ Chß╗ìn t├¬n em</li>
+        <li>Bß║Ñm <strong>Chß╗ìn file</strong> rß╗ôi <strong>Tß║úi l├¬n</strong></li>
+        <li>Chß╗¥ gi├ío vi├¬n x├íc nhß║¡n</li>
+      </ol>
+    </div>
+    <div class="info-card">
+      <div class="info-icon">ΓÜá∩╕Å</div>
+      <h3>L╞░u ├╜ quan trß╗ìng</h3>
+      <ul>
+        <li>File phß║úi r├╡ n├⌐t, kh├┤ng bß╗ï mß╗¥</li>
+        <li>Chß║Ñp nhß║¡n: PDF, JPG, PNG</li>
+        <li>Dung l╞░ß╗úng tß╗æi ─æa: 20MB/file</li>
+        <li>Chß╗ìn ─æ├║ng t├¬n cß╗ºa em trong danh s├ích</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TSDC STATS MODAL ===== -->
+<div class="tsdc-overlay" id="tsdcOverlay" onclick="closeTsdcOutside(event)">
+  <div class="tsdc-box">
+    <div class="tsdc-head">
+      <h2>≡ƒôè Thß╗æng K├¬ Hß╗ô S╞í ─É─âng K├╜ TSDC</h2>
+      <p>Hß╗ç thß╗æng qlts.tsdc.edu.vn ΓÇô Tr╞░ß╗¥ng THCS Chu V─ân An ΓÇô ─É─âk H├á</p>
+      <button class="tsdc-close" onclick="closeTsdc()">Γ£ò</button>
+    </div>
+
+    <!-- Loading -->
+    <div class="tsdc-loading" id="tsdcLoading">
+      <div class="tsdc-spinner"></div>
+      <p id="tsdcLoadMsg">─Éang kß║┐t nß╗æi hß╗ç thß╗æng TSDC...<br><small style="color:#aaa">Th╞░ß╗¥ng mß║Ñt 30ΓÇô60 gi├óy lß║ºn ─æß║ºu</small></p>
+    </div>
+
+    <!-- Error -->
+    <div class="tsdc-body" id="tsdcError" style="display:none">
+      <div style="text-align:center;padding:24px 0;color:#c62828">
+        <div style="font-size:2.5rem;margin-bottom:10px">Γ¥î</div>
+        <p id="tsdcErrMsg" style="margin:0 0 16px;font-weight:600"></p>
+        <button class="tsdc-btn-refresh" onclick="loadTsdc(true)" style="margin:0 auto">≡ƒöä Thß╗¡ lß║íi</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="tsdc-body" id="tsdcResults" style="display:none">
+      <div class="tsdc-cards">
+        <div class="tsdc-card blue">
+          <div class="tsdc-card-num" id="statTotal">ΓÇô</div>
+          <div class="tsdc-card-lbl">Tß╗òng hß╗ô s╞í ─æ├ú ─æ─âng k├╜</div>
+        </div>
+        <div class="tsdc-card teal">
+          <div class="tsdc-card-num" id="statTiepNhan">ΓÇô</div>
+          <div class="tsdc-card-lbl">Chß╗¥ tiß║┐p nhß║¡n</div>
+        </div>
+        <div class="tsdc-card orange">
+          <div class="tsdc-card-num" id="statXetDuyet">ΓÇô</div>
+          <div class="tsdc-card-lbl">Chß╗¥ x├⌐t duyß╗çt</div>
+        </div>
+      </div>
+
+      <div class="tsdc-section">
+        <h3>≡ƒôï Chi Tiß║┐t Trß║íng Th├íi</h3>
+        <div class="status-list" id="statusList"></div>
+      </div>
+
+      <div class="tsdc-section">
+        <h3>≡ƒÅ½ Thß╗æng K├¬ Nguyß╗çn Vß╗ìng ─É─âng K├╜</h3>
+        <div class="nv-tabs">
+          <button class="nv-tab active" onclick="switchNv('nv1',this)">Nguyß╗çn vß╗ìng 1</button>
+          <button class="nv-tab" onclick="switchNv('nv2',this)">Nguyß╗çn vß╗ìng 2</button>
+          <button class="nv-tab" onclick="switchNv('nv3',this)">Nguyß╗çn vß╗ìng 3</button>
+        </div>
+        <div class="nv-panel active" id="panel-nv1"><div id="nv1List"></div></div>
+        <div class="nv-panel" id="panel-nv2"><div id="nv2List"></div></div>
+        <div class="nv-panel" id="panel-nv3"><div id="nv3List"></div></div>
+      </div>
+
+      <div class="tsdc-section">
+        <h3>≡ƒæ¿ΓÇì≡ƒÄô Danh S├ích Hß╗ìc Sinh ─É├ú ─É─âng K├╜</h3>
+        <div class="tsdc-table-wrap">
+          <table class="tsdc-table">
+            <thead><tr>
+              <th class="num-col">#</th>
+              <th>Hß╗ì t├¬n</th>
+              <th>Lß╗¢p</th>
+              <th>Trß║íng th├íi</th>
+              <th>Nguyß╗çn vß╗ìng ─æ─âng k├╜</th>
+            </tr></thead>
+            <tbody id="tsdcStudentBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tsdc-footer">
+        <span class="tsdc-footer-ts">≡ƒòÉ Cß║¡p nhß║¡t: <span id="tsdcUpdatedAt">ΓÇô</span></span>
+        <button class="tsdc-btn-refresh" onclick="loadTsdc(true)">
+          ≡ƒöä L├ám mß╗¢i dß╗» liß╗çu
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _tsdcLoaded = false;
+let _tsdcPollTimer = null;
+
+function openTsdc() {
+  document.getElementById('tsdcOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  loadTsdc(false);
+}
+function closeTsdc() {
+  document.getElementById('tsdcOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+  if (_tsdcPollTimer) { clearInterval(_tsdcPollTimer); _tsdcPollTimer = null; }
+}
+function closeTsdcOutside(e) {
+  if (e.target.id === 'tsdcOverlay') closeTsdc();
+}
+function _showLoading(msg) {
+  document.getElementById('tsdcLoading').style.display = '';
+  document.getElementById('tsdcResults').style.display = 'none';
+  document.getElementById('tsdcError').style.display   = 'none';
+  document.getElementById('tsdcLoadMsg').innerHTML = (msg || '─Éang kß║┐t nß╗æi...') +
+    '<br><small style="color:#aaa">Th╞░ß╗¥ng mß║Ñt 30ΓÇô60 gi├óy lß║ºn ─æß║ºu</small>';
+}
+function _showError(msg) {
+  document.getElementById('tsdcLoading').style.display = 'none';
+  document.getElementById('tsdcResults').style.display = 'none';
+  document.getElementById('tsdcErrMsg').textContent = msg;
+  document.getElementById('tsdcError').style.display = '';
+}
+function loadTsdc(force) {
+  if (!force && _tsdcLoaded) return;
+  if (_tsdcPollTimer) { clearInterval(_tsdcPollTimer); _tsdcPollTimer = null; }
+  _showLoading('─Éang khß╗ƒi ─æß╗Öng kß║┐t nß╗æi TSDC...');
+  fetch('/api/tsdc-stats' + (force ? '?force=1' : ''))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { renderTsdc(d); _tsdcLoaded = true; return; }
+      if (d.loading) {
+        var dots = 0;
+        _tsdcPollTimer = setInterval(function() {
+          dots = (dots + 1) % 4;
+          _showLoading('─Éang lß║Ñy dß╗» liß╗çu tß╗½ TSDC' + Array(dots + 2).join('.'));
+          fetch('/api/tsdc-status').then(function(r) { return r.json(); }).then(function(s) {
+            if (s.ready) {
+              clearInterval(_tsdcPollTimer); _tsdcPollTimer = null;
+              renderTsdc(s); _tsdcLoaded = true;
+            } else if (s.error) {
+              clearInterval(_tsdcPollTimer); _tsdcPollTimer = null;
+              _showError(s.error);
+            }
+          }).catch(function() {});
+        }, 5000);
+      } else if (d.error) { _showError(d.error); }
+    })
+    .catch(function(err) { _showError('Lß╗ùi kß║┐t nß╗æi: ' + err.message); });
+}
+
+function renderTsdc(d) {
+  /* Loc truoc: chi giu hoc sinh co ho ten that */
+  var realStudents = (d.students || []).filter(function(s) {
+    return s.hoTen && s.hoTen.trim() !== '';
+  });
+  var realTotal = realStudents.length;
+
+  /* Thong ke trang thai chi tinh tu realStudents (chinh xac) */
+  var st = {};
+  realStudents.forEach(function(s) {
+    var tt = s.trangThai || 'Kh├┤ng r├╡';
+    st[tt] = (st[tt] || 0) + 1;
+  });
+
+  document.getElementById('statTotal').textContent = realTotal;
+  var tiepNhan = 0, xetDuyet = 0;
+  Object.keys(st).forEach(function(k) {
+    var v = st[k];
+    if (k.indexOf('ti') !== -1 && k.indexOf('p nh') !== -1) tiepNhan += v;
+    if (k.indexOf('t duy') !== -1) xetDuyet += v;
+  });
+  document.getElementById('statTiepNhan').textContent = tiepNhan;
+  document.getElementById('statXetDuyet').textContent = xetDuyet;
+
+  var bar_total = realTotal || 1;
+  var sl = document.getElementById('statusList');
+  sl.innerHTML = '';
+  Object.keys(st).forEach(function(label) {
+    var cnt = st[label];
+    var pct = Math.round(cnt / bar_total * 100);
+    sl.innerHTML += '<div class="status-row"><span class="status-label" title="' + label + '">' + label + '</span>' +
+      '<div class="status-bar-wrap"><div class="status-bar" style="width:' + pct + '%"></div></div>' +
+      '<span class="status-count">' + cnt + '</span></div>';
+  });
+
+  renderNvList('nv1List', d.nv1 || [], '#1565C0');
+  renderNvList('nv2List', d.nv2 || [], '#00897B');
+  renderNvList('nv3List', d.nv3 || [], '#F57C00');
+
+  var tbody = document.getElementById('tsdcStudentBody');
+  tbody.innerHTML = '';
+  if (realStudents.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Ch╞░a c├│ hß╗ìc sinh ─æ─âng k├╜</td></tr>';
+  } else {
+    realStudents.forEach(function(s, i) {
+      var st2 = s.trangThai || '';
+      var cls = st2.indexOf('ti') !== -1 && st2.indexOf('p nh') !== -1 ? 'wait' :
+                st2.indexOf('t duy') !== -1 ? 'review' : 'other';
+      /* Hien thi day du NV1/NV2/NV3 */
+      var nvHtml = '';
+      if (s.nv1) nvHtml += '<div class="nv-line"><span class="nv-tag nv1-tag">NV1</span><span>' + s.nv1 + '</span></div>';
+      if (s.nv2) nvHtml += '<div class="nv-line"><span class="nv-tag nv2-tag">NV2</span><span>' + s.nv2 + '</span></div>';
+      if (s.nv3) nvHtml += '<div class="nv-line"><span class="nv-tag nv3-tag">NV3</span><span>' + s.nv3 + '</span></div>';
+      if (!nvHtml) nvHtml = '<span style="color:#bbb">ΓÇô</span>';
+      tbody.innerHTML += '<tr>' +
+        '<td class="num-col">' + (i+1) + '</td>' +
+        '<td class="name-col">' + s.hoTen + '</td>' +
+        '<td class="lop-col">' + (s.lop || 'ΓÇô') + '</td>' +
+        '<td><span class="st-badge ' + cls + '">' + (st2 || 'ΓÇô') + '</span></td>' +
+        '<td class="nv-wrap">' + nvHtml + '</td>' +
+        '</tr>';
+    });
+  }
+
+  document.getElementById('tsdcUpdatedAt').textContent = d.updated_at || 'ΓÇô';
+  document.getElementById('tsdcResults').style.display = '';
+}
+
+function renderNvList(containerId, items, color) {
+  var el = document.getElementById(containerId);
+  if (!items || !items.length) {
+    el.innerHTML = '<p style="color:#aaa;font-size:.8rem;text-align:center;padding:12px 0">Kh├┤ng c├│ dß╗» liß╗çu</p>';
+    return;
+  }
+  var max = items[0][1] || 1;
+  el.innerHTML = items.map(function(item) {
+    var school = item[0]; var cnt = item[1];
+    var pct = Math.round(cnt / max * 100);
+    var short = school.length > 55 ? school.substring(0, 55) + 'ΓÇª' : school;
+    return '<div class="nv-row"><span class="nv-school" title="' + school + '">' + short + '</span>' +
+      '<div class="nv-bar-wrap"><div class="nv-bar" style="width:' + pct + '%;background:' + color + ';border-radius:4px"></div></div>' +
+      '<span style="font-size:.8rem;font-weight:700;color:' + color + ';min-width:22px;text-align:right">' + cnt + '</span></div>';
+  }).join('');
+}
+
+function switchNv(tab, btn) {
+  var tabs = document.querySelectorAll('.nv-tab');
+  var panels = document.querySelectorAll('.nv-panel');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+  for (var i = 0; i < panels.length; i++) panels[i].classList.remove('active');
+  btn.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTsdc(); });
+</script>
+{% endblock %}
