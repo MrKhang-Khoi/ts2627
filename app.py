@@ -85,8 +85,36 @@ def student_list(class_name):
     students = conn.execute("SELECT * FROM students WHERE lop=? ORDER BY CAST(stt AS INTEGER)", (class_name,)).fetchall()
     conn.close()
     students = enrich_students(students)
+
+    # Tinh thong ke TSDC o backend (tranh loi Jinja2 namespace tren server cu)
+    da_dk = sum(1 for s in students if s.get('tsdc_trang_thai'))
+    chua_dk = len(students) - da_dk
+    nv1_count = sum(1 for s in students if s.get('tsdc_nv1'))
+    nv2_count = sum(1 for s in students if s.get('tsdc_nv2'))
+    nv3_count = sum(1 for s in students if s.get('tsdc_nv3'))
+    ti_le = round(da_dk / len(students) * 100) if students else 0
+
+    # Thong ke theo truong cho tung NV
+    def school_stats(field):
+        counts = {}
+        for s in students:
+            val = (s.get(field) or '').strip()
+            if val:
+                counts[val] = counts.get(val, 0) + 1
+        return sorted(counts.items(), key=lambda x: -x[1])
+
+    tsdc_stats = {
+        'da_dk': da_dk, 'chua_dk': chua_dk,
+        'nv1': nv1_count, 'nv2': nv2_count, 'nv3': nv3_count,
+        'ti_le': ti_le,
+        'nv1_schools': school_stats('tsdc_nv1'),
+        'nv2_schools': school_stats('tsdc_nv2'),
+        'nv3_schools': school_stats('tsdc_nv3'),
+    }
+
     return render_template('student_list.html', students=students, class_name=class_name,
-                           DOC_LABELS=DOC_LABELS, STATUS_LABELS=STATUS_LABELS, OVERALL_LABELS=OVERALL_LABELS)
+                           DOC_LABELS=DOC_LABELS, STATUS_LABELS=STATUS_LABELS, OVERALL_LABELS=OVERALL_LABELS,
+                           tsdc_stats=tsdc_stats)
 
 @app.route('/student/<int:student_id>')
 def student_profile(student_id):

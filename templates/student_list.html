@@ -57,81 +57,72 @@
 
   {# === CARD THONG KE TSDC - CHI HIEN VOI TEACHER/ADMIN === #}
   {% if session.get('role') in ['teacher','admin'] %}
-  {% set ns = namespace(da_dk=0, chua_dk=0, nv1=0, nv2=0, nv3=0) %}
-  {% for s in students %}
-    {% if s.tsdc_trang_thai %}{% set ns.da_dk = ns.da_dk + 1 %}{% else %}{% set ns.chua_dk = ns.chua_dk + 1 %}{% endif %}
-    {% if s.tsdc_nv1 %}{% set ns.nv1 = ns.nv1 + 1 %}{% endif %}
-    {% if s.tsdc_nv2 %}{% set ns.nv2 = ns.nv2 + 1 %}{% endif %}
-    {% if s.tsdc_nv3 %}{% set ns.nv3 = ns.nv3 + 1 %}{% endif %}
-  {% endfor %}
   <div class="tsdc-stat-card">
     <div class="tsdc-stat-head">
-      <span class="tsdc-stat-head-title">&#128202; Thống kê ĐKTS lớp 10 &mdash; Lớp {{ class_name }}</span>
-      <span class="tsdc-stat-head-sub">Năm học 2026&ndash;2027</span>
+      <span class="tsdc-stat-head-title">&#128202; Th&#7889;ng k&#234; &#272;KTS l&#7899;p 10 &mdash; L&#7899;p {{ class_name }}</span>
+      <span class="tsdc-stat-head-sub">N&#259;m h&#7885;c 2026&ndash;2027</span>
     </div>
     <div class="tsdc-stat-grid tsdc-stat-grid-wide">
       <div class="tsdc-stat-item">
         <div class="tsdc-stat-num blue">{{ students|length }}</div>
-        <div class="tsdc-stat-lbl">TỔNG HỌC SINH</div>
+        <div class="tsdc-stat-lbl">T&#7892;NG H&#7884;C SINH</div>
       </div>
       <div class="tsdc-stat-item">
-        <div class="tsdc-stat-num green">{{ ns.da_dk }}</div>
-        <div class="tsdc-stat-lbl">ĐÃ ĐĂNG KÝ TSDC</div>
+        <div class="tsdc-stat-num green">{{ tsdc_stats.da_dk }}</div>
+        <div class="tsdc-stat-lbl">&#272;&#195; &#272;&#258;NG K&#221;</div>
       </div>
       <div class="tsdc-stat-item">
-        <div class="tsdc-stat-num red">{{ ns.chua_dk }}</div>
-        <div class="tsdc-stat-lbl">CHƯA ĐĂNG KÝ</div>
+        <div class="tsdc-stat-num red">{{ tsdc_stats.chua_dk }}</div>
+        <div class="tsdc-stat-lbl">CH&#431;A &#272;&#258;NG K&#221;</div>
       </div>
       <div class="tsdc-stat-item" style="border-right:none">
-        <div class="tsdc-stat-num" style="color:#1565C0;font-size:1.3rem">
-          {% if students|length > 0 %}{{ (ns.da_dk / students|length * 100)|round|int }}%{% else %}0%{% endif %}
-        </div>
+        <div class="tsdc-stat-num" style="color:#1565C0;font-size:1.4rem">{{ tsdc_stats.ti_le }}%</div>
         <div class="tsdc-stat-lbl">TỶ LỆ ĐĂNG KÝ</div>
       </div>
     </div>
     <div class="tsdc-nv-section">
       <div class="tsdc-nv-cols">
+        {# NV1 #}
         <div>
-          <div class="tsdc-nv-col-head nv1-head-bg">Nguyện Vọng 1 &mdash; {{ ns.nv1 }} HS</div>
-          {% set nv1_max = ns.nv1 if ns.nv1 > 0 else 1 %}
-          {% set nv1_schools = namespace(seen=[]) %}
-          {% for s in students %}{% if s.tsdc_nv1 and s.tsdc_nv1 not in nv1_schools.seen %}{% set nv1_schools.seen = nv1_schools.seen + [s.tsdc_nv1] %}{% endif %}{% endfor %}
-          {% for school in nv1_schools.seen %}
-            {% set cnt = namespace(v=0) %}{% for s in students %}{% if s.tsdc_nv1 == school %}{% set cnt.v = cnt.v + 1 %}{% endif %}{% endfor %}
+          <div class="tsdc-nv-col-head nv1-head-bg">Nguy&#7879;n V&#7885;ng 1 &mdash; {{ tsdc_stats.nv1 }} HS</div>
+          {% if tsdc_stats.nv1_schools %}
+            {% set nv1_max = tsdc_stats.nv1_schools[0][1] %}
+            {% for school, cnt in tsdc_stats.nv1_schools %}
             <div class="tsdc-nv-stat-row">
               <span class="tsdc-nv-stat-label" title="{{ school }}">{{ school }}</span>
-              <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt.v/nv1_max*100)|round|int }}%;background:#43a047"></div></div>
-              <span class="tsdc-nv-stat-count">{{ cnt.v }}</span>
+              <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt/nv1_max*100)|round|int }}%;background:#43a047"></div></div>
+              <span class="tsdc-nv-stat-count">{{ cnt }}</span>
             </div>
-          {% else %}<p style="color:#aaa;font-size:.75rem">Chưa có dữ liệu</p>{% endfor %}
+            {% endfor %}
+          {% else %}<p style="color:#aaa;font-size:.75rem">Ch&#432;a c&#243; d&#7919; li&#7879;u</p>{% endif %}
         </div>
+        {# NV2 #}
         <div>
-          <div class="tsdc-nv-col-head nv2-head-bg">Nguyện Vọng 2 &mdash; {{ ns.nv2 }} HS</div>
-          {% set nv2_max = ns.nv2 if ns.nv2 > 0 else 1 %}
-          {% set nv2_schools = namespace(seen=[]) %}
-          {% for s in students %}{% if s.tsdc_nv2 and s.tsdc_nv2 not in nv2_schools.seen %}{% set nv2_schools.seen = nv2_schools.seen + [s.tsdc_nv2] %}{% endif %}{% endfor %}
-          {% for school in nv2_schools.seen %}
-            {% set cnt = namespace(v=0) %}{% for s in students %}{% if s.tsdc_nv2 == school %}{% set cnt.v = cnt.v + 1 %}{% endif %}{% endfor %}
+          <div class="tsdc-nv-col-head nv2-head-bg">Nguy&#7879;n V&#7885;ng 2 &mdash; {{ tsdc_stats.nv2 }} HS</div>
+          {% if tsdc_stats.nv2_schools %}
+            {% set nv2_max = tsdc_stats.nv2_schools[0][1] %}
+            {% for school, cnt in tsdc_stats.nv2_schools %}
             <div class="tsdc-nv-stat-row">
               <span class="tsdc-nv-stat-label" title="{{ school }}">{{ school }}</span>
-              <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt.v/nv2_max*100)|round|int }}%;background:#1976d2"></div></div>
-              <span class="tsdc-nv-stat-count">{{ cnt.v }}</span>
+              <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt/nv2_max*100)|round|int }}%;background:#1976d2"></div></div>
+              <span class="tsdc-nv-stat-count">{{ cnt }}</span>
             </div>
-          {% else %}<p style="color:#aaa;font-size:.75rem">Chưa có dữ liệu</p>{% endfor %}
+            {% endfor %}
+          {% else %}<p style="color:#aaa;font-size:.75rem">Ch&#432;a c&#243; d&#7919; li&#7879;u</p>{% endif %}
         </div>
+        {# NV3 #}
         <div>
-          <div class="tsdc-nv-col-head nv3-head-bg">Nguyện Vọng 3 &mdash; {{ ns.nv3 }} HS</div>
-          {% set nv3_max = ns.nv3 if ns.nv3 > 0 else 1 %}
-          {% set nv3_schools = namespace(seen=[]) %}
-          {% for s in students %}{% if s.tsdc_nv3 and s.tsdc_nv3 not in nv3_schools.seen %}{% set nv3_schools.seen = nv3_schools.seen + [s.tsdc_nv3] %}{% endif %}{% endfor %}
-          {% for school in nv3_schools.seen %}
-            {% set cnt = namespace(v=0) %}{% for s in students %}{% if s.tsdc_nv3 == school %}{% set cnt.v = cnt.v + 1 %}{% endif %}{% endfor %}
+          <div class="tsdc-nv-col-head nv3-head-bg">Nguy&#7879;n V&#7885;ng 3 &mdash; {{ tsdc_stats.nv3 }} HS</div>
+          {% if tsdc_stats.nv3_schools %}
+            {% set nv3_max = tsdc_stats.nv3_schools[0][1] %}
+            {% for school, cnt in tsdc_stats.nv3_schools %}
             <div class="tsdc-nv-stat-row">
               <span class="tsdc-nv-stat-label" title="{{ school }}">{{ school }}</span>
-              <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt.v/nv3_max*100)|round|int }}%;background:#f9a825"></div></div>
-              <span class="tsdc-nv-stat-count">{{ cnt.v }}</span>
+              <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt/nv3_max*100)|round|int }}%;background:#f9a825"></div></div>
+              <span class="tsdc-nv-stat-count">{{ cnt }}</span>
             </div>
-          {% else %}<p style="color:#aaa;font-size:.75rem">Chưa có dữ liệu</p>{% endfor %}
+            {% endfor %}
+          {% else %}<p style="color:#aaa;font-size:.75rem">Ch&#432;a c&#243; d&#7919; li&#7879;u</p>{% endif %}
         </div>
       </div>
     </div>
