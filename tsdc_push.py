@@ -5,8 +5,6 @@ Cach dung:
   py tsdc_push.py                     # Chay 1 lan
   py tsdc_push.py --loop              # Chay tu dong moi 30 phut
   py tsdc_push.py --url https://...   # Chi dinh URL PythonAnywhere tuy chinh
-
-Hoac tich hop vao CHAY_MONITOR_TSDC.bat de chay nen.
 """
 import asyncio, json, sys, time, argparse
 import urllib.request, urllib.error
@@ -22,205 +20,248 @@ PUSH_INTERVAL_MIN  = 30   # push moi 30 phut khi chay --loop
 TSDC_USERNAME = 'qni_thcs_chuvanan1'
 TSDC_PASSWORD = 'QuangNgai@06'
 
+# ============================================================
+# JS PARSER — lay y nguyen tu tsdc_monitor.py (dang chay dung)
+# ============================================================
+_JS_EXTRACT = r"""
+() => {
+    var rows = Array.from(document.querySelectorAll('tbody tr'));
+    var students = [];
+
+    function isMaHS(t) {
+        return t.startsWith('HS') && !t.startsWith('HSO') &&
+               t.length > 5 && t.charCodeAt(2) >= 48 && t.charCodeAt(2) <= 57;
+    }
+    function isDate(t) {
+        return t.length === 10 && t.charAt(2) === '/' && t.charAt(5) === '/';
+    }
+    function allDigits(t) {
+        for (var i=0; i<t.length; i++) if (t.charCodeAt(i)<48||t.charCodeAt(i)>57) return false;
+        return true;
+    }
+    function isIdOrCCCD(t) {
+        if (t.length<9||t.length>12||!allDigits(t)) return false;
+        if (t.length===10 && t.charAt(0)==='0') return false;
+        return true;
+    }
+    function isLop(t) {
+        if (t.length<2||t.length>5) return false;
+        if (t.charAt(0)==='9') { var c=t.charCodeAt(1); return c>=65&&c<=90; }
+        if (t.charAt(0)==='1'&&t.charAt(1)==='0'&&t.length>2) { var c=t.charCodeAt(2); return c>=65&&c<=90; }
+        return false;
+    }
+    function isNVSchool(t) {
+        return t.indexOf('THPT')!==-1 || t.indexOf('PTDT')!==-1 ||
+               t.indexOf('Lien Viet')!==-1 || t.indexOf('Lien Viet')!==-1;
+    }
+
+    rows.forEach(function(row) {
+        var cells = Array.from(row.querySelectorAll('td')).map(function(c){ return c.innerText.trim(); });
+        if (!cells.some(function(t){ return isMaHS(t); })) return;
+
+        var s = {id:'',maHoSo:'',maHocSinh:'',hoTen:'',trangThai:'',
+                 ngaySinh:'',gioiTinh:'',maDinhDanh:'',soCCCD:'',lop:'',
+                 nv1:'',nv2:'',nv3:''};
+        var afterLop=false, nvs=[];
+
+        cells.forEach(function(t) {
+            if (!t) return;
+            if (isMaHS(t))               { s.maHocSinh=t; s.id=t; }
+            else if (t.startsWith('HSO')){ s.maHoSo=t; }
+            else if (isDate(t))          { s.ngaySinh=t; }
+            else if (t==='Nam')          { s.gioiTinh='Nam'; }
+            else if (t==='\u0110\u1ea1'||t==='N\u1eef') { s.gioiTinh=t; }
+            else if (t.indexOf('@')!==-1) { /* skip email */ }
+            else if (isIdOrCCCD(t)) {
+                if (!s.maDinhDanh) s.maDinhDanh=t; else s.soCCCD=t;
+            }
+            else if (t.indexOf('x\u00e9t duy\u1ec7t')!==-1||t.indexOf('ti\u1ebfp nh\u1eadn')!==-1||t.indexOf('Ch\u1edd')!==-1) {
+                s.trangThai=t;
+            }
+            else if (isLop(t))           { s.lop=t; afterLop=true; }
+            else if (afterLop && isNVSchool(t)) { nvs.push(t.substring(0,80)); }
+        });
+
+        /* Tim ho ten */
+        for (var i=0; i<cells.length; i++) {
+            var t=cells[i];
+            if (t&&t.length>2&&!t.startsWith('HS')&&!isDate(t)&&!isIdOrCCCD(t)&&
+                t!=='Nam'&&t!=='\u0110\u1ea1'&&t!=='N\u1eef'&&t.indexOf('@')===-1&&
+                t.indexOf('Tr\u01b0\u1eddng')===-1&&t.indexOf('THPT')===-1&&t.indexOf('PTDT')===-1&&
+                !isLop(t)&&!allDigits(t)&&
+                t.indexOf('duy\u1ec7t')===-1&&t.indexOf('nh\u1eadn')===-1&&t.indexOf('Thao')===-1) {
+                if (!s.hoTen) s.hoTen=t;
+            }
+        }
+
+        if (nvs[0]) s.nv1=nvs[0];
+        if (nvs[1]) s.nv2=nvs[1];
+        if (nvs[2]) s.nv3=nvs[2];
+        if (s.maHocSinh||s.hoTen) students.push(s);
+    });
+    return {students:students, rowCount:rows.length};
+}
+"""
+
+
+async def select_option(page, option_text):
+    """Chon option trong el-select - giong tsdc_monitor.select_el_option"""
+    all_selects = await page.query_selector_all('.el-select')
+    for sel in all_selects:
+        try:
+            await sel.click()
+            await asyncio.sleep(0.8)
+            opts = page.locator('.el-select-dropdown:not([style*="display: none"]) .el-select-dropdown__item')
+            cnt = await opts.count()
+            for j in range(cnt):
+                txt = await opts.nth(j).inner_text()
+                if option_text.lower()[:8] in txt.lower():
+                    await opts.nth(j).click()
+                    print(f'[PUSH]   Da chon: {txt.strip()[:50]}', flush=True)
+                    return True
+            await page.keyboard.press('Escape')
+        except:
+            await page.keyboard.press('Escape')
+    return False
+
+
+async def extract_page(page):
+    """Extract hoc sinh tu bang hien tai (1 trang)"""
+    raw = await page.evaluate(_JS_EXTRACT)
+    students = raw.get('students', [])
+    rows = raw.get('rowCount', 0)
+    print(f'[PUSH]   Trang: {rows} rows -> {len(students)} hoc sinh', flush=True)
+    return students
+
+
 async def scrape_tsdc():
     from playwright.async_api import async_playwright
     print('[PUSH] Bat dau scrape TSDC...', flush=True)
     async with async_playwright() as pw:
         br   = await pw.chromium.launch(headless=True, slow_mo=0)
         page = await br.new_page(viewport={'width':1400,'height':900})
-        # Login
+
+        # 1. Login
         print('[PUSH] Login...', flush=True)
         await page.goto('https://qlts.tsdc.edu.vn', wait_until='domcontentloaded', timeout=20000)
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(2)
         if await page.is_visible('input[type="password"]'):
             await page.fill('input[type="text"]',  TSDC_USERNAME)
             await page.fill('input[type="password"]', TSDC_PASSWORD)
             await page.click('button[type="submit"]')
-            await asyncio.sleep(4)
+            await asyncio.sleep(5)
+
+        # 2. Navigate
         print('[PUSH] Navigate...', flush=True)
         await page.goto('https://qlts.tsdc.edu.vn/quan-ly-ho-so', wait_until='networkidle', timeout=25000)
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(2)
         await page.keyboard.press('Escape'); await asyncio.sleep(0.3)
-        # Click menu Ho so du tuyen
+
+        # 3. Click menu Ho so du tuyen
         print('[PUSH] Click menu...', flush=True)
         for item in await page.query_selector_all('li, a'):
             try:
                 txt = await item.inner_text()
-                if ('\u1ef1 tuy\u1ec3n' in txt or 'du tuyen' in txt.lower()) and len(txt) < 50:
-                    await item.click(); await asyncio.sleep(2.5); break
+                if '\u1ef1 tuy\u1ec3n' in txt and len(txt) < 50:
+                    await item.click(); await asyncio.sleep(2); break
             except: pass
-        await asyncio.sleep(0.5)
-        # Chon Cap 3
+        await asyncio.sleep(2)
+        try: await page.keyboard.press('Escape'); await asyncio.sleep(0.3)
+        except: pass
+
+        # 4. Chon Cap 3
         print('[PUSH] Chon Cap 3...', flush=True)
-        for sel in await page.query_selector_all('.el-select'):
-            try:
-                await sel.click(); await asyncio.sleep(0.5)
-                opts = page.locator('.el-select-dropdown:not([style*="display: none"]) .el-select-dropdown__item')
-                found = False
-                for j in range(await opts.count()):
-                    if 'c\u1ea5p 3' in (await opts.nth(j).inner_text()).lower():
-                        await opts.nth(j).click(); found = True; break
-                if not found: await page.keyboard.press('Escape'); await asyncio.sleep(0.2)
-                else: break
-            except: await page.keyboard.press('Escape')
-        await asyncio.sleep(1.2)
-        # Chon Dot THU
+        await select_option(page, 'C\u1ea5p 3')
+        await asyncio.sleep(0.5)
+        await page.keyboard.press('Escape'); await asyncio.sleep(0.2)
+
+        # 5. Chon Dot THU
         print('[PUSH] Chon Dot THU...', flush=True)
-        for sel in await page.query_selector_all('.el-select'):
-            try:
-                await sel.click(); await asyncio.sleep(0.5)
-                opts = page.locator('.el-select-dropdown:not([style*="display: none"]) .el-select-dropdown__item')
-                found = False
-                for j in range(await opts.count()):
-                    txt = await opts.nth(j).inner_text()
-                    if 'th\u1EED' in txt.lower() or 'th\u1EEC' in txt:
-                        await opts.nth(j).click(); found = True; break
-                if not found: await page.keyboard.press('Escape'); await asyncio.sleep(0.2)
-                else: break
-            except: await page.keyboard.press('Escape')
-        await asyncio.sleep(0.4)
-        # Dong modal popup neu co (bootstrap-dialog chan click)
+        await select_option(page, 'TH\u1EED')
+        await asyncio.sleep(0.5)
+
+        # 6. Dong modal neu co
         print('[PUSH] Dong modal neu co...', flush=True)
         try:
             modal = page.locator('.modal.in, .bootstrap-dialog.in')
             if await modal.count() > 0:
                 close_btn = modal.locator('.close, .btn-default, button').first
-                if await close_btn.count() > 0:
-                    await close_btn.click()
-                else:
-                    await page.keyboard.press('Escape')
+                if await close_btn.count() > 0: await close_btn.click()
+                else: await page.keyboard.press('Escape')
                 await asyncio.sleep(1)
         except: pass
-        # Bam Escape de dam bao khong con popup nao
         await page.keyboard.press('Escape'); await asyncio.sleep(0.5)
-        # Tim kiem
-        print('[PUSH] Tim kiem...', flush=True)
+
+        # 7. CHON 500/TRANG TRUOC KHI TIM KIEM
+        # Theo debug: "Xem tren trang" dropdown nam cuoi trang
+        # Can chon truoc roi tim kiem de ket qua hien thi du
+        # Dau tien lam search 1 lan de page render xong
+        print('[PUSH] Tim kiem lan 1 (de page render)...', flush=True)
         btn = page.locator('button').filter(has_text='T\u00ecm ki\u1ebfm')
         if await btn.count() > 0:
-            # Scroll vao view va click bang JS (tranh bi chan boi overlay)
-            await btn.first.scroll_into_view_if_needed()
-            await page.evaluate("document.querySelector('button.el-button--primary').click()")
-            await asyncio.sleep(6)
-        # =====================================================
-        # CHON PAGE SIZE 500 - selector xac nhan tu browser
-        # Selector that: .el-pagination__sizes .el-input__inner
-        # Click dropdown -> chon "500" -> doi reload -> extract
-        # =====================================================
+            await btn.first.click()
+            await asyncio.sleep(5)
+
+        # 8. CHON 500/TRANG sau khi page render
         print('[PUSH] Chon hien thi 500 ban ghi/trang...', flush=True)
         try:
-            # Selector chinh xac da xac nhan tu browser inspection
-            page_size_input = page.locator('.el-pagination__sizes .el-input__inner')
-            if await page_size_input.count() > 0:
-                await page_size_input.first.click()
-                await asyncio.sleep(1)
-                # Chon option "500" tu dropdown
-                opt_500 = page.locator('.el-select-dropdown__item').filter(has_text='500')
-                if await opt_500.count() > 0:
-                    await opt_500.first.click()
-                    print('[PUSH] Da chon 500/trang - doi reload...', flush=True)
-                    await asyncio.sleep(4)
-                else:
-                    # Fallback: thu tat ca option, chon cai lon nhat
+            # Scroll xuong cuoi de thay "Xem tren trang"
+            await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+            await asyncio.sleep(1.5)
+
+            # Lay tat ca el-select sau khi ket qua hien ra
+            # "Xem tren trang" la el-select cuoi cung tren trang
+            all_selects_now = await page.query_selector_all('.el-select')
+            print(f'[PUSH] So el-select tim thay: {len(all_selects_now)}', flush=True)
+            page_size_chosen = False
+            for sel in reversed(all_selects_now):
+                try:
+                    # Lay text hien thi cua select nay
+                    inner = await sel.query_selector('.el-input__inner')
+                    if not inner:
+                        continue
+                    cur_val = await inner.input_value()
+                    print(f'[PUSH]   el-select gia tri: "{cur_val}"', flush=True)
+                    # Neu la select co gia tri so (page size) thi click
+                    if cur_val.strip().isdigit() or cur_val.strip() == '':
+                        await inner.click()
+                        await asyncio.sleep(1)
+                        opt = page.locator('.el-select-dropdown__item').filter(has_text='500')
+                        if await opt.count() > 0:
+                            await opt.first.click()
+                            print('[PUSH] Da chon 500/trang!', flush=True)
+                            page_size_chosen = True
+                            await asyncio.sleep(1)
+                            break
+                        else:
+                            await page.keyboard.press('Escape')
+                            await asyncio.sleep(0.3)
+                except:
                     await page.keyboard.press('Escape')
-                    await asyncio.sleep(0.3)
-                    print('[PUSH] Khong co option 500, tim option lon nhat...', flush=True)
-                    all_visible_opts = page.locator('.el-select-dropdown:not([style*="display: none"]) .el-select-dropdown__item')
-                    best = None
-                    best_val = 0
-                    for j in range(await all_visible_opts.count()):
-                        txt = (await all_visible_opts.nth(j).inner_text()).strip()
-                        nums = [int(x) for x in txt.split() if x.isdigit()]
-                        if nums and nums[0] > best_val:
-                            best_val = nums[0]; best = all_visible_opts.nth(j)
-                    if best:
-                        await best.click()
-                        print(f'[PUSH] Da chon {best_val}/trang', flush=True)
-                        await asyncio.sleep(4)
-                    else:
-                        await page.keyboard.press('Escape')
-                        print('[PUSH] Khong doi duoc page size - chi lay trang hien tai', flush=True)
-            else:
-                print('[PUSH] Khong tim thay .el-pagination__sizes, bo qua', flush=True)
+
+            if not page_size_chosen:
+                print('[PUSH] Khong doi duoc page size, se tim kiem truc tiep', flush=True)
         except Exception as pe:
             print(f'[PUSH] Loi chon page size: {pe}', flush=True)
 
-        await asyncio.sleep(2)
-        # Extract
-        print('[PUSH] Extract data...', flush=True)
-        JS = r"""
-() => {
-    var rows = Array.from(document.querySelectorAll('tbody tr'));
-    var students = [];
-    /* Nhan dang ma ho so TSDC: HSO2651900039... hoac HS2... */
-    function isMaHS(t){
-        if(t.startsWith('HSO') && t.length > 8) return true;
-        return t.startsWith('HS') && t.length > 5 &&
-               t.charCodeAt(2) >= 48 && t.charCodeAt(2) <= 57;
-    }
-    function isDate(t){return t.length===10&&t.charAt(2)==='/'&&t.charAt(5)==='/';}
-    function isNVSchool(t){
-        return t.indexOf('THPT')!==-1||t.indexOf('PTDT')!==-1||
-               t.indexOf('Lien Viet')!==-1||t.indexOf('THCS')!==-1;
-    }
-    function isLop(t){
-        if(t.length<2||t.length>5) return false;
-        if(t.charAt(0)==='9'){var c=t.charCodeAt(1);return c>=65&&c<=90;}
-        if(t.charAt(0)==='1'&&t.charAt(1)==='0'&&t.length>2){
-            var c=t.charCodeAt(2);return c>=65&&c<=90;
-        }
-        return false;
-    }
-    rows.forEach(function(row){
-        var cells=Array.from(row.querySelectorAll('td')).map(function(c){return c.innerText.trim();});
-        /* Chi xu ly row co ma ho so (HSO...) */
-        if(!cells.some(function(t){return isMaHS(t);})) return;
-        var s={maHocSinh:'',hoTen:'',trangThai:'',ngaySinh:'',lop:'',
-               nv1:'',nv2:'',nv3:'',cccd:'',maDinhDanh:'',gioiTinh:''};
-        var nvs=[], nums12=[], nums9=[], nums10=[];
-        cells.forEach(function(t){
-            if(!t) return;
-            if(isMaHS(t)){s.maHocSinh=t;}
-            if(isDate(t)&&!s.ngaySinh){s.ngaySinh=t;}
-            else if(t==='Nam'||t==='\u0110\u1ea1'||t==='N\u1eef'){s.gioiTinh=t;}
-            /* Bat moi trang thai TSDC - khong gioi han tu khoa */
-            else if(
-                t.includes('ti\u1ebfp nh\u1eadn') || t.includes('Ti\u1ebfp nh\u1eadn') ||
-                t.includes('x\u00e9t duy\u1ec7t') || t.includes('Ch\u1edd') ||
-                t.includes('xet duyet') || t.includes('\u0110\u00e3 ti\u1ebfp') ||
-                t.includes('duy\u1ec7t') || t.includes('x\u1eed l\u00fd') ||
-                t.includes('b\u1ecb t\u1eeb ch\u1ed1i') || t.includes('ho\u00e0n th\u00e0nh') ||
-                t.includes('tr\u1ea1ng th\u00e1i')
-            ){s.trangThai=t;}
-            else if(t.includes('@')){/* skip email */}
-            else if(isLop(t)){s.lop=t;}
-            else if(isNVSchool(t)){nvs.push(t);}
-            /* So dinh danh/CCCD: 12 chu so; Ma dinh danh GD: 9-10 chu so */
-            else if(/^\d{12}$/.test(t)){nums12.push(t);}
-            else if(/^\d{10}$/.test(t)){nums10.push(t);}
-            else if(/^\d{9}$/.test(t)){nums9.push(t);}
-            /* Ho ten: text dai hon 1 tu, khong phai so, khong phai truong */
-            else if(!s.hoTen && t.length>3 && !/^\d+$/.test(t) &&
-                    !isNVSchool(t) && !isMaHS(t) && !isLop(t) &&
-                    t.indexOf('Tr\u01b0\u1eddng')===-1){
-                s.hoTen=t;
-            }
-        });
-        /* 12 so = CCCD; 10 so = Ma dinh danh GD; 9 so = CMND cu */
-        if(nums12.length>0) s.cccd=nums12[0];
-        if(nums10.length>0) s.maDinhDanh=nums10[0];
-        else if(nums9.length>0) s.maDinhDanh=nums9[0];
-        if(nvs[0])s.nv1=nvs[0]; if(nvs[1])s.nv2=nvs[1]; if(nvs[2])s.nv3=nvs[2];
-        if(s.maHocSinh || s.hoTen) students.push(s);
-    });
-    return {students:students, rowCount:rows.length};
-}
-"""
+        # 9. TIM KIEM LAI (de ap dung page size moi)
+        print('[PUSH] Tim kiem lai voi page size moi...', flush=True)
+        await page.evaluate('window.scrollTo(0, 0)')
+        await asyncio.sleep(0.5)
+        btn = page.locator('button').filter(has_text='T\u00ecm ki\u1ebfm')
+        if await btn.count() > 0:
+            await btn.first.click()
+            await asyncio.sleep(8)  # Cho du toan bo ket qua load
 
-        raw = await page.evaluate(JS)
+        # 10. EXTRACT (1 lan - tat ca hs da hien thi)
+        print('[PUSH] Extract tat ca hoc sinh...', flush=True)
+        await asyncio.sleep(2)
+        raw = await page.evaluate(_JS_EXTRACT)
         await br.close()
         students = raw.get('students', [])
-        print(f'[PUSH] Tim duoc {len(students)} hoc sinh', flush=True)
+        print(f'[PUSH] Tim duoc {len(students)} hoc sinh (tu {raw.get("rowCount",0)} rows)', flush=True)
         return students
+
 
 def build_stats(students):
     from datetime import datetime
@@ -240,13 +281,15 @@ def build_stats(students):
         'students': [{'hoTen':s.get('hoTen',''),'lop':s.get('lop',''),
                       'trangThai':s.get('trangThai',''),
                       'ngaySinh':s.get('ngaySinh',''),
-                      'cccd':s.get('cccd',''),
+                      'soCCCD':s.get('soCCCD',''),
                       'maDinhDanh':s.get('maDinhDanh',''),
                       'maHocSinh':s.get('maHocSinh',''),
+                      'maHoSo':s.get('maHoSo',''),
                       'nv1':s.get('nv1',''),'nv2':s.get('nv2',''),'nv3':s.get('nv3','')}
                      for s in students],
         'updated_at': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
     }
+
 
 def push_to_pythonanywhere(data, base_url):
     url = base_url.rstrip('/') + '/api/tsdc-push'
@@ -266,6 +309,7 @@ def push_to_pythonanywhere(data, base_url):
         print(f'[PUSH] Loi: {e}', flush=True)
     return False
 
+
 def run_once(base_url):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -276,6 +320,7 @@ def run_once(base_url):
     data = build_stats(students)
     print(f'[PUSH] Dang push {data["total"]} HS len {base_url}...', flush=True)
     return push_to_pythonanywhere(data, base_url)
+
 
 def main():
     parser = argparse.ArgumentParser(description='TSDC Push - Scrape va push len PythonAnywhere')
@@ -300,6 +345,7 @@ def main():
     else:
         ok = run_once(args.url)
         sys.exit(0 if ok else 1)
+
 
 if __name__ == '__main__':
     main()
