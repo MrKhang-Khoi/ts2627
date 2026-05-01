@@ -530,6 +530,32 @@
       text-align: center; padding: 40px 0;
       color: var(--text2); font-size: 14px;
     }
+    /* ── NV FILTER ── */
+    .nv-tabs{display:flex;gap:6px;margin-bottom:12px;}
+    .nv-tab{flex:1;padding:8px 4px;font-family:'Be Vietnam Pro',sans-serif;font-size:12px;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:all .2s;background:rgba(255,255,255,0.06);color:var(--text2);}
+    .nv-tab.active{background:linear-gradient(135deg,#6366f1,#38bdf8);color:#fff;box-shadow:0 2px 10px rgba(99,102,241,.3);}
+    .school-item{display:flex;align-items:center;gap:8px;padding:8px 10px;margin:2px -10px;border-radius:8px;cursor:pointer;transition:background .15s;}
+    .school-item:hover{background:rgba(255,255,255,0.05);}
+    .school-item.sel{background:rgba(99,102,241,0.15);border-left:3px solid #818cf8;}
+    .si-name{flex:1;font-size:13px;color:var(--text);line-height:1.3;}
+    .si-bar-wrap{width:50px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;flex-shrink:0;}
+    .si-bar{height:100%;background:linear-gradient(90deg,#6366f1,#38bdf8);border-radius:2px;}
+    .si-n{font-size:13px;font-weight:700;color:var(--accent);min-width:22px;text-align:right;}
+    #filterStudentPanel{margin-top:4px;}
+    .fp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;}
+    .fp-title{font-size:12px;font-weight:700;color:var(--text);flex:1;line-height:1.4;}
+    .fp-clear{font-size:11px;color:var(--text2);cursor:pointer;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:transparent;font-family:'Be Vietnam Pro',sans-serif;}
+    .fp-clear:hover{background:rgba(255,255,255,0.06);}
+    .stu-item{display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+    .stu-item:last-child{border-bottom:none;}
+    .stu-stt{width:20px;text-align:center;font-size:11px;color:var(--text2);flex-shrink:0;padding-top:2px;}
+    .stu-name{font-size:13px;font-weight:700;color:var(--text);}
+    .stu-meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center;}
+    .stu-lop{background:rgba(99,102,241,0.18);color:var(--accent2);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;}
+    .stu-st{font-size:11px;color:var(--text2);}
+    .stu-nvs{margin-top:4px;}
+    .stu-nv-r{font-size:11px;color:var(--text2);padding:1px 0;}
+    .stu-nv-r b{color:var(--text);font-weight:600;}
   </style>
 </head>
 <body>
@@ -621,8 +647,13 @@
     sb.className = 'show';
     sb.innerHTML = '<div class="stats-loading"><div class="spinner" style="margin:0 auto 10px"></div>Đang tải thống kê...</div>';
     try {
-      const resp = await fetch(APPS_SCRIPT_URL + '?action=stats');
-      const data = await resp.json();
+      const [r1, r2] = await Promise.all([
+        fetch(APPS_SCRIPT_URL + '?action=stats'),
+        fetch(APPS_SCRIPT_URL + '?action=all')
+      ]);
+      const data    = await r1.json();
+      const allData = await r2.json();
+      window._allStudents = allData.students || [];
       statsLoaded = true;
       sb.innerHTML = renderStats(data);
     } catch(e) {
@@ -697,8 +728,32 @@
     });
 
     const ts = d.updated_at ? `<div class="timestamp">Cập nhật lúc ${d.updated_at}</div>` : '';
+
+    // NV Filter section
+    const nvCfg = [{k:'nv1',l:'Nguyện vọng 1'},{k:'nv2',l:'Nguyện vọng 2'},{k:'nv3',l:'Nguyện vọng 3'}];
+    const nvTabsHTML = nvCfg.map((n,i)=>`<button class="nv-tab${i===0?' active':''}" id="nvt-${n.k}" onclick="switchNvTab('${n.k}')">${n.l}</button>`).join('');
+    const nvListsHTML = nvCfg.map((n,i)=>{
+      const list = d[n.k] || [];
+      const tot  = list.reduce((s,[,c])=>s+c,0)||1;
+      const rows = list.map(([school,cnt])=>{
+        const pct=(cnt/tot*100).toFixed(0);
+        return `<div class="school-item" onclick="filterBySchool('${n.k}',${JSON.stringify(school)},this)">
+          <div class="si-name">${school}</div>
+          <div class="si-bar-wrap"><div class="si-bar" style="width:${pct}%"></div></div>
+          <div class="si-n">${cnt}</div></div>`;
+      }).join('');
+      return `<div id="nv-list-${n.k}" style="${i>0?'display:none':''}">${
+        rows||'<div style="color:var(--text2);font-size:13px;padding:8px 0">Chưa có dữ liệu</div>'}</div>`;
+    }).join('');
+
     return `
       <div class="stat-summary animate-in">${summaryHTML}</div>
+      <div class="card animate-in delay-1">
+        <div class="nv-section-title">🎯 Lọc học sinh theo trường đăng ký</div>
+        <div class="nv-tabs">${nvTabsHTML}</div>
+        ${nvListsHTML}
+      </div>
+      <div id="filterStudentPanel"></div>
       <div class="nv-section-title" style="padding-left:4px">📚 CHI TIẾT THEO LỚP (${classes.length} lớp)</div>
       ${clsHTML}
       ${ts}`;
@@ -709,6 +764,66 @@
     const arrow = head.querySelector('.cls-arrow');
     body.classList.toggle('open');
     arrow.classList.toggle('open');
+  }
+
+  /* ── NV FILTER FUNCTIONS ── */
+  window._allStudents = [];
+
+  function switchNvTab(nv) {
+    ['nv1','nv2','nv3'].forEach(k => {
+      const t = document.getElementById('nvt-'+k);
+      const l = document.getElementById('nv-list-'+k);
+      if(t) t.classList.toggle('active', k===nv);
+      if(l) l.style.display = k===nv ? '' : 'none';
+    });
+    // Clear filter panel when switching NV tab
+    const fp = document.getElementById('filterStudentPanel');
+    if(fp) { fp.innerHTML=''; fp.style.display='none'; }
+    document.querySelectorAll('.school-item.sel').forEach(el=>el.classList.remove('sel'));
+  }
+
+  function filterBySchool(nv, school, el) {
+    // Toggle
+    const fp = document.getElementById('filterStudentPanel');
+    const alreadySel = el && el.classList.contains('sel');
+    document.querySelectorAll('.school-item.sel').forEach(e=>e.classList.remove('sel'));
+    if(alreadySel) { fp.innerHTML=''; fp.style.display='none'; return; }
+    if(el) el.classList.add('sel');
+
+    const students = (window._allStudents||[]).filter(s=>s[nv]===school);
+    if(!students.length) { fp.innerHTML=''; fp.style.display='none'; return; }
+
+    const nvLabel = {nv1:'Nguyện vọng 1',nv2:'Nguyện vọng 2',nv3:'Nguyện vọng 3'}[nv];
+    const stColors = {waiting:'#fbbf24',approved:'#4ade80',rejected:'#f87171',default:'#64748b'};
+    let rows = students.map((s,i)=>{
+      const sc = stCls(s.trangThai);
+      const dot = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${stColors[sc]};margin-right:3px"></span>`;
+      const otherNv = ['nv1','nv2','nv3'].filter(k=>k!==nv&&s[k]).map(k=>{
+        const lab={nv1:'🥇NV1',nv2:'🥈NV2',nv3:'🥉NV3'}[k];
+        return `<div class="stu-nv-r">${lab}: <b>${s[k]}</b></div>`;
+      }).join('');
+      return `<div class="stu-item">
+        <div class="stu-stt">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div class="stu-name">${s.hoTen||'—'}</div>
+          <div class="stu-meta">
+            <span class="stu-lop">Lớp ${s.lop||'?'}</span>
+            <span class="stu-st">${dot}${s.trangThai||'Chưa cập nhật'}</span>
+          </div>
+          ${otherNv?`<div class="stu-nvs">${otherNv}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+
+    fp.style.display='';
+    fp.innerHTML=`<div class="card animate-in">
+      <div class="fp-header">
+        <div class="fp-title">🎫 ${nvLabel}: <b>${school}</b><br><span style="font-weight:400;color:var(--text2)">${students.length} học sinh đăng ký</span></div>
+        <button class="fp-clear" onclick="filterBySchool(null,null,null)">✕ Đóng</button>
+      </div>
+      ${rows}
+    </div>`;
+    fp.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
 
   const input  = document.getElementById('cccdInput');
