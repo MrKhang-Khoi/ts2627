@@ -97,9 +97,28 @@ _JS_EXTRACT = r"""
         if (nvs[0]) s.nv1=nvs[0];
         if (nvs[1]) s.nv2=nvs[1];
         if (nvs[2]) s.nv3=nvs[2];
-        if (s.maHocSinh||s.hoTen) students.push(s);
+        /* Chi lay HS cua truong Chu Van An */
+        if ((s.maHocSinh||s.hoTen)) students.push(s);
     });
-    return {students:students, rowCount:rows.length};
+    /* Loc theo truong cap duoi = "Chu Van An" trong row DOM */
+    /* Doc lai row DOM de kiem tra ten truong */
+    var filtered = [];
+    for (var i=0; i<rows.length; i++) {
+        var rowText = rows[i].innerText || '';
+        if (rowText.indexOf('Chu V\u0103n An') === -1) continue;
+        /* Row nay chua "Chu Van An" - kiem tra xem co HS nao khop */
+        var cells = Array.from(rows[i].querySelectorAll('td')).map(function(c){ return c.innerText.trim(); });
+        for (var s of students) {
+            if (s.maHocSinh && cells.indexOf(s.maHocSinh) >= 0) {
+                if (!filtered.some(function(f){ return f.maHocSinh === s.maHocSinh; })) {
+                    filtered.push(s);
+                }
+            }
+        }
+    }
+    /* Neu filter qua kenh thi lay tat ca (fallback) */
+    if (filtered.length === 0) filtered = students;
+    return {students:filtered, rowCount:rows.length, total:students.length};
 }
 """
 
