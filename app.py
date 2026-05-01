@@ -146,7 +146,8 @@ def index():
 
     show_tsdc = not is_pythonanywhere
 
-    return render_template('index.html', classes=classes, show_tsdc=show_tsdc)
+    is_teacher_idx = session.get('role') in ('teacher', 'admin')
+    return render_template('index.html', classes=classes, show_tsdc=show_tsdc, is_teacher=is_teacher_idx)
 
 
 

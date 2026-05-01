@@ -276,7 +276,8 @@
         <div class="nv-panel" id="panel-nv3"><div id="nv3List"></div></div>
       </div>
 
-      <!-- Filter result panel -->
+      {% if is_teacher %}
+      <!-- Filter result panel (chi GV/Admin) -->
       <div id="tsdcFilterPanel" style="display:none">
         <div class="tsdc-section">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px">
@@ -297,13 +298,17 @@
           </div>
         </div>
       </div>
+      {% endif %}
 
-      <!-- Class stats section -->
+      {% if is_teacher %}
+      <!-- Class stats section (chi GV/Admin) -->
       <div class="tsdc-section" id="clsStatsSection" style="display:none">
         <h3>📚 Thống Kê Theo Lớp</h3>
         <div class="cls-grid" id="clsGrid"></div>
       </div>
+      {% endif %}
 
+      {% if is_teacher %}
       <div class="tsdc-section">
         <h3>👨‍🎓 Danh Sách Học Sinh Đã Đăng Ký</h3>
         <div class="tsdc-table-wrap">
@@ -319,6 +324,7 @@
           </table>
         </div>
       </div>
+      {% endif %}
 
       <div class="tsdc-footer">
         <span class="tsdc-footer-ts">🕐 Cập nhật: <span id="tsdcUpdatedAt">–</span></span>
