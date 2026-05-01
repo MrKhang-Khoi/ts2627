@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Lớp {{ class_name }} - Danh Sách Học Sinh{% endblock %}
+{% block head_extra %}
+<style>
+/* Badge TSDC trong student-list */
+.tsdc-list-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:10px;font-size:.7rem;font-weight:700;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.tsdc-list-badge.dk{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
+.tsdc-list-badge.chua-dk{background:#fafafa;color:#9e9e9e;border:1px solid #e0e0e0}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -31,6 +39,15 @@
           <span class="doc-count-badge {% if s.doc_count == s.doc_total %}doc-count-full{% elif s.doc_count > 0 %}doc-count-partial{% else %}doc-count-none{% endif %}">
             📄 {{ s.doc_count }}/{{ s.doc_total }} tệp
           </span>
+          {% if s.tsdc_trang_thai %}
+          <span class="tsdc-list-badge dk" title="Đã đăng ký: {{ s.tsdc_trang_thai }}">
+            ✓ Đã ĐK TSDC
+          </span>
+          {% else %}
+          <span class="tsdc-list-badge chua-dk" title="Chưa nộp hồ sơ ĐKTS lớp 10">
+            Chưa ĐK TSDC
+          </span>
+          {% endif %}
         </div>
       </div>
       <div class="student-right">
