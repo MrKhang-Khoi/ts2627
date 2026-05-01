@@ -70,7 +70,15 @@
   <div class="tsdc-stat-card">
     <div class="tsdc-stat-head">
       <span class="tsdc-stat-head-title">&#128202; Th&#7889;ng k&#234; &#272;KTS l&#7899;p 10 &mdash; L&#7899;p {{ class_name }}</span>
-      <span class="tsdc-stat-head-sub">N&#259;m h&#7885;c 2026&ndash;2027</span>
+      <span class="tsdc-stat-head-sub">
+        N&#259;m h&#7885;c 2026&ndash;2027
+        &nbsp;
+        <button id="liveSyncBtn" onclick="runLiveSync()" title="C&#7853;p nh&#7853;t d&#7919; li&#7879;u m&#7899;i nh&#7845;t t&#7915; Google Sheets"
+          style="background:#ffffff30;border:1px solid #fff6;color:#fff;border-radius:20px;padding:3px 10px;font-size:.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;vertical-align:middle;transition:all .2s">
+          &#128260; Đ&#7891;ng b&#7897;
+        </button>
+        <span id="liveSyncStatus" style="font-size:.72rem;opacity:.85;margin-left:4px"></span>
+      </span>
     </div>
     <div class="tsdc-stat-grid tsdc-stat-grid-wide">
       <div class="tsdc-stat-item">
@@ -385,11 +393,11 @@ function _nrm(s){
   r=r.replace(/[\u0300-\u036f]/g,'').replace(/[\u0111\u0110]/g,'d');
   return r.replace(/\s+/g,' ').trim();
 }
-(async function(){
+// === LIVE TSDC: named function de co the goi lai tu nut Dong bo ===
+async function liveTsdcSync(){
   try{
     var d=await(await fetch(_AU+'?action=all')).json();
     if(!d.students)return;
-    // Loc chi HS cua lop nay, index theo ten chuan hoa
     var mp={};
     d.students.forEach(function(s){
       if((s.lop||'').trim()!==_CN)return;
@@ -397,8 +405,7 @@ function _nrm(s){
       if(k)mp[k]=s;
     });
     if(!Object.keys(mp).length)return;
-    _tsdcLiveMap=mp; // luu de filterByNvSchool dung
-    // Cap nhat badge tung hoc sinh
+    _tsdcLiveMap=mp;
     var dk=0;
     document.querySelectorAll('.student-item').forEach(function(el){
       var b=el.querySelector('.tsdc-list-badge');
@@ -417,7 +424,6 @@ function _nrm(s){
         el.dataset.tsdc='chua_dk';
       }
     });
-    // Cap nhat so lieu thong ke
     var tot=document.querySelectorAll('.student-item').length;
     var cdn=tot-dk;
     var tl=tot?Math.round(dk/tot*100):0;
@@ -428,7 +434,6 @@ function _nrm(s){
       else if(t.includes('CHƯ')&&t.includes('ĐĂNG'))el.textContent=cdn;
       else if(t.includes('TỶ LỆ'))el.textContent=tl+'%';
     });
-    // Cap nhat NV stats
     var n1={},n2={},n3={};
     Object.values(mp).forEach(function(s){
       if(s.nv1)n1[s.nv1]=(n1[s.nv1]||0)+1;
@@ -459,8 +464,31 @@ function _nrm(s){
     var cols=document.querySelectorAll('.tsdc-nv-cols > div');
     updNv(cols[0],n1,'nv1','#43a047');updNv(cols[1],n2,'nv2','#1976d2');updNv(cols[2],n3,'nv3','#f9a825');
     console.log('[LIVE] '+_CN+': '+dk+'/'+tot+' da DK TSDC (GSheets live)');
-  }catch(e){console.warn('[LIVE TSDC] Loi:',e);}
-})();
+    return {ok:true, dk:dk, tot:tot};
+  }catch(e){console.warn('[LIVE TSDC] Loi:',e); return {ok:false, err:e.message};}
+}
+// Chay tu dong khi load trang
+liveTsdcSync();
+
+// Ham goi tu nut Dong bo (visible cho tat ca)
+function runLiveSync(){
+  var btn=document.getElementById('liveSyncBtn');
+  var sts=document.getElementById('liveSyncStatus');
+  if(!btn)return;
+  btn.disabled=true;
+  btn.innerHTML='&#9203; Đang c&#7853;p nh&#7853;t...';
+  sts.textContent='';
+  liveTsdcSync().then(function(r){
+    btn.disabled=false;
+    btn.innerHTML='&#128260; Đ&#7891;ng b&#7897;';
+    if(r&&r.ok){
+      sts.innerHTML='<span style="color:#b9f6ca">✓ '+r.dk+'/'+r.tot+' học sinh</span>';
+      setTimeout(function(){sts.textContent='';},5000);
+    }else{
+      sts.innerHTML='<span style="color:#ffcdd2">⚠ Lỗi kết nối</span>';
+    }
+  });
+}
 
 // === FILTER BY NV SCHOOL ===
 var _selNvRow=null;
