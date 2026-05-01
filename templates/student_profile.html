@@ -24,10 +24,31 @@
 .tsdc-warn-icon{font-size:1.8rem;flex-shrink:0}
 .tsdc-warn-title{font-size:.92rem;font-weight:700;color:#f57f17}
 .tsdc-warn-sub{font-size:.78rem;color:#888;margin-top:3px}
-/* Link dang ky tuyen sinh */
-.tsdc-link-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0 16px;padding:12px 18px;background:linear-gradient(90deg,#0d47a1,#1565C0);border-radius:12px;text-decoration:none;color:#fff;font-weight:700;font-size:.88rem;box-shadow:0 3px 12px rgba(13,71,161,.25);transition:opacity .15s,transform .15s}
-.tsdc-link-row:hover{opacity:.9;transform:translateY(-1px);color:#fff}
-.tsdc-link-arrow{font-size:1rem;margin-left:2px}
+/* Link dang ky tuyen sinh — CTA noi bat */
+@keyframes tsdc-pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.45),0 4px 18px rgba(229,57,53,.35)}50%{box-shadow:0 0 0 10px rgba(229,57,53,0),0 4px 18px rgba(229,57,53,.35)}}
+@keyframes tsdc-arrow-bounce{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+.tsdc-link-row{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin:12px 0 18px;padding:15px 22px;
+  background:linear-gradient(135deg,#e53935 0%,#ff6f00 100%);
+  border-radius:14px;text-decoration:none;color:#fff;
+  font-weight:800;font-size:.95rem;letter-spacing:.02em;
+  box-shadow:0 6px 20px rgba(229,57,53,.4);
+  animation:tsdc-pulse 2s infinite;
+  transition:transform .15s,opacity .15s;
+  border:2px solid rgba(255,255,255,.25);
+  position:relative;overflow:hidden;
+}
+.tsdc-link-row::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.12) 0%,transparent 60%);
+  pointer-events:none;
+}
+.tsdc-link-row:hover{opacity:.93;transform:translateY(-2px) scale(1.01);color:#fff}
+.tsdc-link-label{display:flex;flex-direction:column;align-items:center;gap:2px}
+.tsdc-link-main{font-size:.95rem;font-weight:800}
+.tsdc-link-sub{font-size:.72rem;font-weight:500;opacity:.88;letter-spacing:.01em}
+.tsdc-link-arrow{font-size:1.2rem;animation:tsdc-arrow-bounce 1s infinite;flex-shrink:0}
 </style>
 {% endblock %}
 {% block content %}
@@ -124,7 +145,11 @@
   <a href="https://quangngai.tsdc.edu.vn/dang-ky-ho-so-tuyen-sinh"
      target="_blank" rel="noopener"
      class="tsdc-link-row">
-    &#127979; Đăng ký tuyển sinh lớp 10 trực tuyến &mdash; Năm học 2026&ndash;2027
+    <span style="font-size:1.4rem">&#128276;</span>
+    <span class="tsdc-link-label">
+      <span class="tsdc-link-main">&#127979; Đăng ký tuyển sinh lớp 10 trực tuyến</span>
+      <span class="tsdc-link-sub">Bấm vào đây để đăng ký ngay &mdash; Năm học 2026&ndash;2027</span>
+    </span>
     <span class="tsdc-link-arrow">&#8594;</span>
   </a>
 
