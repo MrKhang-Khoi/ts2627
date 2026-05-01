@@ -408,14 +408,31 @@ function loadTsdc(force) {
       _tsdcLoaded = true;
     })
     .catch(function(err) {
-      /* Fallback: thu lay tu PythonAnywhere */
+      console.warn('[TSDC] Primary failed, trying fallback:', err ? err.message : '');
+      /* Fallback: thu lay tu DB local (PythonAnywhere cache) */
       fetch('/api/tsdc-stats')
         .then(function(r) { return r.json(); })
         .then(function(d) {
-          if (d.success) { renderTsdc(d); _tsdcLoaded = true; }
-          else _showError('Chưa có dữ liệu. Vui lòng chạy file đồng bộ trước.');
+          var sts = d.students || [];
+          if (!sts.length && !d.success) {
+            _showError('Chưa có dữ liệu. Vui lòng chạy đồng bộ trước.');
+            return;
+          }
+          /* Build stats tu students (fallback data co the thieu nv1/nv2/nv3) */
+          var builtStats = buildStatsFromStudents(sts);
+          renderTsdc({
+            students: sts,
+            total: d.total || sts.length,
+            updated_at: d.updated_at || d.pushed_at || '',
+            nv1: (d.nv1 && d.nv1.length) ? d.nv1 : builtStats.nv1,
+            nv2: (d.nv2 && d.nv2.length) ? d.nv2 : builtStats.nv2,
+            nv3: (d.nv3 && d.nv3.length) ? d.nv3 : builtStats.nv3,
+            classCounts: null
+          });
+          _tsdcLoaded = true;
         })
-        .catch(function() {
+        .catch(function(e2) {
+          console.error('[TSDC] Fallback also failed:', e2 ? e2.message : '');
           _showError('Không thể kết nối. Kiểm tra mạng và thử lại.');
         });
     });
