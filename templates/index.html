@@ -285,6 +285,12 @@
 let _tsdcLoaded = false;
 let _tsdcPollTimer = null;
 
+/* ============================================================
+   NGUON DU LIEU: Google Sheets qua Apps Script Web App
+   (fallback: PythonAnywhere /api/tsdc-stats)
+   ============================================================ */
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIxSlNum5oRdASLpAKRgnt_GYefUx2uwtCmu9OzKmtpKr0Zi3AnYyKOhaDSunvhsxC/exec';
+
 function openTsdc() {
   document.getElementById('tsdcOverlay').classList.add('active');
   document.body.style.overflow = 'hidden';
@@ -310,32 +316,55 @@ function _showError(msg) {
   document.getElementById('tsdcErrMsg').textContent = msg;
   document.getElementById('tsdcError').style.display = '';
 }
+
 function loadTsdc(force) {
   if (!force && _tsdcLoaded) return;
-  if (_tsdcPollTimer) { clearInterval(_tsdcPollTimer); _tsdcPollTimer = null; }
-  _showLoading('Đang khởi động kết nối TSDC...');
-  fetch('/api/tsdc-stats' + (force ? '?force=1' : ''))
+  _showLoading('⏳ Đang lấy dữ liệu từ Google Sheets...');
+
+  /* Uu tien lay tu Apps Script (Google Sheets) */
+  var url = APPS_SCRIPT_URL + '?action=all&t=' + Date.now();
+  fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.success) { renderTsdc(d); _tsdcLoaded = true; return; }
-      if (d.loading) {
-        var dots = 0;
-        _tsdcPollTimer = setInterval(function() {
-          dots = (dots + 1) % 4;
-          _showLoading('Đang lấy dữ liệu từ TSDC' + Array(dots + 2).join('.'));
-          fetch('/api/tsdc-status').then(function(r) { return r.json(); }).then(function(s) {
-            if (s.ready) {
-              clearInterval(_tsdcPollTimer); _tsdcPollTimer = null;
-              renderTsdc(s); _tsdcLoaded = true;
-            } else if (s.error) {
-              clearInterval(_tsdcPollTimer); _tsdcPollTimer = null;
-              _showError(s.error);
-            }
-          }).catch(function() {});
-        }, 5000);
-      } else if (d.error) { _showError(d.error); }
+      if (d.error) throw new Error(d.error);
+      if (!d.students) throw new Error('Dữ liệu không hợp lệ');
+      /* Chuyen sang dinh dang renderTsdc mong doi */
+      var stats = buildStatsFromStudents(d.students);
+      renderTsdc({
+        success: true,
+        students: d.students,
+        total: d.total,
+        updated_at: d.updated_at,
+        nv1: stats.nv1,
+        nv2: stats.nv2,
+        nv3: stats.nv3
+      });
+      _tsdcLoaded = true;
     })
-    .catch(function(err) { _showError('Lỗi kết nối: ' + err.message); });
+    .catch(function(err) {
+      /* Fallback: thu lay tu PythonAnywhere */
+      fetch('/api/tsdc-stats')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) { renderTsdc(d); _tsdcLoaded = true; }
+          else _showError('Chưa có dữ liệu. Vui lòng chạy file đồng bộ trước.');
+        })
+        .catch(function() {
+          _showError('Không thể kết nối. Kiểm tra mạng và thử lại.');
+        });
+    });
+}
+
+/* Build stats tu mang students (cho Apps Script tra ve flat array) */
+function buildStatsFromStudents(students) {
+  var nv1={}, nv2={}, nv3={};
+  students.forEach(function(s) {
+    if (s.nv1) nv1[s.nv1] = (nv1[s.nv1]||0)+1;
+    if (s.nv2) nv2[s.nv2] = (nv2[s.nv2]||0)+1;
+    if (s.nv3) nv3[s.nv3] = (nv3[s.nv3]||0)+1;
+  });
+  function toArr(m){ return Object.keys(m).map(function(k){return[k,m[k]];}).sort(function(a,b){return b[1]-a[1];}); }
+  return { nv1: toArr(nv1), nv2: toArr(nv2), nv3: toArr(nv3) };
 }
 
 function renderTsdc(d) {

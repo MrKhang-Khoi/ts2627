@@ -13,8 +13,11 @@ import urllib.request, urllib.error
 # CAU HINH — chinh o day
 # ============================================================
 PYTHONANYWHERE_URL = 'https://ts102627.pythonanywhere.com'
-TSDC_PUSH_TOKEN    = 'chuvanan_tsdc_push_2026'   # phai khop voi app.py
+TSDC_PUSH_TOKEN    = 'chuvanan_tsdc_push_2026'   # phai khop voi app.py va Apps Script
 PUSH_INTERVAL_MIN  = 30   # push moi 30 phut khi chay --loop
+
+# Google Apps Script Web App URL
+APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIxSlNum5oRdASLpAKRgnt_GYefUx2uwtCmu9OzKmtpKr0Zi3AnYyKOhaDSunvhsxC/exec'
 # ============================================================
 
 TSDC_USERNAME = 'qni_thcs_chuvanan1'
@@ -319,13 +322,43 @@ def push_to_pythonanywhere(data, base_url):
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             result = json.loads(resp.read().decode('utf-8'))
-            print(f'[PUSH] Thanh cong! {result}', flush=True)
+            print(f'[PUSH] PythonAnywhere: Thanh cong! {result}', flush=True)
             return True
     except urllib.error.HTTPError as e:
         body = e.read().decode('utf-8', errors='replace')
-        print(f'[PUSH] Loi HTTP {e.code}: {body}', flush=True)
+        print(f'[PUSH] PythonAnywhere Loi HTTP {e.code}: {body}', flush=True)
     except Exception as e:
-        print(f'[PUSH] Loi: {e}', flush=True)
+        print(f'[PUSH] PythonAnywhere Loi: {e}', flush=True)
+    return False
+
+
+def push_to_sheets(data):
+    """Push du lieu len Google Sheets qua Apps Script Web App"""
+    if not APPS_SCRIPT_URL:
+        print('[PUSH] Chua cau hinh APPS_SCRIPT_URL, bo qua', flush=True)
+        return False
+    print(f'[PUSH] Dang dong bo len Google Sheets ({data["total"]} HS)...', flush=True)
+    payload = json.dumps({'token': TSDC_PUSH_TOKEN, **data}, ensure_ascii=False).encode('utf-8')
+    req = urllib.request.Request(
+        APPS_SCRIPT_URL, data=payload,
+        headers={'Content-Type': 'application/json; charset=utf-8'},
+        method='POST'
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+            if result.get('success'):
+                print(f'[PUSH] Google Sheets: OK! {result.get("total")} HS | {result.get("updated_at")}', flush=True)
+                if result.get('sheet_url'):
+                    print(f'[PUSH] Xem tai: {result["sheet_url"]}', flush=True)
+                return True
+            else:
+                print(f'[PUSH] Google Sheets Loi: {result}', flush=True)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8', errors='replace')
+        print(f'[PUSH] Google Sheets HTTP {e.code}: {body[:200]}', flush=True)
+    except Exception as e:
+        print(f'[PUSH] Google Sheets Loi: {e}', flush=True)
     return False
 
 
@@ -337,8 +370,10 @@ def run_once(base_url):
     finally:
         loop.close()
     data = build_stats(students)
-    print(f'[PUSH] Dang push {data["total"]} HS len {base_url}...', flush=True)
-    return push_to_pythonanywhere(data, base_url)
+    # Push len ca hai noi song song
+    ok_pa     = push_to_pythonanywhere(data, base_url)
+    ok_sheets = push_to_sheets(data)
+    return ok_pa or ok_sheets
 
 
 def main():
