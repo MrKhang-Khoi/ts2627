@@ -20,14 +20,16 @@
         <span>📋 STT {{ student.stt }}</span>
         <span>🎂 {{ student.ngay_sinh }}</span>
       </div>
-      <span class="sp-overall-badge status-{{ student.status_overall }}">
-        {{ OVERALL_LABELS.get(student.status_overall, student.status_overall) }}
-      </span>
-      {% if student.tsdc_trang_thai %}
-      <span class="sp-tsdc-badge {% if 'xét duyệt' in student.tsdc_trang_thai or 'xet duyet' in student.tsdc_trang_thai.lower() %}tsdc-xetduyet{% else %}tsdc-chotiepnhan{% endif %}">
-        🏫 TSDC: {{ student.tsdc_trang_thai }}
-      </span>
-      {% endif %}
+      <div class="sp-badges-row">
+        <span class="sp-overall-badge status-{{ student.status_overall }}">
+          {{ OVERALL_LABELS.get(student.status_overall, student.status_overall) }}
+        </span>
+        {% if student.tsdc_trang_thai %}
+        <span class="sp-tsdc-badge {% if 'xét duyệt' in student.tsdc_trang_thai or 'xet duyet' in student.tsdc_trang_thai.lower() %}tsdc-xetduyet{% elif 'tiếp nhận' in student.tsdc_trang_thai or 'tiep nhan' in student.tsdc_trang_thai.lower() %}tsdc-chotiepnhan{% else %}tsdc-other{% endif %}">
+          🏫 TSDC: {{ student.tsdc_trang_thai }}
+        </span>
+        {% endif %}
+      </div>
     </div>
     <div class="sp-header-actions">
       {% if session.get('role') in ['teacher','admin'] %}
@@ -37,32 +39,48 @@
     </div>
   </div>
 
-  {% if student.tsdc_nv1 or student.tsdc_nv2 or student.tsdc_nv3 %}
+  {% if student.tsdc_nv1 or student.tsdc_nv2 or student.tsdc_nv3 or student.tsdc_trang_thai %}
   <div class="tsdc-info-card">
-    <div class="tsdc-info-title">📊 Thông tin đăng ký TSDC</div>
-    <div class="tsdc-info-grid">
+    <div class="tsdc-info-header">
+      <span class="tsdc-info-title">📊 Thông tin đăng ký TSDC</span>
+      {% if student.tsdc_trang_thai %}
+      <span class="tsdc-status-pill {% if 'xét duyệt' in student.tsdc_trang_thai or 'xet duyet' in student.tsdc_trang_thai.lower() %}tsdc-xetduyet{% elif 'tiếp nhận' in student.tsdc_trang_thai or 'tiep nhan' in student.tsdc_trang_thai.lower() %}tsdc-chotiepnhan{% else %}tsdc-other{% endif %}">
+        {{ student.tsdc_trang_thai }}
+      </span>
+      {% endif %}
+    </div>
+    {% if student.tsdc_nv1 or student.tsdc_nv2 or student.tsdc_nv3 %}
+    <div class="tsdc-nv-list">
       {% if student.tsdc_nv1 %}
-      <div class="tsdc-nv-item nv1">
-        <span class="tsdc-nv-label">Nguyện vọng 1</span>
-        <span class="tsdc-nv-school">{{ student.tsdc_nv1 }}</span>
+      <div class="tsdc-nv-row nv1-row">
+        <span class="tsdc-nv-badge">NV1</span>
+        <span class="tsdc-nv-text">{{ student.tsdc_nv1 }}</span>
       </div>
       {% endif %}
       {% if student.tsdc_nv2 %}
-      <div class="tsdc-nv-item nv2">
-        <span class="tsdc-nv-label">Nguyện vọng 2</span>
-        <span class="tsdc-nv-school">{{ student.tsdc_nv2 }}</span>
+      <div class="tsdc-nv-row nv2-row">
+        <span class="tsdc-nv-badge nv2-badge">NV2</span>
+        <span class="tsdc-nv-text">{{ student.tsdc_nv2 }}</span>
       </div>
       {% endif %}
       {% if student.tsdc_nv3 %}
-      <div class="tsdc-nv-item nv3">
-        <span class="tsdc-nv-label">Nguyện vọng 3</span>
-        <span class="tsdc-nv-school">{{ student.tsdc_nv3 }}</span>
+      <div class="tsdc-nv-row nv3-row">
+        <span class="tsdc-nv-badge nv3-badge">NV3</span>
+        <span class="tsdc-nv-text">{{ student.tsdc_nv3 }}</span>
       </div>
       {% endif %}
     </div>
-    {% if student.tsdc_updated_at %}
-    <div class="tsdc-info-updated">🕐 Cập nhật lúc: {{ student.tsdc_updated_at }}</div>
+    {% else %}
+    <p style="color:#aaa;font-size:.85rem;margin:8px 0 0">Chưa có nguyện vọng đăng ký.</p>
     {% endif %}
+    <div class="tsdc-info-footer">
+      {% if student.cccd %}
+      <span>🪪 CCCD: <strong>{{ student.cccd }}</strong></span>
+      {% endif %}
+      {% if student.tsdc_updated_at %}
+      <span>🕐 Cập nhật: {{ student.tsdc_updated_at }}</span>
+      {% endif %}
+    </div>
   </div>
   {% endif %}
 
@@ -365,18 +383,61 @@ function submitMulti(dt, sid) {
 {% endblock %}
 {% block styles %}
 <style>
-.sp-tsdc-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;margin-top:6px;margin-left:4px}
+/* === TSDC Badge trong header === */
+.sp-badges-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.sp-tsdc-badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;
+  font-size:.78rem;font-weight:700;gap:4px}
 .tsdc-xetduyet{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
 .tsdc-chotiepnhan{background:#fff3e0;color:#e65100;border:1px solid #ffcc80}
-.tsdc-info-card{background:#fff;border:2px solid #e3f2fd;border-radius:14px;padding:18px 22px;margin:14px 0;box-shadow:0 2px 8px rgba(25,118,210,.08)}
-.tsdc-info-title{font-size:1rem;font-weight:700;color:#1565C0;margin-bottom:12px}
-.tsdc-info-grid{display:flex;gap:12px;flex-wrap:wrap}
-.tsdc-nv-item{flex:1;min-width:180px;padding:10px 14px;border-radius:10px;display:flex;flex-direction:column;gap:4px}
-.tsdc-nv-item.nv1{background:#e8f5e9;border-left:4px solid #43a047}
-.tsdc-nv-item.nv2{background:#e3f2fd;border-left:4px solid #1e88e5}
-.tsdc-nv-item.nv3{background:#fff8e1;border-left:4px solid #fb8c00}
-.tsdc-nv-label{font-size:.72rem;font-weight:700;text-transform:uppercase;opacity:.7}
-.tsdc-nv-school{font-size:.88rem;font-weight:600;color:#222}
-.tsdc-info-updated{margin-top:10px;font-size:.75rem;color:#888}
+.tsdc-other{background:#eeeeee;color:#555;border:1px solid #ccc}
+
+/* === TSDC Info Card === */
+.tsdc-info-card{
+  background:linear-gradient(135deg,#f0f7ff 0%,#fff 100%);
+  border:1.5px solid #bbdefb;
+  border-radius:16px;
+  padding:16px 20px;
+  margin:14px 0;
+  box-shadow:0 3px 12px rgba(25,118,210,.08);
+}
+.tsdc-info-header{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;margin-bottom:14px;
+}
+.tsdc-info-title{
+  font-size:.95rem;font-weight:700;color:#1565C0;
+}
+.tsdc-status-pill{
+  display:inline-block;padding:4px 14px;border-radius:20px;
+  font-size:.78rem;font-weight:700;
+}
+.tsdc-nv-list{
+  display:flex;flex-direction:column;gap:8px;
+}
+.tsdc-nv-row{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:9px 12px;border-radius:10px;
+  line-height:1.4;
+}
+.nv1-row{background:#e8f5e9;border-left:4px solid #43a047}
+.nv2-row{background:#e3f2fd;border-left:4px solid #1e88e5}
+.nv3-row{background:#fff8e1;border-left:4px solid #fb8c00}
+.tsdc-nv-badge{
+  display:inline-block;font-size:.7rem;font-weight:800;
+  padding:2px 8px;border-radius:6px;flex-shrink:0;margin-top:1px;
+  background:#43a047;color:#fff;
+}
+.nv2-badge{background:#1e88e5}
+.nv3-badge{background:#fb8c00}
+.tsdc-nv-text{
+  font-size:.88rem;font-weight:600;color:#222;flex:1;
+}
+.tsdc-info-footer{
+  margin-top:12px;padding-top:10px;
+  border-top:1px solid #e3f2fd;
+  display:flex;flex-wrap:wrap;gap:16px;
+  font-size:.78rem;color:#666;
+}
+.tsdc-info-footer strong{color:#333}
 </style>
 {% endblock %}

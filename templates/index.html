@@ -16,14 +16,13 @@
 <meta name="twitter:description" content="Trường THCS Chu Văn An – Đăk Hà. Nộp hồ sơ tuyển sinh lớp 10 trực tuyến nhanh chóng qua điện thoại.">
 <meta name="twitter:image" content="https://ts102627.pythonanywhere.com/static/og_thumbnail.png">
 <style>
-/* ===== TSDC MODAL ===== */
 .tsdc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
 .tsdc-overlay.active{opacity:1;pointer-events:all}
-.tsdc-box{background:#fff;border-radius:20px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3);transform:translateY(20px);transition:transform .3s}
+.tsdc-box{background:#fff;border-radius:20px;width:100%;max-width:760px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3);transform:translateY(20px);transition:transform .3s}
 .tsdc-overlay.active .tsdc-box{transform:translateY(0)}
 .tsdc-head{background:linear-gradient(135deg,#1565C0,#0D47A1);color:#fff;padding:22px 24px 18px;border-radius:20px 20px 0 0;position:sticky;top:0;z-index:1}
-.tsdc-head h2{margin:0 0 4px;font-size:1.2rem;font-weight:700}
-.tsdc-head p{margin:0;font-size:.82rem;opacity:.8}
+.tsdc-head h2{margin:0 0 4px;font-size:1.15rem;font-weight:700}
+.tsdc-head p{margin:0;font-size:.8rem;opacity:.8}
 .tsdc-close{position:absolute;top:16px;right:18px;background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;line-height:32px;text-align:center;transition:background .2s}
 .tsdc-close:hover{background:rgba(255,255,255,.35)}
 .tsdc-loading{padding:48px 24px;text-align:center}
@@ -37,36 +36,46 @@
 .tsdc-card.teal{background:linear-gradient(135deg,#00897B,#00695C)}
 .tsdc-card.orange{background:linear-gradient(135deg,#F57C00,#E65100)}
 .tsdc-card-num{font-size:2rem;font-weight:800;line-height:1.1}
-.tsdc-card-lbl{font-size:.72rem;opacity:.9;margin-top:2px}
+.tsdc-card-lbl{font-size:.7rem;opacity:.9;margin-top:2px}
 .tsdc-section{margin-bottom:20px}
-.tsdc-section h3{font-size:.9rem;font-weight:700;color:#1565C0;margin:0 0 10px;display:flex;align-items:center;gap:6px}
+.tsdc-section h3{font-size:.88rem;font-weight:700;color:#1565C0;margin:0 0 10px;display:flex;align-items:center;gap:6px}
 .status-list{display:flex;flex-direction:column;gap:6px}
 .status-row{display:flex;align-items:center;gap:10px}
-.status-label{font-size:.8rem;color:#444;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-label{font-size:.8rem;color:#444;flex:1;min-width:0}
 .status-bar-wrap{width:120px;height:8px;background:#e8edf5;border-radius:4px;flex-shrink:0}
 .status-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#1976D2,#42A5F5);transition:width .5s}
-.status-count{font-size:.8rem;font-weight:700;color:#1565C0;min-width:22px;text-align:right}
+.status-count{font-size:.8rem;font-weight:700;color:#1565C0;min-width:24px;text-align:right}
 .nv-tabs{display:flex;gap:6px;margin-bottom:12px}
 .nv-tab{padding:5px 14px;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;border:2px solid #1565C0;color:#1565C0;background:#fff;transition:all .2s}
 .nv-tab.active{background:#1565C0;color:#fff}
 .nv-panel{display:none}.nv-panel.active{display:block}
-.nv-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f0f3f8}
-.nv-school{font-size:.8rem;color:#333;flex:1;min-width:0}
-.nv-bar-wrap{width:100px;height:8px;background:#e8edf5;border-radius:4px;flex-shrink:0}
+.nv-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f3f8}
+.nv-school{font-size:.82rem;color:#333;flex:1;min-width:0;line-height:1.4}
+.nv-bar-wrap{width:90px;height:8px;background:#e8edf5;border-radius:4px;flex-shrink:0}
 .nv-bar{height:8px;border-radius:4px;transition:width .6s}
-.tsdc-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid #e0e7f0}
-.tsdc-table{width:100%;border-collapse:collapse;font-size:.78rem}
-.tsdc-table th{background:#1565C0;color:#fff;padding:8px 10px;text-align:left;white-space:nowrap}
-.tsdc-table td{padding:7px 10px;border-bottom:1px solid #f0f3f8}
+/* Student table */
+.tsdc-table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #e0e7f0}
+.tsdc-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.tsdc-table th{background:#1565C0;color:#fff;padding:9px 10px;text-align:left;font-size:.75rem;letter-spacing:.02em}
+.tsdc-table td{padding:8px 10px;border-bottom:1px solid #f0f3f8;vertical-align:top}
 .tsdc-table tr:last-child td{border-bottom:none}
 .tsdc-table tr:hover td{background:#f5f8ff}
-.st-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;white-space:nowrap}
+.tsdc-table .num-col{color:#888;font-size:.75rem;width:28px}
+.tsdc-table .name-col{font-weight:700;color:#1a237e}
+.tsdc-table .lop-col{font-weight:600;color:#1565C0;white-space:nowrap}
+.tsdc-table .nv-wrap{font-size:.76rem;color:#444;line-height:1.5}
+.tsdc-table .nv-line{display:flex;gap:4px;align-items:baseline;flex-wrap:wrap}
+.tsdc-table .nv-tag{font-size:.68rem;font-weight:700;padding:1px 5px;border-radius:4px;flex-shrink:0;white-space:nowrap}
+.nv-tag.nv1-tag{background:#e8f5e9;color:#2e7d32}
+.nv-tag.nv2-tag{background:#e3f2fd;color:#1565C0}
+.nv-tag.nv3-tag{background:#fff3e0;color:#e65100}
+.st-badge{display:inline-block;padding:3px 9px;border-radius:10px;font-size:.72rem;font-weight:600;white-space:nowrap}
 .st-badge.wait{background:#FFF3E0;color:#E65100}
 .st-badge.review{background:#E8F5E9;color:#2E7D32}
 .st-badge.other{background:#EEE;color:#555}
 .tsdc-footer{margin-top:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:14px;border-top:1px solid #e0e7f0}
 .tsdc-footer-ts{font-size:.75rem;color:#888}
-.tsdc-btn-refresh{padding:7px 18px;background:#1565C0;color:#fff;border:none;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s}
+.tsdc-btn-refresh{padding:8px 18px;background:#1565C0;color:#fff;border:none;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s}
 .tsdc-btn-refresh:hover{background:#0D47A1}
 .tsdc-trigger{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:linear-gradient(135deg,#1976D2,#0D47A1);color:#fff;border:none;border-radius:30px;font-size:.9rem;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(21,101,192,.35);transition:all .25s}
 .tsdc-trigger:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(21,101,192,.45)}
@@ -216,7 +225,11 @@
         <div class="tsdc-table-wrap">
           <table class="tsdc-table">
             <thead><tr>
-              <th>#</th><th>Họ tên</th><th>Lớp</th><th>Trạng thái</th><th>Nguyện vọng 1</th>
+              <th class="num-col">#</th>
+              <th>Họ tên</th>
+              <th>Lớp</th>
+              <th>Trạng thái</th>
+              <th>Nguyện vọng đăng ký</th>
             </tr></thead>
             <tbody id="tsdcStudentBody"></tbody>
           </table>
@@ -320,16 +333,31 @@ function renderTsdc(d) {
 
   var tbody = document.getElementById('tsdcStudentBody');
   tbody.innerHTML = '';
-  (d.students || []).forEach(function(s, i) {
-    var st2 = s.trangThai || '';
-    var cls = st2.indexOf('ti') !== -1 && st2.indexOf('p nh') !== -1 ? 'wait' :
-              st2.indexOf('t duy') !== -1 ? 'review' : 'other';
-    var nv1Short = (s.nv1 || '–').substring(0, 45);
-    tbody.innerHTML += '<tr><td>' + (i+1) + '</td><td><strong>' + s.hoTen + '</strong></td>' +
-      '<td><b>' + s.lop + '</b></td>' +
-      '<td><span class="st-badge ' + cls + '">' + (st2 || 'Đang xử lý') + '</span></td>' +
-      '<td style="font-size:.75rem;color:#555">' + nv1Short + '</td></tr>';
+  var realStudents = (d.students || []).filter(function(s) {
+    return s.hoTen && s.hoTen.trim() !== '';
   });
+  if (realStudents.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Chưa có học sinh đăng ký</td></tr>';
+  } else {
+    realStudents.forEach(function(s, i) {
+      var st2 = s.trangThai || '';
+      var cls = st2.indexOf('ti') !== -1 && st2.indexOf('p nh') !== -1 ? 'wait' :
+                st2.indexOf('t duy') !== -1 ? 'review' : 'other';
+      /* Hien thi day du NV1/NV2/NV3 */
+      var nvHtml = '';
+      if (s.nv1) nvHtml += '<div class="nv-line"><span class="nv-tag nv1-tag">NV1</span><span>' + s.nv1 + '</span></div>';
+      if (s.nv2) nvHtml += '<div class="nv-line"><span class="nv-tag nv2-tag">NV2</span><span>' + s.nv2 + '</span></div>';
+      if (s.nv3) nvHtml += '<div class="nv-line"><span class="nv-tag nv3-tag">NV3</span><span>' + s.nv3 + '</span></div>';
+      if (!nvHtml) nvHtml = '<span style="color:#bbb">–</span>';
+      tbody.innerHTML += '<tr>' +
+        '<td class="num-col">' + (i+1) + '</td>' +
+        '<td class="name-col">' + s.hoTen + '</td>' +
+        '<td class="lop-col">' + (s.lop || '–') + '</td>' +
+        '<td><span class="st-badge ' + cls + '">' + (st2 || '–') + '</span></td>' +
+        '<td class="nv-wrap">' + nvHtml + '</td>' +
+        '</tr>';
+    });
+  }
 
   document.getElementById('tsdcUpdatedAt').textContent = d.updated_at || '–';
   document.getElementById('tsdcResults').style.display = '';
