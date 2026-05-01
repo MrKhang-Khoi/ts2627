@@ -101,6 +101,52 @@ async def scrape_tsdc():
             await btn.first.scroll_into_view_if_needed()
             await page.evaluate("document.querySelector('button.el-button--primary').click()")
             await asyncio.sleep(6)
+        # =====================================================
+        # FIX PAGINATION: Tang page size len 50 truoc khi doc
+        # Mac dinh TSDC hien 20/trang -> chi lay duoc 20/26
+        # =====================================================
+        print('[PUSH] Tang page size len 50...', flush=True)
+        try:
+            # Pager nay la el-select trong el-pagination
+            pager_changed = await page.evaluate("""
+            () => {
+                // Tim select page-size trong el-pagination
+                var pagers = document.querySelectorAll('.el-pagination .el-select .el-input__inner');
+                if (pagers.length > 0) {
+                    // Trigger change event de set 50/trang
+                    var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    nativeInputValueSetter.call(pagers[0], '50');
+                    pagers[0].dispatchEvent(new Event('input', { bubbles: true }));
+                    return 'input_triggered';
+                }
+                return 'no_pager_found';
+            }
+            """)
+            print(f'[PUSH] Pager result: {pager_changed}', flush=True)
+        except Exception as pe:
+            print(f'[PUSH] Khong tim thay pager (bo qua): {pe}', flush=True)
+
+        # Thu click dropdown page-size va chon 50
+        try:
+            pager_selects = await page.query_selector_all('.el-pagination .el-select')
+            if pager_selects:
+                await pager_selects[0].click()
+                await asyncio.sleep(0.8)
+                opts = page.locator('.el-select-dropdown:not([style*="display: none"]) .el-select-dropdown__item')
+                for j in range(await opts.count()):
+                    txt = (await opts.nth(j).inner_text()).strip()
+                    if '50' in txt or '100' in txt:
+                        await opts.nth(j).click()
+                        print(f'[PUSH] Da chon page size: {txt}', flush=True)
+                        await asyncio.sleep(3)  # Cho reload
+                        break
+                else:
+                    await page.keyboard.press('Escape')
+                    print('[PUSH] Khong co option 50 trong pager, thu scroll...', flush=True)
+        except Exception as pe2:
+            print(f'[PUSH] Loi chon page size: {pe2}', flush=True)
+
+        await asyncio.sleep(3)
         # Extract
         print('[PUSH] Extract data...', flush=True)
         JS = r"""
@@ -136,10 +182,17 @@ async def scrape_tsdc():
         cells.forEach(function(t){
             if(!t) return;
             if(isMaHS(t)){s.maHocSinh=t;}
-            else if(isDate(t)&&!s.ngaySinh){s.ngaySinh=t;}
-            else if(t==='Nam'||t==='\u0110\u1ea1'){s.gioiTinh=t;}
-            else if(t.includes('ti\u1ebfp nh\u1eadn')||t.includes('Ti\u1ebfp nh\u1eadn')){s.trangThai=t;}
-            else if(t.includes('xét duyệt')||t.includes('Ch\u1edd xét')||t.includes('xet duyet')){s.trangThai=t;}
+            if(isDate(t)&&!s.ngaySinh){s.ngaySinh=t;}
+            else if(t==='Nam'||t==='\u0110\u1ea1'||t==='N\u1eef'){s.gioiTinh=t;}
+            /* Bat moi trang thai TSDC - khong gioi han tu khoa */
+            else if(
+                t.includes('ti\u1ebfp nh\u1eadn') || t.includes('Ti\u1ebfp nh\u1eadn') ||
+                t.includes('x\u00e9t duy\u1ec7t') || t.includes('Ch\u1edd') ||
+                t.includes('xet duyet') || t.includes('\u0110\u00e3 ti\u1ebfp') ||
+                t.includes('duy\u1ec7t') || t.includes('x\u1eed l\u00fd') ||
+                t.includes('b\u1ecb t\u1eeb ch\u1ed1i') || t.includes('ho\u00e0n th\u00e0nh') ||
+                t.includes('tr\u1ea1ng th\u00e1i')
+            ){s.trangThai=t;}
             else if(t.includes('@')){/* skip email */}
             else if(isLop(t)){s.lop=t;}
             else if(isNVSchool(t)){nvs.push(t);}
