@@ -22,15 +22,26 @@
 .tsdc-nv-section{padding:14px 18px}
 .tsdc-nv-stat-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f0f3f8}
 .tsdc-nv-stat-row:last-child{border-bottom:none}
-.tsdc-nv-stat-label{font-size:.78rem;color:#444;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tsdc-nv-stat-bar-wrap{flex:2;height:7px;background:#e8edf5;border-radius:4px}
+.tsdc-nv-stat-label{font-size:.82rem;color:#222;flex:1;line-height:1.4;word-break:break-word;white-space:normal}
+.tsdc-nv-stat-bar-wrap{flex:0 0 80px;height:7px;background:#e8edf5;border-radius:4px}
 .tsdc-nv-stat-bar{height:7px;border-radius:4px;transition:width .5s}
-.tsdc-nv-stat-count{font-size:.78rem;font-weight:700;color:#333;min-width:28px;text-align:right}
+.tsdc-nv-stat-count{font-size:.82rem;font-weight:700;color:#333;min-width:28px;text-align:right}
 .tsdc-nv-section-title{font-size:.8rem;font-weight:700;color:#1565C0;margin:0 0 8px;display:flex;align-items:center;gap:6px}
 .tsdc-nv-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media(max-width:600px){.tsdc-nv-cols{grid-template-columns:1fr}}
 .tsdc-nv-col-head{font-size:.75rem;font-weight:800;padding:3px 8px;border-radius:6px;display:inline-block;margin-bottom:8px;color:#fff}
 .nv1-head-bg{background:#43a047}.nv2-head-bg{background:#1976d2}.nv3-head-bg{background:#f9a825}
+/* School rows - clickable */
+.tsdc-nv-stat-row{display:flex;align-items:flex-start;gap:8px;padding:6px 6px;border-bottom:1px solid #f0f3f8;border-radius:6px;cursor:pointer;transition:background .15s}
+.tsdc-nv-stat-row:hover{background:#f0f6ff}
+.tsdc-nv-stat-row.active{background:#e3f0ff;border-left:3px solid #1565C0;}
+.tsdc-nv-stat-row:last-child{border-bottom:none}
+/* Filter result */
+#nvFilterResult{display:none;margin-top:10px;border-top:2px solid #e0e7f0;padding-top:10px}
+.nvfr-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.nvfr-title{font-size:.85rem;font-weight:700;color:#1565C0}
+.nvfr-clear{font-size:.75rem;color:#888;cursor:pointer;padding:3px 8px;border:1px solid #ccc;border-radius:6px;background:#f5f5f5}
+.nvfr-list{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto}
 </style>
 {% endblock %}
 
@@ -55,8 +66,7 @@
     </div>
   </div>
 
-  {# === CARD THONG KE TSDC - HIEN VOI TEACHER/ADMIN KHI LOGIN === #}
-  {% if is_teacher %}
+  {# === CARD THONG KE TSDC - HIEN VOI TAT CA MO =  === #}
   <div class="tsdc-stat-card">
     <div class="tsdc-stat-head">
       <span class="tsdc-stat-head-title">&#128202; Th&#7889;ng k&#234; &#272;KTS l&#7899;p 10 &mdash; L&#7899;p {{ class_name }}</span>
@@ -77,7 +87,7 @@
       </div>
       <div class="tsdc-stat-item" style="border-right:none">
         <div class="tsdc-stat-num" style="color:#1565C0;font-size:1.4rem">{{ tsdc_stats.ti_le }}%</div>
-        <div class="tsdc-stat-lbl">TỶ LỆ ĐĂNG KÝ</div>
+        <div class="tsdc-stat-lbl">T&#7� L&#7878; &#272;&#258;NG K&#221;</div>
       </div>
     </div>
     <div class="tsdc-nv-section">
@@ -88,8 +98,8 @@
           {% if tsdc_stats.nv1_schools %}
             {% set nv1_max = tsdc_stats.nv1_schools[0][1] %}
             {% for school, cnt in tsdc_stats.nv1_schools %}
-            <div class="tsdc-nv-stat-row">
-              <span class="tsdc-nv-stat-label" title="{{ school }}">{{ school }}</span>
+            <div class="tsdc-nv-stat-row" onclick="filterByNvSchool('nv1','{{ school|e }}'  ,this)" title="Click để lọc học sinh">
+              <span class="tsdc-nv-stat-label">{{ school }}</span>
               <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt/nv1_max*100)|round|int }}%;background:#43a047"></div></div>
               <span class="tsdc-nv-stat-count">{{ cnt }}</span>
             </div>
@@ -102,8 +112,8 @@
           {% if tsdc_stats.nv2_schools %}
             {% set nv2_max = tsdc_stats.nv2_schools[0][1] %}
             {% for school, cnt in tsdc_stats.nv2_schools %}
-            <div class="tsdc-nv-stat-row">
-              <span class="tsdc-nv-stat-label" title="{{ school }}">{{ school }}</span>
+            <div class="tsdc-nv-stat-row" onclick="filterByNvSchool('nv2','{{ school|e }}',this)" title="Click để lọc học sinh">
+              <span class="tsdc-nv-stat-label">{{ school }}</span>
               <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt/nv2_max*100)|round|int }}%;background:#1976d2"></div></div>
               <span class="tsdc-nv-stat-count">{{ cnt }}</span>
             </div>
@@ -116,8 +126,8 @@
           {% if tsdc_stats.nv3_schools %}
             {% set nv3_max = tsdc_stats.nv3_schools[0][1] %}
             {% for school, cnt in tsdc_stats.nv3_schools %}
-            <div class="tsdc-nv-stat-row">
-              <span class="tsdc-nv-stat-label" title="{{ school }}">{{ school }}</span>
+            <div class="tsdc-nv-stat-row" onclick="filterByNvSchool('nv3','{{ school|e }}',this)" title="Click để lọc học sinh">
+              <span class="tsdc-nv-stat-label">{{ school }}</span>
               <div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:{{ (cnt/nv3_max*100)|round|int }}%;background:#f9a825"></div></div>
               <span class="tsdc-nv-stat-count">{{ cnt }}</span>
             </div>
@@ -125,9 +135,16 @@
           {% else %}<p style="color:#aaa;font-size:.75rem">Ch&#432;a c&#243; d&#7919; li&#7879;u</p>{% endif %}
         </div>
       </div>
+      <!-- Filter result panel -->
+      <div id="nvFilterResult">
+        <div class="nvfr-head">
+          <span class="nvfr-title" id="nvfrTitle"></span>
+          <button class="nvfr-clear" onclick="clearNvFilter()">&#10005; Xem tất cả</button>
+        </div>
+        <div class="nvfr-list" id="nvfrList"></div>
+      </div>
     </div>
   </div>
-  {% endif %}
 
   <div class="student-list" id="student-list">
     {% for s in students %}
@@ -361,6 +378,7 @@ function showVerifyError(msg) {
 // === LIVE TSDC: lay du lieu truc tiep tu GSheets de cap nhat trang lop ===
 var _AU='https://script.google.com/macros/s/AKfycbzIxSlNum5oRdASLpAKRgnt_GYefUx2uwtCmu9OzKmtpKr0Zi3AnYyKOhaDSunvhsxC/exec';
 var _CN='{{ class_name }}';
+var _tsdcLiveMap={}; // normName -> {nv1,nv2,nv3,trangThai}
 function _nrm(s){
   if(!s)return'';
   var r=s.toLowerCase().normalize('NFD');
@@ -379,6 +397,7 @@ function _nrm(s){
       if(k)mp[k]=s;
     });
     if(!Object.keys(mp).length)return;
+    _tsdcLiveMap=mp; // luu de filterByNvSchool dung
     // Cap nhat badge tung hoc sinh
     var dk=0;
     document.querySelectorAll('.student-item').forEach(function(el){
@@ -416,7 +435,7 @@ function _nrm(s){
       if(s.nv2)n2[s.nv2]=(n2[s.nv2]||0)+1;
       if(s.nv3)n3[s.nv3]=(n3[s.nv3]||0)+1;
     });
-    function updNv(container,nvm){
+    function updNv(container,nvm,nvKey,color){
       if(!container)return;
       var cnt=Object.values(nvm).reduce(function(a,b){return a+b;},0);
       var h=container.querySelector('.tsdc-nv-col-head');
@@ -427,16 +446,70 @@ function _nrm(s){
       var srt=Object.keys(nvm).map(function(k){return[k,nvm[k]];}).sort(function(a,b){return b[1]-a[1];});
       var mx=srt.length?srt[0][1]:1;
       srt.forEach(function(x){
-        var sh=x[0].length>35?x[0].slice(0,35)+'…':x[0];
-        w.innerHTML+='<div class="tsdc-nv-stat-row"><span class="tsdc-nv-stat-label" title="'+x[0]+'">'+sh+'</span>'+
-          '<div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:'+Math.round(x[1]/mx*100)+'%"></div></div>'+
-          '<span class="tsdc-nv-stat-count">'+x[1]+'</span></div>';
+        var row=document.createElement('div');
+        row.className='tsdc-nv-stat-row';
+        row.title='Click để lọc học sinh';
+        row.innerHTML='<span class="tsdc-nv-stat-label">'+x[0]+'</span>'+
+          '<div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:'+Math.round(x[1]/mx*100)+'%;background:'+color+'"></div></div>'+
+          '<span class="tsdc-nv-stat-count">'+x[1]+'</span>';
+        row.addEventListener('click',(function(school,r){return function(){filterByNvSchool(nvKey,school,r);};})(x[0],row));
+        w.appendChild(row);
       });
     }
     var cols=document.querySelectorAll('.tsdc-nv-cols > div');
-    updNv(cols[0],n1);updNv(cols[1],n2);updNv(cols[2],n3);
+    updNv(cols[0],n1,'nv1','#43a047');updNv(cols[1],n2,'nv2','#1976d2');updNv(cols[2],n3,'nv3','#f9a825');
     console.log('[LIVE] '+_CN+': '+dk+'/'+tot+' da DK TSDC (GSheets live)');
   }catch(e){console.warn('[LIVE TSDC] Loi:',e);}
 })();
+
+// === FILTER BY NV SCHOOL ===
+var _selNvRow=null;
+function filterByNvSchool(nv,school,rowEl){
+  // Toggle
+  if(_selNvRow===rowEl){clearNvFilter();return;}
+  if(_selNvRow)_selNvRow.classList.remove('active');
+  _selNvRow=rowEl;
+  if(rowEl)rowEl.classList.add('active');
+  var nvLabel={nv1:'Nguyện vọng 1',nv2:'Nguyện vọng 2',nv3:'Nguyện vọng 3'}[nv]||nv;
+  // Tim HS trong lop da dang ky truong nay
+  var matched=[];
+  document.querySelectorAll('.student-item').forEach(function(el){
+    var ts=_tsdcLiveMap[_nrm(el.dataset.name||'')];
+    if(ts&&ts[nv]===school)matched.push({el:el,ts:ts});
+  });
+  // Cap nhat panel
+  var panel=document.getElementById('nvFilterResult');
+  var title=document.getElementById('nvfrTitle');
+  var list=document.getElementById('nvfrList');
+  var nvColors={nv1:'#43a047',nv2:'#1976d2',nv3:'#f9a825'};
+  title.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+nvColors[nv]+';margin-right:5px"></span>'+nvLabel+': <b>'+school+'</b> &nbsp;<span style="font-weight:400;font-size:.8rem;color:#666">('+matched.length+' học sinh)</span>';
+  if(!matched.length){
+    list.innerHTML='<div style="color:#aaa;padding:8px;font-size:.82rem">Không tìm thấy học sinh</div>';
+  }else{
+    list.innerHTML=matched.map(function(m,i){
+      var s=m.ts;
+      var others=['nv1','nv2','nv3'].filter(function(k){return k!==nv&&s[k];}).map(function(k){
+        var c=nvColors[k];
+        return '<span style="font-size:.7rem;padding:1px 5px;border-radius:4px;background:'+c+'20;color:'+c+';border:1px solid '+c+'40;margin-left:4px">'+k.toUpperCase()+' '+s[k]+'</span>';
+      }).join('');
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid #f0f3f8">'+
+        '<span style="font-weight:700;min-width:22px;color:#1565C0;font-size:.8rem">'+(i+1)+'.</span>'+
+        '<div style="flex:1"><span style="font-weight:600;font-size:.88rem">'+(m.el.querySelector('.student-name')||{}).textContent+'</span>'+others+'</div>'+
+        '</div>';
+    }).join('');
+  }
+  panel.style.display='';
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  // Cuon den danh sach va highlight
+  if(matched.length){
+    matched[0].el.scrollIntoView({behavior:'smooth',block:'center'});
+    matched.forEach(function(m){m.el.style.boxShadow='0 0 0 2px #1565C040';});
+    setTimeout(function(){matched.forEach(function(m){m.el.style.boxShadow='';});},2000);
+  }
+}
+function clearNvFilter(){
+  document.getElementById('nvFilterResult').style.display='none';
+  if(_selNvRow){_selNvRow.classList.remove('active');_selNvRow=null;}
+}
 </script>
 {% endblock %}
