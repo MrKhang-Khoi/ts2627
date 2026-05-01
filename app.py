@@ -112,9 +112,10 @@ def student_list(class_name):
         'nv3_schools': school_stats('tsdc_nv3'),
     }
 
+    is_teacher = session.get('role') in ('teacher', 'admin')
     return render_template('student_list.html', students=students, class_name=class_name,
                            DOC_LABELS=DOC_LABELS, STATUS_LABELS=STATUS_LABELS, OVERALL_LABELS=OVERALL_LABELS,
-                           tsdc_stats=tsdc_stats)
+                           tsdc_stats=tsdc_stats, is_teacher=is_teacher)
 
 @app.route('/student/<int:student_id>')
 def student_profile(student_id):

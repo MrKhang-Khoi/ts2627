@@ -55,8 +55,8 @@
     </div>
   </div>
 
-  {# === CARD THONG KE TSDC - CHI HIEN VOI TEACHER/ADMIN === #}
-  {% if session.get('role') in ['teacher','admin'] %}
+  {# === CARD THONG KE TSDC - HIEN VOI TEACHER/ADMIN KHI LOGIN === #}
+  {% if is_teacher %}
   <div class="tsdc-stat-card">
     <div class="tsdc-stat-head">
       <span class="tsdc-stat-head-title">&#128202; Th&#7889;ng k&#234; &#272;KTS l&#7899;p 10 &mdash; L&#7899;p {{ class_name }}</span>
