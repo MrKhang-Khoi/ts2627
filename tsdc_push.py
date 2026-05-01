@@ -102,51 +102,49 @@ async def scrape_tsdc():
             await page.evaluate("document.querySelector('button.el-button--primary').click()")
             await asyncio.sleep(6)
         # =====================================================
-        # FIX PAGINATION: Tang page size len 50 truoc khi doc
-        # Mac dinh TSDC hien 20/trang -> chi lay duoc 20/26
+        # CHON PAGE SIZE 500 - selector xac nhan tu browser
+        # Selector that: .el-pagination__sizes .el-input__inner
+        # Click dropdown -> chon "500" -> doi reload -> extract
         # =====================================================
-        print('[PUSH] Tang page size len 50...', flush=True)
+        print('[PUSH] Chon hien thi 500 ban ghi/trang...', flush=True)
         try:
-            # Pager nay la el-select trong el-pagination
-            pager_changed = await page.evaluate("""
-            () => {
-                // Tim select page-size trong el-pagination
-                var pagers = document.querySelectorAll('.el-pagination .el-select .el-input__inner');
-                if (pagers.length > 0) {
-                    // Trigger change event de set 50/trang
-                    var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                    nativeInputValueSetter.call(pagers[0], '50');
-                    pagers[0].dispatchEvent(new Event('input', { bubbles: true }));
-                    return 'input_triggered';
-                }
-                return 'no_pager_found';
-            }
-            """)
-            print(f'[PUSH] Pager result: {pager_changed}', flush=True)
-        except Exception as pe:
-            print(f'[PUSH] Khong tim thay pager (bo qua): {pe}', flush=True)
-
-        # Thu click dropdown page-size va chon 50
-        try:
-            pager_selects = await page.query_selector_all('.el-pagination .el-select')
-            if pager_selects:
-                await pager_selects[0].click()
-                await asyncio.sleep(0.8)
-                opts = page.locator('.el-select-dropdown:not([style*="display: none"]) .el-select-dropdown__item')
-                for j in range(await opts.count()):
-                    txt = (await opts.nth(j).inner_text()).strip()
-                    if '50' in txt or '100' in txt:
-                        await opts.nth(j).click()
-                        print(f'[PUSH] Da chon page size: {txt}', flush=True)
-                        await asyncio.sleep(3)  # Cho reload
-                        break
+            # Selector chinh xac da xac nhan tu browser inspection
+            page_size_input = page.locator('.el-pagination__sizes .el-input__inner')
+            if await page_size_input.count() > 0:
+                await page_size_input.first.click()
+                await asyncio.sleep(1)
+                # Chon option "500" tu dropdown
+                opt_500 = page.locator('.el-select-dropdown__item').filter(has_text='500')
+                if await opt_500.count() > 0:
+                    await opt_500.first.click()
+                    print('[PUSH] Da chon 500/trang - doi reload...', flush=True)
+                    await asyncio.sleep(4)
                 else:
+                    # Fallback: thu tat ca option, chon cai lon nhat
                     await page.keyboard.press('Escape')
-                    print('[PUSH] Khong co option 50 trong pager, thu scroll...', flush=True)
-        except Exception as pe2:
-            print(f'[PUSH] Loi chon page size: {pe2}', flush=True)
+                    await asyncio.sleep(0.3)
+                    print('[PUSH] Khong co option 500, tim option lon nhat...', flush=True)
+                    all_visible_opts = page.locator('.el-select-dropdown:not([style*="display: none"]) .el-select-dropdown__item')
+                    best = None
+                    best_val = 0
+                    for j in range(await all_visible_opts.count()):
+                        txt = (await all_visible_opts.nth(j).inner_text()).strip()
+                        nums = [int(x) for x in txt.split() if x.isdigit()]
+                        if nums and nums[0] > best_val:
+                            best_val = nums[0]; best = all_visible_opts.nth(j)
+                    if best:
+                        await best.click()
+                        print(f'[PUSH] Da chon {best_val}/trang', flush=True)
+                        await asyncio.sleep(4)
+                    else:
+                        await page.keyboard.press('Escape')
+                        print('[PUSH] Khong doi duoc page size - chi lay trang hien tai', flush=True)
+            else:
+                print('[PUSH] Khong tim thay .el-pagination__sizes, bo qua', flush=True)
+        except Exception as pe:
+            print(f'[PUSH] Loi chon page size: {pe}', flush=True)
 
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
         # Extract
         print('[PUSH] Extract data...', flush=True)
         JS = r"""
