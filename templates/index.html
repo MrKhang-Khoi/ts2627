@@ -376,16 +376,26 @@ function loadTsdc(force) {
   if (!force && _tsdcLoaded) return;
   _showLoading('⏳ Đang lấy dữ liệu từ Google Sheets...');
 
-  /* Load song song: Apps Script (TSDC) + class counts (DB noi bo) */
   var urlTsdc   = APPS_SCRIPT_URL + '?action=all&t=' + Date.now();
   var urlCounts = '/api/class-counts';
 
-  Promise.all([fetch(urlTsdc), fetch(urlCounts)])
-    .then(function(rs) { return Promise.all([rs[0].json(), rs[1].json()]); })
-    .then(function(ds) {
-      var d = ds[0]; var classCounts = ds[1];
+  /* Luon fetch TSDC truoc, class-counts chi la bonus (khong pha vo neu loi) */
+  Promise.allSettled([
+    fetch(urlTsdc).then(function(r){ return r.json(); }),
+    fetch(urlCounts).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+  ])
+    .then(function(results) {
+      var tsdcResult   = results[0];
+      var countsResult = results[1];
+
+      if (tsdcResult.status === 'rejected' || !tsdcResult.value) {
+        throw new Error(tsdcResult.reason || 'Loi fetch TSDC');
+      }
+      var d = tsdcResult.value;
       if (d.error) throw new Error(d.error);
-      if (!d.students) throw new Error('Dữ liệu không hợp lệ');
+      if (!d.students) throw new Error('Du lieu khong hop le');
+
+      var classCounts = (countsResult.status === 'fulfilled' && countsResult.value) ? countsResult.value : null;
       var stats = buildStatsFromStudents(d.students);
       renderTsdc({
         success: true,
