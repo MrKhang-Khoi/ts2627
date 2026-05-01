@@ -358,5 +358,85 @@ function showVerifyError(msg) {
   const m = btn.getAttribute('onclick').match(/openVerify\((\d+),\s*'([^']+)'\)/);
   if (m) openVerify(parseInt(m[1]), m[2]);
 })();
+// === LIVE TSDC: lay du lieu truc tiep tu GSheets de cap nhat trang lop ===
+var _AU='https://script.google.com/macros/s/AKfycbzIxSlNum5oRdASLpAKRgnt_GYefUx2uwtCmu9OzKmtpKr0Zi3AnYyKOhaDSunvhsxC/exec';
+var _CN='{{ class_name }}';
+function _nrm(s){
+  if(!s)return'';
+  var r=s.toLowerCase().normalize('NFD');
+  r=r.replace(/[\u0300-\u036f]/g,'').replace(/[\u0111\u0110]/g,'d');
+  return r.replace(/\s+/g,' ').trim();
+}
+(async function(){
+  try{
+    var d=await(await fetch(_AU+'?action=all')).json();
+    if(!d.students)return;
+    // Loc chi HS cua lop nay, index theo ten chuan hoa
+    var mp={};
+    d.students.forEach(function(s){
+      if((s.lop||'').trim()!==_CN)return;
+      var k=_nrm(s.hoTen);
+      if(k)mp[k]=s;
+    });
+    if(!Object.keys(mp).length)return;
+    // Cap nhat badge tung hoc sinh
+    var dk=0;
+    document.querySelectorAll('.student-item').forEach(function(el){
+      var b=el.querySelector('.tsdc-list-badge');
+      if(!b)return;
+      var ts=mp[_nrm(el.dataset.name||'')];
+      if(ts&&ts.trangThai){
+        b.className='tsdc-list-badge dk';
+        b.title='Da dang ky: '+ts.trangThai;
+        b.innerHTML='✓ Đã ĐK TSDC';
+        el.dataset.tsdc='da_dk';
+        dk++;
+      }else{
+        b.className='tsdc-list-badge chua-dk';
+        b.title='Chua nop ho so DKTS lop 10';
+        b.innerHTML='Chua ĐK TSDC';
+        el.dataset.tsdc='chua_dk';
+      }
+    });
+    // Cap nhat so lieu thong ke
+    var tot=document.querySelectorAll('.student-item').length;
+    var cdn=tot-dk;
+    var tl=tot?Math.round(dk/tot*100):0;
+    document.querySelectorAll('.tsdc-stat-num').forEach(function(el){
+      var lb=(el.nextElementSibling||{}).textContent||'';
+      var t=lb.trim().toUpperCase();
+      if(t.includes('ĐÃ')&&t.includes('ĐĂNG'))el.textContent=dk;
+      else if(t.includes('CHƯ')&&t.includes('ĐĂNG'))el.textContent=cdn;
+      else if(t.includes('TỶ LỆ'))el.textContent=tl+'%';
+    });
+    // Cap nhat NV stats
+    var n1={},n2={},n3={};
+    Object.values(mp).forEach(function(s){
+      if(s.nv1)n1[s.nv1]=(n1[s.nv1]||0)+1;
+      if(s.nv2)n2[s.nv2]=(n2[s.nv2]||0)+1;
+      if(s.nv3)n3[s.nv3]=(n3[s.nv3]||0)+1;
+    });
+    function updNv(container,nvm){
+      if(!container)return;
+      var cnt=Object.values(nvm).reduce(function(a,b){return a+b;},0);
+      var h=container.querySelector('.tsdc-nv-col-head');
+      if(h)h.textContent=h.textContent.replace(/— \d+ HS/,'— '+cnt+' HS');
+      var rows=container.querySelectorAll('.tsdc-nv-stat-row');
+      if(!rows.length)return;
+      var w=rows[0].parentElement;w.innerHTML='';
+      var srt=Object.keys(nvm).map(function(k){return[k,nvm[k]];}).sort(function(a,b){return b[1]-a[1];});
+      var mx=srt.length?srt[0][1]:1;
+      srt.forEach(function(x){
+        var sh=x[0].length>35?x[0].slice(0,35)+'…':x[0];
+        w.innerHTML+='<div class="tsdc-nv-stat-row"><span class="tsdc-nv-stat-label" title="'+x[0]+'">'+sh+'</span>'+
+          '<div class="tsdc-nv-stat-bar-wrap"><div class="tsdc-nv-stat-bar" style="width:'+Math.round(x[1]/mx*100)+'%"></div></div>'+
+          '<span class="tsdc-nv-stat-count">'+x[1]+'</span></div>';
+      });
+    }
+    var cols=document.querySelectorAll('.tsdc-nv-cols > div');
+    updNv(cols[0],n1);updNv(cols[1],n2);updNv(cols[2],n3);
+    console.log('[LIVE] '+_CN+': '+dk+'/'+tot+' da DK TSDC (GSheets live)');
+  }catch(e){console.warn('[LIVE TSDC] Loi:',e);}
+})();
 </script>
 {% endblock %}
