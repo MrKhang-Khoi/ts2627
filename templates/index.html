@@ -80,6 +80,27 @@
 .tsdc-trigger:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(21,101,192,.45)}
 .tsdc-trigger-wrap{margin-top:12px;display:flex;justify-content:center}
 @media(max-width:500px){.tsdc-cards{grid-template-columns:1fr 1fr}.tsdc-card:first-child{grid-column:span 2}}
+/* === CLASS STATS === */
+.cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.cls-card{border:1px solid #e0e7f0;border-radius:12px;overflow:hidden;transition:box-shadow .2s}
+.cls-card:hover{box-shadow:0 4px 16px rgba(21,101,192,.12)}
+.cls-card-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;cursor:pointer}
+.cls-card-name{font-size:.95rem;font-weight:800;letter-spacing:.02em}
+.cls-card-badge{background:rgba(255,255,255,.25);border-radius:10px;padding:2px 8px;font-size:.72rem;font-weight:700}
+.cls-card-body{padding:12px 14px;background:#f8faff}
+.cls-stat-row{display:flex;gap:8px;margin-bottom:10px}
+.cls-stat-item{flex:1;text-align:center;background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #e8edf5}
+.cls-stat-num{font-size:1.2rem;font-weight:800}
+.cls-stat-num.blue{color:#1565C0}.cls-stat-num.green{color:#2e7d32}.cls-stat-num.red{color:#c62828}.cls-stat-num.pct{color:#6a1b9a}
+.cls-stat-lbl{font-size:.62rem;color:#888;margin-top:1px}
+.cls-prog-bar{height:6px;background:#e0e7f0;border-radius:3px;overflow:hidden;margin-bottom:10px}
+.cls-prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#1565C0,#42A5F5);transition:width .6s}
+.cls-nv-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.cls-nv-block{background:#fff;border-radius:8px;padding:7px 6px;border:1px solid #e8edf5}
+.cls-nv-title{font-size:.63rem;font-weight:800;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+.cls-nv-title.t1{color:#1565C0}.cls-nv-title.t2{color:#00897B}.cls-nv-title.t3{color:#E65100}
+.cls-nv-sch{font-size:.67rem;color:#444;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cls-nv-sch:hover{color:#1565C0;text-decoration:underline}
 /* CTA dang ky TSDC noi bat tren trang chu */
 @keyframes idx-pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.5),0 6px 24px rgba(229,57,53,.35)}55%{box-shadow:0 0 0 12px rgba(229,57,53,0),0 6px 24px rgba(229,57,53,.35)}}
 @keyframes idx-arrow{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
@@ -277,6 +298,12 @@
         </div>
       </div>
 
+      <!-- Class stats section -->
+      <div class="tsdc-section" id="clsStatsSection" style="display:none">
+        <h3>📚 Thống Kê Theo Lớp</h3>
+        <div class="cls-grid" id="clsGrid"></div>
+      </div>
+
       <div class="tsdc-section">
         <h3>👨‍🎓 Danh Sách Học Sinh Đã Đăng Ký</h3>
         <div class="tsdc-table-wrap">
@@ -343,23 +370,24 @@ function loadTsdc(force) {
   if (!force && _tsdcLoaded) return;
   _showLoading('⏳ Đang lấy dữ liệu từ Google Sheets...');
 
-  /* Uu tien lay tu Apps Script (Google Sheets) */
-  var url = APPS_SCRIPT_URL + '?action=all&t=' + Date.now();
-  fetch(url)
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
+  /* Load song song: Apps Script (TSDC) + class counts (DB noi bo) */
+  var urlTsdc   = APPS_SCRIPT_URL + '?action=all&t=' + Date.now();
+  var urlCounts = '/api/class-counts';
+
+  Promise.all([fetch(urlTsdc), fetch(urlCounts)])
+    .then(function(rs) { return Promise.all([rs[0].json(), rs[1].json()]); })
+    .then(function(ds) {
+      var d = ds[0]; var classCounts = ds[1];
       if (d.error) throw new Error(d.error);
       if (!d.students) throw new Error('Dữ liệu không hợp lệ');
-      /* Chuyen sang dinh dang renderTsdc mong doi */
       var stats = buildStatsFromStudents(d.students);
       renderTsdc({
         success: true,
         students: d.students,
         total: d.total,
         updated_at: d.updated_at,
-        nv1: stats.nv1,
-        nv2: stats.nv2,
-        nv3: stats.nv3
+        nv1: stats.nv1, nv2: stats.nv2, nv3: stats.nv3,
+        classCounts: classCounts
       });
       _tsdcLoaded = true;
     })
@@ -456,6 +484,12 @@ function renderTsdc(d) {
 
   document.getElementById('tsdcUpdatedAt').textContent = d.updated_at || '–';
   document.getElementById('tsdcResults').style.display = '';
+
+  /* Class stats */
+  if (d.classCounts) {
+    renderClassStats(realStudents, d.classCounts);
+    document.getElementById('clsStatsSection').style.display = '';
+  }
 }
 
 function renderNvList(containerId, items, color, nvKey) {
@@ -488,6 +522,66 @@ function switchNv(tab, btn) {
   btn.classList.add('active');
   document.getElementById('panel-' + tab).classList.add('active');
   closeTsdcFilter();
+}
+
+function renderClassStats(students, classCounts) {
+  var grid = document.getElementById('clsGrid');
+  /* Build per-class map from TSDC students */
+  var byLop = {};
+  students.forEach(function(s) {
+    var lop = (s.lop || '').trim();
+    if (!lop) return;
+    if (!byLop[lop]) byLop[lop] = { total:0, nv1:{}, nv2:{}, nv3:{} };
+    byLop[lop].total++;
+    if (s.nv1) byLop[lop].nv1[s.nv1] = (byLop[lop].nv1[s.nv1]||0)+1;
+    if (s.nv2) byLop[lop].nv2[s.nv2] = (byLop[lop].nv2[s.nv2]||0)+1;
+    if (s.nv3) byLop[lop].nv3[s.nv3] = (byLop[lop].nv3[s.nv3]||0)+1;
+  });
+  function top(map, n) {
+    return Object.keys(map).map(function(k){return[k,map[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,n);
+  }
+  function shortName(s) { return s.length>22?s.substring(0,22)+'…':s; }
+
+  /* All classes from DB, sorted */
+  var allClasses = Object.keys(classCounts).sort();
+  var html = '';
+  allClasses.forEach(function(lop) {
+    var dbTotal  = classCounts[lop] || 0;
+    var regData  = byLop[lop] || { total:0, nv1:{}, nv2:{}, nv3:{} };
+    var regCount = regData.total;
+    var noReg    = Math.max(0, dbTotal - regCount);
+    var pct      = dbTotal ? Math.round(regCount/dbTotal*100) : 0;
+
+    function nvBlock(nvMap, cls, label) {
+      var list = top(nvMap, 3);
+      var cnt  = Object.values(nvMap).reduce(function(a,b){return a+b;},0);
+      var rows = list.length
+        ? list.map(function(item){
+            return '<div class="cls-nv-sch" title="'+item[0]+'" onclick="filterTsdcBySchool(\''+cls+'\','+JSON.stringify(item[0])+',null)">'+shortName(item[0])+' <b>'+item[1]+'</b></div>';
+          }).join('')
+        : '<div style="font-size:.63rem;color:#aaa">Chưa có</div>';
+      var tCls = {nv1:'t1',nv2:'t2',nv3:'t3'}[cls];
+      return '<div class="cls-nv-block"><div class="cls-nv-title '+tCls+'"><span>'+label+'</span><span>'+cnt+'</span></div>'+rows+'</div>';
+    }
+
+    html += '<div class="cls-card">' +
+      '<div class="cls-card-head"><span class="cls-card-name">Lớp '+lop+'</span><span class="cls-card-badge">'+pct+'% đăng ký</span></div>' +
+      '<div class="cls-card-body">' +
+        '<div class="cls-stat-row">' +
+          '<div class="cls-stat-item"><div class="cls-stat-num blue">'+dbTotal+'</div><div class="cls-stat-lbl">Tổng HS</div></div>' +
+          '<div class="cls-stat-item"><div class="cls-stat-num green">'+regCount+'</div><div class="cls-stat-lbl">Đã đăng ký</div></div>' +
+          '<div class="cls-stat-item"><div class="cls-stat-num red">'+noReg+'</div><div class="cls-stat-lbl">Chưa đăng ký</div></div>' +
+        '</div>' +
+        '<div class="cls-prog-bar"><div class="cls-prog-fill" style="width:'+pct+'%"></div></div>' +
+        '<div class="cls-nv-wrap">' +
+          nvBlock(regData.nv1,'nv1','NV1') +
+          nvBlock(regData.nv2,'nv2','NV2') +
+          nvBlock(regData.nv3,'nv3','NV3') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  grid.innerHTML = html || '<p style="color:#aaa;font-size:.85rem">Không có dữ liệu</p>';
 }
 
 window._tsdcStudents = [];
