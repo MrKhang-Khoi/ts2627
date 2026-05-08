@@ -1,657 +1,390 @@
 /**
  * scanner.js — Module quét tài liệu PDF trên mobile
- * Tích hợp: Camera capture → Image processing → PDF generation → Upload
- *
- * Dependencies: jsPDF (loaded from CDN in base.html)
- * Sử dụng: Canvas API để xử lý ảnh trực tiếp trên client
+ * Flow: Camera capture → Crop (yellow frame) → Editor (filters) → PDF → Upload
  */
-
 (function () {
   'use strict';
 
-  // ==========================================================
-  // STATE
-  // ==========================================================
-  let _pages = [];         // Array of {img: HTMLImageElement, canvas: HTMLCanvasElement, filter: string}
-  let _activeIdx = -1;     // Index trang đang chỉnh sửa
-  let _docType = '';       // doc_type đang upload (GIAYKHAISINH, CCCD, etc.)
-  let _studentId = 0;      // student_id
-  let _uploadEndpoint = ''; // API endpoint tùy doc_type
-  let _overlay = null;     // DOM overlay element
+  var _pages = [], _activeIdx = -1, _docType = '', _studentId = 0, _overlay = null;
+  // Crop state
+  var _cropImg = null, _cropCorners = [], _dragIdx = -1, _cropCanvas = null, _cropCtx = null;
+  var _pendingFiles = [], _pendingFileIdx = 0;
 
-  // ==========================================================
-  // FILTERS — xử lý ảnh trên Canvas
-  // ==========================================================
-  const FILTERS = {
-    original: { label: 'Gốc', apply: function (ctx, w, h) { /* no-op */ } },
-    document: {
-      label: 'Tài liệu',
-      apply: function (ctx, w, h) {
-        var id = ctx.getImageData(0, 0, w, h);
-        var d = id.data;
-        for (var i = 0; i < d.length; i += 4) {
-          // Increase contrast + brightness for document
-          var avg = (d[i] + d[i + 1] + d[i + 2]) / 3;
-          var factor = 1.5;
-          d[i]     = Math.min(255, Math.max(0, factor * (d[i] - 128) + 128 + 20));
-          d[i + 1] = Math.min(255, Math.max(0, factor * (d[i + 1] - 128) + 128 + 20));
-          d[i + 2] = Math.min(255, Math.max(0, factor * (d[i + 2] - 128) + 128 + 20));
-        }
-        ctx.putImageData(id, 0, 0);
-      }
-    },
-    bw: {
-      label: 'Đen trắng',
-      apply: function (ctx, w, h) {
-        var id = ctx.getImageData(0, 0, w, h);
-        var d = id.data;
-        for (var i = 0; i < d.length; i += 4) {
-          var gray = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-          // Threshold for clean B&W
-          var val = gray > 140 ? 255 : 0;
-          d[i] = d[i + 1] = d[i + 2] = val;
-        }
-        ctx.putImageData(id, 0, 0);
-      }
-    },
-    grayscale: {
-      label: 'Xám',
-      apply: function (ctx, w, h) {
-        var id = ctx.getImageData(0, 0, w, h);
-        var d = id.data;
-        for (var i = 0; i < d.length; i += 4) {
-          var gray = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-          d[i] = d[i + 1] = d[i + 2] = gray;
-        }
-        ctx.putImageData(id, 0, 0);
-      }
-    },
-    bright: {
-      label: 'Tăng sáng',
-      apply: function (ctx, w, h) {
-        var id = ctx.getImageData(0, 0, w, h);
-        var d = id.data;
-        for (var i = 0; i < d.length; i += 4) {
-          d[i]     = Math.min(255, d[i] + 40);
-          d[i + 1] = Math.min(255, d[i + 1] + 40);
-          d[i + 2] = Math.min(255, d[i + 2] + 40);
-        }
-        ctx.putImageData(id, 0, 0);
-      }
-    },
-    sharp: {
-      label: 'Nét',
-      apply: function (ctx, w, h) {
-        // Increase contrast slightly
-        var id = ctx.getImageData(0, 0, w, h);
-        var d = id.data;
-        var factor = 1.3;
-        for (var i = 0; i < d.length; i += 4) {
-          d[i]     = Math.min(255, Math.max(0, factor * (d[i] - 128) + 128));
-          d[i + 1] = Math.min(255, Math.max(0, factor * (d[i + 1] - 128) + 128));
-          d[i + 2] = Math.min(255, Math.max(0, factor * (d[i + 2] - 128) + 128));
-        }
-        ctx.putImageData(id, 0, 0);
-      }
-    }
+  var FILTERS = {
+    original: { label: 'Gốc', apply: function(){} },
+    document: { label: 'Tài liệu', apply: function(ctx,w,h){
+      var id=ctx.getImageData(0,0,w,h),d=id.data;
+      for(var i=0;i<d.length;i+=4){var f=1.5;d[i]=Math.min(255,Math.max(0,f*(d[i]-128)+148));d[i+1]=Math.min(255,Math.max(0,f*(d[i+1]-128)+148));d[i+2]=Math.min(255,Math.max(0,f*(d[i+2]-128)+148));}
+      ctx.putImageData(id,0,0);
+    }},
+    bw: { label: 'Đen trắng', apply: function(ctx,w,h){
+      var id=ctx.getImageData(0,0,w,h),d=id.data;
+      for(var i=0;i<d.length;i+=4){var g=d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;var v=g>140?255:0;d[i]=d[i+1]=d[i+2]=v;}
+      ctx.putImageData(id,0,0);
+    }},
+    grayscale: { label: 'Xám', apply: function(ctx,w,h){
+      var id=ctx.getImageData(0,0,w,h),d=id.data;
+      for(var i=0;i<d.length;i+=4){var g=d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;d[i]=d[i+1]=d[i+2]=g;}
+      ctx.putImageData(id,0,0);
+    }},
+    bright: { label: 'Tăng sáng', apply: function(ctx,w,h){
+      var id=ctx.getImageData(0,0,w,h),d=id.data;
+      for(var i=0;i<d.length;i+=4){d[i]=Math.min(255,d[i]+40);d[i+1]=Math.min(255,d[i+1]+40);d[i+2]=Math.min(255,d[i+2]+40);}
+      ctx.putImageData(id,0,0);
+    }},
+    sharp: { label: 'Nét', apply: function(ctx,w,h){
+      var id=ctx.getImageData(0,0,w,h),d=id.data,f=1.3;
+      for(var i=0;i<d.length;i+=4){d[i]=Math.min(255,Math.max(0,f*(d[i]-128)+128));d[i+1]=Math.min(255,Math.max(0,f*(d[i+1]-128)+128));d[i+2]=Math.min(255,Math.max(0,f*(d[i+2]-128)+128));}
+      ctx.putImageData(id,0,0);
+    }}
   };
 
-  // ==========================================================
-  // HTML TEMPLATE
-  // ==========================================================
   function _buildHTML() {
     return '<div id="scanner-overlay" class="scanner-overlay hidden">' +
-      '<!-- Processing overlay -->' +
-      '<div id="scanner-processing" class="scanner-processing hidden">' +
-        '<div class="scanner-spinner"></div>' +
-        '<div class="scanner-processing-text" id="scanner-proc-text">Đang xử lý...</div>' +
-      '</div>' +
-
-      '<!-- Header -->' +
-      '<div class="scanner-header">' +
-        '<div class="scanner-title">' +
-          '📸 Quét tài liệu <span class="scan-badge" id="scanner-doc-label"></span>' +
-        '</div>' +
-        '<button class="scanner-close" onclick="DocScanner.close()" title="Đóng">✕</button>' +
-      '</div>' +
-
-      '<!-- STEP 1: Capture -->' +
+      '<div id="scanner-processing" class="scanner-processing hidden"><div class="scanner-spinner"></div><div class="scanner-processing-text" id="scanner-proc-text">Đang xử lý...</div></div>' +
+      '<div class="scanner-header"><div class="scanner-title">📸 Quét tài liệu <span class="scan-badge" id="scanner-doc-label"></span></div><button class="scanner-close" onclick="DocScanner.close()" title="Đóng">✕</button></div>' +
+      // STEP 1: Capture
       '<div id="scanner-step-capture" class="scanner-capture">' +
         '<div class="scanner-capture-icon">📄</div>' +
-        '<div class="scanner-capture-text">' +
-          '<strong>Chụp hoặc chọn ảnh tài liệu</strong><br>' +
-          'Đặt tài liệu trên nền phẳng, chụp rõ nét' +
-        '</div>' +
+        '<div class="scanner-capture-text"><strong>Chụp hoặc chọn ảnh tài liệu</strong><br>Đặt tài liệu trên nền phẳng, chụp rõ nét</div>' +
         '<div class="scanner-capture-btns">' +
-          '<button class="scanner-btn-camera" onclick="DocScanner._triggerCamera()">' +
-            '📸 Chụp ảnh' +
-          '</button>' +
-          '<button class="scanner-btn-gallery" onclick="DocScanner._triggerGallery()">' +
-            '🖼️ Chọn từ thư viện' +
-          '</button>' +
+          '<button class="scanner-btn-camera" onclick="DocScanner._triggerCamera()">📸 Chụp ảnh</button>' +
+          '<button class="scanner-btn-gallery" onclick="DocScanner._triggerGallery()">🖼️ Chọn từ thư viện</button>' +
         '</div>' +
-        '<input type="file" id="scanner-camera-input" class="scanner-input-hidden" accept="image/*" capture="environment" multiple>' +
+        '<input type="file" id="scanner-camera-input" class="scanner-input-hidden" accept="image/*" capture="environment">' +
         '<input type="file" id="scanner-gallery-input" class="scanner-input-hidden" accept="image/*" multiple>' +
       '</div>' +
-
-      '<!-- STEP 2: Editor -->' +
+      // STEP 1.5: Crop with yellow frame
+      '<div id="scanner-step-crop" class="scanner-crop-step hidden">' +
+        '<div class="scanner-crop-hint">⬛ Kéo 4 góc vàng để căn chỉnh tài liệu</div>' +
+        '<div class="scanner-crop-canvas-wrap" id="crop-canvas-wrap"><canvas id="crop-canvas"></canvas></div>' +
+        '<div class="scanner-crop-actions">' +
+          '<button class="scanner-btn-crop-retake" onclick="DocScanner._cropRetake()">↩ Chụp lại</button>' +
+          '<button class="scanner-btn-crop-confirm" onclick="DocScanner._cropConfirm()">✅ Xác nhận cắt</button>' +
+        '</div>' +
+      '</div>' +
+      // STEP 2: Editor
       '<div id="scanner-step-editor" class="scanner-editor hidden">' +
-        '<div class="scanner-canvas-wrap">' +
-          '<canvas id="scanner-canvas"></canvas>' +
-        '</div>' +
-
-        '<!-- Filters -->' +
+        '<div class="scanner-canvas-wrap"><canvas id="scanner-canvas"></canvas></div>' +
         '<div class="scanner-filters" id="scanner-filters"></div>' +
-
-        '<!-- Tool buttons -->' +
         '<div class="scanner-toolbar">' +
-          '<button class="scanner-tool-btn" onclick="DocScanner._rotateCW()">' +
-            '<span class="tool-icon">↻</span>Xoay phải' +
-          '</button>' +
-          '<button class="scanner-tool-btn" onclick="DocScanner._rotateCCW()">' +
-            '<span class="tool-icon">↺</span>Xoay trái' +
-          '</button>' +
-          '<button class="scanner-tool-btn" onclick="DocScanner._cropToggle()">' +
-            '<span class="tool-icon">✂️</span>Cắt' +
-          '</button>' +
-          '<button class="scanner-tool-btn" onclick="DocScanner._removePage()">' +
-            '<span class="tool-icon">🗑️</span>Xóa trang' +
-          '</button>' +
+          '<button class="scanner-tool-btn" onclick="DocScanner._rotateCW()"><span class="tool-icon">↻</span>Xoay phải</button>' +
+          '<button class="scanner-tool-btn" onclick="DocScanner._rotateCCW()"><span class="tool-icon">↺</span>Xoay trái</button>' +
+          '<button class="scanner-tool-btn" onclick="DocScanner._removePage()"><span class="tool-icon">🗑️</span>Xóa trang</button>' +
         '</div>' +
       '</div>' +
-
-      '<!-- Pages thumbnails -->' +
-      '<div id="scanner-pages" class="scanner-pages hidden">' +
-        '<div class="scanner-pages-header">' +
-          '<div class="scanner-pages-title">Các trang đã chụp</div>' +
-          '<div class="scanner-pages-count" id="scanner-page-count">0</div>' +
-        '</div>' +
-        '<div class="scanner-page-list" id="scanner-page-list"></div>' +
-      '</div>' +
-
-      '<!-- Bottom bar -->' +
+      // Pages
+      '<div id="scanner-pages" class="scanner-pages hidden"><div class="scanner-pages-header"><div class="scanner-pages-title">Các trang đã chụp</div><div class="scanner-pages-count" id="scanner-page-count">0</div></div><div class="scanner-page-list" id="scanner-page-list"></div></div>' +
+      // Bottom bar
       '<div id="scanner-bottom-bar" class="scanner-bottom-bar hidden">' +
-        '<button class="scanner-btn-addpage" onclick="DocScanner._addMore()">' +
-          '➕ Thêm trang' +
-        '</button>' +
-        '<button class="scanner-btn-create-pdf" id="scanner-btn-pdf" onclick="DocScanner._createAndUpload()">' +
-          '📄 Tạo PDF & Tải lên' +
-        '</button>' +
+        '<button class="scanner-btn-addpage" onclick="DocScanner._addMore()">➕ Thêm trang</button>' +
+        '<button class="scanner-btn-create-pdf" id="scanner-btn-pdf" onclick="DocScanner._createAndUpload()">📄 Tạo PDF & Tải lên</button>' +
       '</div>' +
     '</div>';
   }
 
-  // ==========================================================
-  // INIT — Inject HTML + bind events
-  // ==========================================================
   function _init() {
     if (document.getElementById('scanner-overlay')) return;
-    var container = document.createElement('div');
-    container.innerHTML = _buildHTML();
-    document.body.appendChild(container.firstChild);
+    var c = document.createElement('div');
+    c.innerHTML = _buildHTML();
+    document.body.appendChild(c.firstChild);
     _overlay = document.getElementById('scanner-overlay');
-
-    // Camera input change
-    document.getElementById('scanner-camera-input').addEventListener('change', function (e) {
-      _handleFiles(e.target.files);
-      e.target.value = '';
-    });
-    // Gallery input change
-    document.getElementById('scanner-gallery-input').addEventListener('change', function (e) {
-      _handleFiles(e.target.files);
-      e.target.value = '';
-    });
-
+    document.getElementById('scanner-camera-input').addEventListener('change', function(e){ _handleFiles(e.target.files); e.target.value=''; });
+    document.getElementById('scanner-gallery-input').addEventListener('change', function(e){ _handleFiles(e.target.files); e.target.value=''; });
     // Build filter buttons
-    var filtersDiv = document.getElementById('scanner-filters');
-    var filterKeys = Object.keys(FILTERS);
-    for (var i = 0; i < filterKeys.length; i++) {
-      (function (key) {
-        var btn = document.createElement('button');
-        btn.className = 'scanner-filter-btn' + (key === 'original' ? ' active' : '');
-        btn.textContent = FILTERS[key].label;
-        btn.setAttribute('data-filter', key);
-        btn.addEventListener('click', function () { _applyFilter(key); });
-        filtersDiv.appendChild(btn);
-      })(filterKeys[i]);
-    }
+    var fd = document.getElementById('scanner-filters');
+    Object.keys(FILTERS).forEach(function(key){
+      var btn = document.createElement('button');
+      btn.className = 'scanner-filter-btn' + (key==='original'?' active':'');
+      btn.textContent = FILTERS[key].label;
+      btn.setAttribute('data-filter', key);
+      btn.addEventListener('click', function(){ _applyFilter(key); });
+      fd.appendChild(btn);
+    });
+    // Crop touch/mouse events
+    var cw = document.getElementById('crop-canvas-wrap');
+    cw.addEventListener('mousedown', _cropDown); cw.addEventListener('mousemove', _cropMove); cw.addEventListener('mouseup', _cropUp);
+    cw.addEventListener('touchstart', _cropTouchDown, {passive:false}); cw.addEventListener('touchmove', _cropTouchMove, {passive:false}); cw.addEventListener('touchend', _cropUp);
   }
 
-  // ==========================================================
-  // PUBLIC: Open scanner for a specific doc_type
-  // ==========================================================
+  // ===== PUBLIC =====
   function open(studentId, docType, docLabel) {
-    _init();
-    _pages = [];
-    _activeIdx = -1;
-    _studentId = studentId;
-    _docType = docType;
-
-    // Determine upload endpoint based on doc type
-    // For HOCBA_6_8 we use append endpoint, others use standard upload
-    _uploadEndpoint = '/api/upload';
-
-    document.getElementById('scanner-doc-label').textContent = docLabel || docType;
-
-    // Reset UI
+    _init(); _pages=[]; _activeIdx=-1; _studentId=studentId; _docType=docType;
+    document.getElementById('scanner-doc-label').textContent = docLabel||docType;
     _showStep('capture');
     document.getElementById('scanner-pages').classList.add('hidden');
     document.getElementById('scanner-bottom-bar').classList.add('hidden');
-
     _overlay.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow='hidden';
   }
-
-  // ==========================================================
-  // PUBLIC: Close scanner
-  // ==========================================================
   function close() {
-    if (_overlay) {
-      _overlay.classList.add('hidden');
-      document.body.style.overflow = '';
-    }
-    _pages = [];
-    _activeIdx = -1;
+    if(_overlay){_overlay.classList.add('hidden'); document.body.style.overflow='';}
+    _pages=[]; _activeIdx=-1; _pendingFiles=[]; _pendingFileIdx=0;
   }
 
-  // ==========================================================
-  // INTERNAL: Trigger camera / gallery
-  // ==========================================================
-  function _triggerCamera() {
-    document.getElementById('scanner-camera-input').click();
-  }
-  function _triggerGallery() {
-    document.getElementById('scanner-gallery-input').click();
-  }
+  function _triggerCamera(){ document.getElementById('scanner-camera-input').click(); }
+  function _triggerGallery(){ document.getElementById('scanner-gallery-input').click(); }
 
-  // ==========================================================
-  // INTERNAL: Handle selected files
-  // ==========================================================
+  // ===== HANDLE FILES → go to crop step =====
   function _handleFiles(fileList) {
-    if (!fileList || !fileList.length) return;
+    if(!fileList||!fileList.length) return;
     _showProcessing('Đang xử lý ảnh...');
-
-    var loaded = 0;
-    var total = fileList.length;
-
-    for (var i = 0; i < total; i++) {
-      (function (file) {
-        var reader = new FileReader();
-        reader.onload = function (ev) {
-          var img = new Image();
-          img.onload = function () {
-            // Auto-resize nếu quá lớn (giữ chất lượng)
-            var maxDim = 2400;
-            var w = img.naturalWidth;
-            var h = img.naturalHeight;
-            if (w > maxDim || h > maxDim) {
-              var ratio = Math.min(maxDim / w, maxDim / h);
-              w = Math.round(w * ratio);
-              h = Math.round(h * ratio);
-            }
-
-            var canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            var ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, h);
-
-            _pages.push({ img: img, canvas: canvas, filter: 'original', rotation: 0 });
+    _pendingFiles=[]; _pendingFileIdx=0;
+    var loaded=0, total=fileList.length;
+    for(var i=0;i<total;i++){
+      (function(file){
+        var reader=new FileReader();
+        reader.onload=function(ev){
+          var img=new Image();
+          img.onload=function(){
+            var maxD=2400, w=img.naturalWidth, h=img.naturalHeight;
+            if(w>maxD||h>maxD){var r=Math.min(maxD/w,maxD/h);w=Math.round(w*r);h=Math.round(h*r);}
+            var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+            cv.getContext('2d').drawImage(img,0,0,w,h);
+            _pendingFiles.push({img:img, canvas:cv});
             loaded++;
-
-            if (loaded === total) {
-              _hideProcessing();
-              _activeIdx = _pages.length - total; // Select first new page
-              _showStep('editor');
-              _renderEditor();
-              _renderPages();
-            }
+            if(loaded===total){ _hideProcessing(); _pendingFileIdx=0; _showCropForPending(); }
           };
-          img.src = ev.target.result;
+          img.src=ev.target.result;
         };
         reader.readAsDataURL(file);
       })(fileList[i]);
     }
   }
 
-  // ==========================================================
-  // UI: Switch steps
-  // ==========================================================
+  // ===== CROP STEP =====
+  function _showCropForPending() {
+    if(_pendingFileIdx >= _pendingFiles.length) {
+      // All files cropped, go to editor
+      if(_pages.length>0){ _activeIdx=_pages.length-1; _showStep('editor'); _renderEditor(); _renderPages(); }
+      else { _showStep('capture'); }
+      return;
+    }
+    var pf = _pendingFiles[_pendingFileIdx];
+    _cropImg = pf.canvas;
+    // Init corners at 5% margin (normalized 0-1)
+    _cropCorners = [{x:0.05,y:0.05},{x:0.95,y:0.05},{x:0.95,y:0.95},{x:0.05,y:0.95}];
+    _showStep('crop');
+    setTimeout(_renderCrop, 50);
+  }
+
   function _showStep(step) {
-    var capture = document.getElementById('scanner-step-capture');
-    var editor = document.getElementById('scanner-step-editor');
-    if (step === 'capture') {
-      capture.style.display = '';
-      editor.classList.add('hidden');
-    } else {
-      capture.style.display = 'none';
-      editor.classList.remove('hidden');
+    var cap=document.getElementById('scanner-step-capture');
+    var crop=document.getElementById('scanner-step-crop');
+    var ed=document.getElementById('scanner-step-editor');
+    cap.style.display = step==='capture'?'':'none';
+    crop.classList.toggle('hidden', step!=='crop');
+    ed.classList.toggle('hidden', step!=='editor');
+    // Hide/show bottom bar and pages for crop step
+    if(step==='crop'){
+      document.getElementById('scanner-pages').classList.add('hidden');
+      document.getElementById('scanner-bottom-bar').classList.add('hidden');
     }
   }
 
-  function _showProcessing(text) {
-    var el = document.getElementById('scanner-processing');
-    document.getElementById('scanner-proc-text').textContent = text || 'Đang xử lý...';
-    el.classList.remove('hidden');
-  }
-  function _hideProcessing() {
-    document.getElementById('scanner-processing').classList.add('hidden');
-  }
-
-  // ==========================================================
-  // RENDER: Main canvas editor
-  // ==========================================================
-  function _renderEditor() {
-    if (_activeIdx < 0 || _activeIdx >= _pages.length) return;
-    var page = _pages[_activeIdx];
-    var displayCanvas = document.getElementById('scanner-canvas');
-    var srcCanvas = page.canvas;
-
-    // Recreate from original image with current rotation + filter
-    var w = page.img.naturalWidth;
-    var h = page.img.naturalHeight;
-    var maxDim = 2400;
-    if (w > maxDim || h > maxDim) {
-      var ratio = Math.min(maxDim / w, maxDim / h);
-      w = Math.round(w * ratio);
-      h = Math.round(h * ratio);
-    }
-
-    var rot = page.rotation || 0;
-    var rotated = (rot === 90 || rot === 270);
-    var cw = rotated ? h : w;
-    var ch = rotated ? w : h;
-
-    srcCanvas.width = cw;
-    srcCanvas.height = ch;
-    var ctx = srcCanvas.getContext('2d');
+  function _renderCrop() {
+    var wrap = document.getElementById('crop-canvas-wrap');
+    var cv = document.getElementById('crop-canvas');
+    if(!_cropImg) return;
+    var ww=wrap.clientWidth, wh=wrap.clientHeight;
+    if(ww<1||wh<1) return;
+    cv.width=ww; cv.height=wh;
+    _cropCanvas=cv; _cropCtx=cv.getContext('2d');
+    var iw=_cropImg.width, ih=_cropImg.height;
+    var scale=Math.min(ww/iw, wh/ih);
+    var dw=iw*scale, dh=ih*scale;
+    var ox=(ww-dw)/2, oy=(wh-dh)/2;
+    var ctx=_cropCtx;
+    // Draw image
+    ctx.clearRect(0,0,ww,wh);
+    ctx.drawImage(_cropImg, ox, oy, dw, dh);
+    // Dark overlay outside crop area
+    ctx.fillStyle='rgba(0,0,0,0.55)';
+    ctx.fillRect(0,0,ww,wh);
+    // Clear crop area (draw image only inside polygon)
     ctx.save();
-    ctx.translate(cw / 2, ch / 2);
-    ctx.rotate(rot * Math.PI / 180);
-    ctx.drawImage(page.img, -w / 2, -h / 2, w, h);
+    ctx.beginPath();
+    var pts=_cropCorners.map(function(p){return{x:ox+p.x*dw, y:oy+p.y*dh};});
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(var i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath(); ctx.clip();
+    ctx.drawImage(_cropImg, ox, oy, dw, dh);
     ctx.restore();
-
-    // Apply filter
-    if (page.filter && page.filter !== 'original' && FILTERS[page.filter]) {
-      FILTERS[page.filter].apply(ctx, cw, ch);
+    // Yellow border
+    ctx.strokeStyle='#FFD54F'; ctx.lineWidth=3; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(var i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.closePath(); ctx.stroke();
+    // Corner handles
+    for(var i=0;i<pts.length;i++){
+      ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 14, 0, Math.PI*2);
+      ctx.fillStyle='#FFD54F'; ctx.fill();
+      ctx.strokeStyle='#F9A825'; ctx.lineWidth=3; ctx.stroke();
+      // Inner dot
+      ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 5, 0, Math.PI*2);
+      ctx.fillStyle='#1a1a2e'; ctx.fill();
     }
-
-    // Copy to display canvas
-    displayCanvas.width = cw;
-    displayCanvas.height = ch;
-    displayCanvas.getContext('2d').drawImage(srcCanvas, 0, 0);
-
-    // Update filter buttons
-    var btns = document.querySelectorAll('.scanner-filter-btn');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].classList.toggle('active', btns[i].getAttribute('data-filter') === page.filter);
+    // Edge midpoint handles
+    for(var i=0;i<pts.length;i++){
+      var j=(i+1)%pts.length;
+      var mx=(pts[i].x+pts[j].x)/2, my=(pts[i].y+pts[j].y)/2;
+      ctx.beginPath(); ctx.arc(mx,my,6,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,213,79,0.6)'; ctx.fill();
     }
   }
 
-  // ==========================================================
-  // RENDER: Page thumbnails
-  // ==========================================================
+  function _getCropCoords(clientX, clientY) {
+    var wrap=document.getElementById('crop-canvas-wrap');
+    var rect=wrap.getBoundingClientRect();
+    return {x:clientX-rect.left, y:clientY-rect.top};
+  }
+  function _findCorner(cx,cy) {
+    var wrap=document.getElementById('crop-canvas-wrap');
+    var ww=wrap.clientWidth, wh=wrap.clientHeight;
+    var iw=_cropImg.width, ih=_cropImg.height;
+    var scale=Math.min(ww/iw, wh/ih);
+    var dw=iw*scale, dh=ih*scale, ox=(ww-dw)/2, oy=(wh-dh)/2;
+    var best=-1, bestD=40;
+    for(var i=0;i<_cropCorners.length;i++){
+      var px=ox+_cropCorners[i].x*dw, py=oy+_cropCorners[i].y*dh;
+      var d=Math.sqrt((cx-px)*(cx-px)+(cy-py)*(cy-py));
+      if(d<bestD){bestD=d;best=i;}
+    }
+    return best;
+  }
+  function _moveCorner(idx,cx,cy){
+    var wrap=document.getElementById('crop-canvas-wrap');
+    var ww=wrap.clientWidth, wh=wrap.clientHeight;
+    var iw=_cropImg.width, ih=_cropImg.height;
+    var scale=Math.min(ww/iw, wh/ih);
+    var dw=iw*scale, dh=ih*scale, ox=(ww-dw)/2, oy=(wh-dh)/2;
+    var nx=Math.max(0,Math.min(1,(cx-ox)/dw));
+    var ny=Math.max(0,Math.min(1,(cy-oy)/dh));
+    _cropCorners[idx]={x:nx,y:ny};
+    _renderCrop();
+  }
+  function _cropDown(e){var c=_getCropCoords(e.clientX,e.clientY);_dragIdx=_findCorner(c.x,c.y);}
+  function _cropMove(e){if(_dragIdx<0)return;var c=_getCropCoords(e.clientX,e.clientY);_moveCorner(_dragIdx,c.x,c.y);}
+  function _cropUp(){_dragIdx=-1;}
+  function _cropTouchDown(e){e.preventDefault();var t=e.touches[0];var c=_getCropCoords(t.clientX,t.clientY);_dragIdx=_findCorner(c.x,c.y);}
+  function _cropTouchMove(e){e.preventDefault();if(_dragIdx<0)return;var t=e.touches[0];var c=_getCropCoords(t.clientX,t.clientY);_moveCorner(_dragIdx,c.x,c.y);}
+
+  function _cropConfirm() {
+    if(!_cropImg) return;
+    var corners=_cropCorners;
+    var iw=_cropImg.width, ih=_cropImg.height;
+    // Get bounding box from corners
+    var minX=1,minY=1,maxX=0,maxY=0;
+    for(var i=0;i<corners.length;i++){
+      if(corners[i].x<minX)minX=corners[i].x; if(corners[i].x>maxX)maxX=corners[i].x;
+      if(corners[i].y<minY)minY=corners[i].y; if(corners[i].y>maxY)maxY=corners[i].y;
+    }
+    var sx=Math.round(minX*iw), sy=Math.round(minY*ih);
+    var sw=Math.round((maxX-minX)*iw), sh=Math.round((maxY-minY)*ih);
+    if(sw<20||sh<20){sw=iw; sh=ih; sx=0; sy=0;}
+    var cv=document.createElement('canvas'); cv.width=sw; cv.height=sh;
+    cv.getContext('2d').drawImage(_cropImg, sx, sy, sw, sh, 0, 0, sw, sh);
+    var img = _pendingFiles[_pendingFileIdx].img;
+    _pages.push({img:img, canvas:cv, filter:'original', rotation:0, cropped:true});
+    _pendingFileIdx++;
+    _showCropForPending();
+  }
+  function _cropRetake() { _pendingFiles=[]; _pendingFileIdx=0; _showStep('capture'); }
+
+  // ===== PROCESSING =====
+  function _showProcessing(t){var e=document.getElementById('scanner-processing');document.getElementById('scanner-proc-text').textContent=t||'Đang xử lý...';e.classList.remove('hidden');}
+  function _hideProcessing(){document.getElementById('scanner-processing').classList.add('hidden');}
+
+  // ===== EDITOR =====
+  function _renderEditor() {
+    if(_activeIdx<0||_activeIdx>=_pages.length) return;
+    var page=_pages[_activeIdx], dc=document.getElementById('scanner-canvas'), sc=page.canvas;
+    if(page.cropped){
+      // Already cropped, just apply filter
+      var cw=sc.width, ch=sc.height;
+      dc.width=cw; dc.height=ch;
+      var ctx=dc.getContext('2d');
+      ctx.drawImage(sc,0,0);
+      if(page.filter&&page.filter!=='original'&&FILTERS[page.filter]) FILTERS[page.filter].apply(ctx,cw,ch);
+    } else {
+      var w=page.img.naturalWidth, h=page.img.naturalHeight, maxD=2400;
+      if(w>maxD||h>maxD){var r=Math.min(maxD/w,maxD/h);w=Math.round(w*r);h=Math.round(h*r);}
+      var rot=page.rotation||0, rotated=(rot===90||rot===270);
+      var cw=rotated?h:w, ch=rotated?w:h;
+      sc.width=cw; sc.height=ch;
+      var ctx=sc.getContext('2d');
+      ctx.save(); ctx.translate(cw/2,ch/2); ctx.rotate(rot*Math.PI/180); ctx.drawImage(page.img,-w/2,-h/2,w,h); ctx.restore();
+      if(page.filter&&page.filter!=='original'&&FILTERS[page.filter]) FILTERS[page.filter].apply(ctx,cw,ch);
+      dc.width=cw; dc.height=ch; dc.getContext('2d').drawImage(sc,0,0);
+    }
+    var btns=document.querySelectorAll('.scanner-filter-btn');
+    for(var i=0;i<btns.length;i++) btns[i].classList.toggle('active',btns[i].getAttribute('data-filter')===page.filter);
+  }
+
   function _renderPages() {
-    var pagesDiv = document.getElementById('scanner-pages');
-    var listDiv = document.getElementById('scanner-page-list');
-    var bottomBar = document.getElementById('scanner-bottom-bar');
-    var countEl = document.getElementById('scanner-page-count');
-
-    if (_pages.length === 0) {
-      pagesDiv.classList.add('hidden');
-      bottomBar.classList.add('hidden');
-      return;
+    var pd=document.getElementById('scanner-pages'), ld=document.getElementById('scanner-page-list');
+    var bb=document.getElementById('scanner-bottom-bar'), cnt=document.getElementById('scanner-page-count');
+    if(!_pages.length){pd.classList.add('hidden');bb.classList.add('hidden');return;}
+    pd.classList.remove('hidden'); bb.classList.remove('hidden'); cnt.textContent=_pages.length;
+    var html='';
+    for(var i=0;i<_pages.length;i++){
+      var u=_pages[i].canvas.toDataURL('image/jpeg',0.4);
+      html+='<div class="scanner-page-thumb'+(i===_activeIdx?' active':'')+'" onclick="DocScanner._selectPage('+i+')"><img src="'+u+'" alt="Trang '+(i+1)+'"><span class="scanner-page-num">'+(i+1)+'</span><button class="scanner-page-rm" onclick="event.stopPropagation();DocScanner._removePageAt('+i+')">✕</button></div>';
     }
-
-    pagesDiv.classList.remove('hidden');
-    bottomBar.classList.remove('hidden');
-    countEl.textContent = _pages.length;
-
-    var html = '';
-    for (var i = 0; i < _pages.length; i++) {
-      var thumbUrl = _pages[i].canvas.toDataURL('image/jpeg', 0.4);
-      html += '<div class="scanner-page-thumb' + (i === _activeIdx ? ' active' : '') + '" ' +
-              'onclick="DocScanner._selectPage(' + i + ')">' +
-        '<img src="' + thumbUrl + '" alt="Trang ' + (i + 1) + '">' +
-        '<span class="scanner-page-num">' + (i + 1) + '</span>' +
-        '<button class="scanner-page-rm" onclick="event.stopPropagation();DocScanner._removePageAt(' + i + ')">✕</button>' +
-      '</div>';
-    }
-    listDiv.innerHTML = html;
+    ld.innerHTML=html;
   }
 
-  // ==========================================================
-  // ACTIONS: Filter
-  // ==========================================================
-  function _applyFilter(filterKey) {
-    if (_activeIdx < 0 || !_pages[_activeIdx]) return;
-    _pages[_activeIdx].filter = filterKey;
-    _renderEditor();
-    _renderPages();
+  function _applyFilter(k){if(_activeIdx<0||!_pages[_activeIdx])return;_pages[_activeIdx].filter=k;_renderEditor();_renderPages();}
+  function _rotateCW(){if(_activeIdx<0)return;var p=_pages[_activeIdx];p.rotation=((p.rotation||0)+90)%360;p.cropped=false;_renderEditor();_renderPages();}
+  function _rotateCCW(){if(_activeIdx<0)return;var p=_pages[_activeIdx];p.rotation=((p.rotation||0)+270)%360;p.cropped=false;_renderEditor();_renderPages();}
+  function _removePage(){if(_activeIdx<0)return;_removePageAt(_activeIdx);}
+  function _removePageAt(idx){
+    _pages.splice(idx,1);
+    if(!_pages.length){_activeIdx=-1;_showStep('capture');_renderPages();}
+    else{_activeIdx=Math.min(idx,_pages.length-1);_renderEditor();_renderPages();}
   }
+  function _selectPage(i){_activeIdx=i;_renderEditor();_renderPages();}
+  function _addMore(){_showStep('capture');}
 
-  // ==========================================================
-  // ACTIONS: Rotate
-  // ==========================================================
-  function _rotateCW() {
-    if (_activeIdx < 0) return;
-    var p = _pages[_activeIdx];
-    p.rotation = ((p.rotation || 0) + 90) % 360;
-    _renderEditor();
-    _renderPages();
-  }
-  function _rotateCCW() {
-    if (_activeIdx < 0) return;
-    var p = _pages[_activeIdx];
-    p.rotation = ((p.rotation || 0) + 270) % 360;
-    _renderEditor();
-    _renderPages();
-  }
-
-  // ==========================================================
-  // ACTIONS: Crop (simple center crop toggle)
-  // ==========================================================
-  var _cropMode = false;
-  function _cropToggle() {
-    if (_activeIdx < 0) return;
-    var page = _pages[_activeIdx];
-    var c = page.canvas;
-    if (!_cropMode) {
-      // Crop 10% from each edge
-      var ctx = c.getContext('2d');
-      var w = c.width, h = c.height;
-      var cropX = Math.floor(w * 0.05);
-      var cropY = Math.floor(h * 0.05);
-      var cropW = w - cropX * 2;
-      var cropH = h - cropY * 2;
-      var imgData = ctx.getImageData(cropX, cropY, cropW, cropH);
-      c.width = cropW;
-      c.height = cropH;
-      ctx.putImageData(imgData, 0, 0);
-      _cropMode = true;
-    } else {
-      // Restore: re-render from original
-      _renderEditor();
-      _cropMode = false;
-    }
-    var displayCanvas = document.getElementById('scanner-canvas');
-    displayCanvas.width = c.width;
-    displayCanvas.height = c.height;
-    displayCanvas.getContext('2d').drawImage(c, 0, 0);
-    _renderPages();
-  }
-
-  // ==========================================================
-  // ACTIONS: Remove page
-  // ==========================================================
-  function _removePage() {
-    if (_activeIdx < 0) return;
-    _removePageAt(_activeIdx);
-  }
-  function _removePageAt(idx) {
-    _pages.splice(idx, 1);
-    if (_pages.length === 0) {
-      _activeIdx = -1;
-      _showStep('capture');
-      _renderPages();
-    } else {
-      _activeIdx = Math.min(idx, _pages.length - 1);
-      _renderEditor();
-      _renderPages();
-    }
-  }
-
-  // ==========================================================
-  // ACTIONS: Select page
-  // ==========================================================
-  function _selectPage(idx) {
-    _activeIdx = idx;
-    _renderEditor();
-    _renderPages();
-  }
-
-  // ==========================================================
-  // ACTIONS: Add more pages
-  // ==========================================================
-  function _addMore() {
-    _showStep('capture');
-  }
-
-  // ==========================================================
-  // CORE: Create PDF and upload
-  // ==========================================================
+  // ===== PDF + UPLOAD =====
   function _createAndUpload() {
-    if (_pages.length === 0) {
-      if (typeof showToast === 'function') showToast('Chưa có trang nào để tạo PDF.', 'error');
-      return;
-    }
-
-    var btn = document.getElementById('scanner-btn-pdf');
-    btn.disabled = true;
-    _showProcessing('Đang tạo PDF (' + _pages.length + ' trang)...');
-
-    // Sử dụng setTimeout để UI kịp cập nhật
-    setTimeout(function () {
-      try {
-        _generatePDF(function (pdfBlob) {
-          _showProcessing('Đang tải lên...');
-          _uploadPDF(pdfBlob, function (success, message) {
-            _hideProcessing();
-            btn.disabled = false;
-            if (success) {
-              if (typeof showToast === 'function') showToast(message || 'Tải lên thành công!', 'success');
-              close();
-              setTimeout(function () { location.reload(); }, 1200);
-            } else {
-              if (typeof showToast === 'function') showToast(message || 'Lỗi tải lên.', 'error');
-            }
-          });
+    if(!_pages.length){if(typeof showToast==='function')showToast('Chưa có trang nào.','error');return;}
+    var btn=document.getElementById('scanner-btn-pdf'); btn.disabled=true;
+    _showProcessing('Đang tạo PDF ('+_pages.length+' trang)...');
+    setTimeout(function(){
+      try{
+        var jsPDFClass=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
+        if(!jsPDFClass) throw new Error('jsPDF chưa tải');
+        var doc=new jsPDFClass({orientation:'portrait',unit:'mm',format:'a4'});
+        for(var i=0;i<_pages.length;i++){
+          if(i>0)doc.addPage();
+          var cv=_pages[i].canvas, imgData=cv.toDataURL('image/jpeg',0.85);
+          var iw=cv.width,ih=cv.height,r=Math.min(210/iw,297/ih);
+          var fw=iw*r,fh=ih*r;
+          doc.addImage(imgData,'JPEG',(210-fw)/2,(297-fh)/2,fw,fh);
+        }
+        var blob=doc.output('blob');
+        _showProcessing('Đang tải lên...');
+        _uploadPDF(blob,function(ok,msg){
+          _hideProcessing(); btn.disabled=false;
+          if(ok){if(typeof showToast==='function')showToast(msg||'Thành công!','success');close();setTimeout(function(){location.reload();},1200);}
+          else{if(typeof showToast==='function')showToast(msg||'Lỗi tải lên.','error');}
         });
-      } catch (e) {
-        _hideProcessing();
-        btn.disabled = false;
-        if (typeof showToast === 'function') showToast('Lỗi tạo PDF: ' + e.message, 'error');
-      }
-    }, 100);
+      }catch(e){_hideProcessing();btn.disabled=false;if(typeof showToast==='function')showToast('Lỗi: '+e.message,'error');}
+    },100);
   }
 
-  // ==========================================================
-  // PDF Generation using jsPDF
-  // ==========================================================
-  function _generatePDF(callback) {
-    if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
-      throw new Error('Thư viện jsPDF chưa được tải. Vui lòng thử lại.');
-    }
-    var jsPDFClass = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-    // A4 dimensions in mm
-    var A4_W = 210, A4_H = 297;
-
-    var doc = new jsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-    for (var i = 0; i < _pages.length; i++) {
-      if (i > 0) doc.addPage();
-
-      var canvas = _pages[i].canvas;
-      var imgData = canvas.toDataURL('image/jpeg', 0.85);
-
-      // Fit to A4 preserving aspect ratio
-      var imgW = canvas.width;
-      var imgH = canvas.height;
-      var ratio = Math.min(A4_W / imgW, A4_H / imgH);
-      var fitW = imgW * ratio;
-      var fitH = imgH * ratio;
-      var offX = (A4_W - fitW) / 2;
-      var offY = (A4_H - fitH) / 2;
-
-      doc.addImage(imgData, 'JPEG', offX, offY, fitW, fitH);
-    }
-
-    var blob = doc.output('blob');
-    callback(blob);
+  function _uploadPDF(blob,cb) {
+    var fd=new FormData(), fn=_docType+'_scan_'+Date.now()+'.pdf';
+    if(_docType==='HOCBA_6_8'){fd.append('files',blob,fn);fetch('/api/append-hocba/'+_studentId,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){cb(d.success,d.message||d.error);}).catch(function(e){cb(false,'Lỗi: '+e.message);});}
+    else if(_docType==='CCCD'){fd.append('files',blob,fn);fetch('/api/upload-multi/'+_studentId+'/'+_docType,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){cb(d.success,d.message||d.error);}).catch(function(e){cb(false,'Lỗi: '+e.message);});}
+    else{fd.append('student_id',_studentId);fd.append('doc_type',_docType);fd.append('file',blob,fn);fetch('/api/upload',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){cb(d.success,d.message||d.error);}).catch(function(e){cb(false,'Lỗi: '+e.message);});}
   }
 
-  // ==========================================================
-  // Upload PDF to server
-  // ==========================================================
-  function _uploadPDF(pdfBlob, callback) {
-    var fd = new FormData();
-    var fileName = _docType + '_scan_' + Date.now() + '.pdf';
-
-    if (_docType === 'HOCBA_6_8') {
-      // Sử dụng endpoint append-hocba cho học bạ
-      fd.append('files', pdfBlob, fileName);
-      fetch('/api/append-hocba/' + _studentId, { method: 'POST', body: fd })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          callback(d.success, d.message || d.error);
-        })
-        .catch(function (e) {
-          callback(false, 'Lỗi kết nối: ' + e.message);
-        });
-    } else if (_docType === 'CCCD') {
-      // Sử dụng endpoint upload-multi cho CCCD
-      fd.append('files', pdfBlob, fileName);
-      fetch('/api/upload-multi/' + _studentId + '/' + _docType, { method: 'POST', body: fd })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          callback(d.success, d.message || d.error);
-        })
-        .catch(function (e) {
-          callback(false, 'Lỗi kết nối: ' + e.message);
-        });
-    } else {
-      // Standard upload
-      fd.append('student_id', _studentId);
-      fd.append('doc_type', _docType);
-      fd.append('file', pdfBlob, fileName);
-      fetch('/api/upload', { method: 'POST', body: fd })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          callback(d.success, d.message || d.error);
-        })
-        .catch(function (e) {
-          callback(false, 'Lỗi kết nối: ' + e.message);
-        });
-    }
-  }
-
-  // ==========================================================
-  // PUBLIC API
-  // ==========================================================
   window.DocScanner = {
-    open: open,
-    close: close,
-    _triggerCamera: _triggerCamera,
-    _triggerGallery: _triggerGallery,
-    _rotateCW: _rotateCW,
-    _rotateCCW: _rotateCCW,
-    _cropToggle: _cropToggle,
-    _removePage: _removePage,
-    _removePageAt: _removePageAt,
-    _selectPage: _selectPage,
-    _addMore: _addMore,
-    _createAndUpload: _createAndUpload,
-    _applyFilter: _applyFilter
+    open:open, close:close, _triggerCamera:_triggerCamera, _triggerGallery:_triggerGallery,
+    _rotateCW:_rotateCW, _rotateCCW:_rotateCCW, _removePage:_removePage, _removePageAt:_removePageAt,
+    _selectPage:_selectPage, _addMore:_addMore, _createAndUpload:_createAndUpload, _applyFilter:_applyFilter,
+    _cropConfirm:_cropConfirm, _cropRetake:_cropRetake
   };
-
 })();
