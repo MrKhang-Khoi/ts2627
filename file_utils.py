@@ -148,6 +148,70 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
             save_ext = 'jpg'
         except Exception as e:
             return None, f'Không thể xử lý ảnh thẻ: {str(e)}'
+    elif doc_type == 'ANH_THE' and ext == 'pdf':
+        # ANH_THE upload dang PDF: trich anh tu PDF -> crop 3x4 -> luu JPG
+        try:
+            from PIL import Image
+            import io as _io
+            pdf_bytes = file.read()
+            img = None
+
+            # Thu 1: dung PyMuPDF (fitz) - nhanh va nhe
+            try:
+                import fitz
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                page = doc[0]
+                # Render page thanh anh voi DPI cao
+                mat = fitz.Matrix(3, 3)  # 3x zoom = ~216 DPI
+                pix = page.get_pixmap(matrix=mat)
+                img = Image.open(_io.BytesIO(pix.tobytes("png")))
+                doc.close()
+            except ImportError:
+                pass
+
+            # Thu 2: dung pdf2image (can poppler)
+            if img is None:
+                try:
+                    from pdf2image import convert_from_bytes
+                    images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=1)
+                    if images:
+                        img = images[0]
+                except ImportError:
+                    pass
+
+            # Thu 3: dung Pillow doc truc tiep (gioi han)
+            if img is None:
+                try:
+                    img = Image.open(_io.BytesIO(pdf_bytes))
+                except Exception:
+                    pass
+
+            if img is not None:
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                # Crop 3x4
+                w, h = img.size
+                target_ratio = 3 / 4
+                current_ratio = w / h
+                if current_ratio > target_ratio:
+                    new_w = int(h * target_ratio)
+                    left = (w - new_w) // 2
+                    img = img.crop((left, 0, left + new_w, h))
+                elif current_ratio < target_ratio:
+                    new_h = int(w / target_ratio)
+                    top = (h - new_h) // 2
+                    img = img.crop((0, top, w, top + new_h))
+                img = img.resize((450, 600), Image.LANCZOS)
+                buf = _io.BytesIO()
+                img.save(buf, 'JPEG', quality=95, optimize=True)
+                file_bytes = buf.getvalue()
+                save_ext = 'jpg'
+            else:
+                # Fallback: khong trich duoc anh -> luu PDF nguyen
+                file_bytes = pdf_bytes
+                save_ext = 'pdf'
+        except Exception as e:
+            return None, f'Không thể xử lý ảnh thẻ từ PDF: {str(e)}'
     elif ext == 'pdf':
         file_bytes = file.read()
         save_ext = 'pdf'
