@@ -331,31 +331,48 @@ def _get_hocba_path(doc_map):
 
 
 def _convert_anh_the_pdf_to_jpg(pdf_bytes):
-    """Convert ANH_THE PDF sang JPG 3x4. Return (jpg_bytes, ok)."""
+    """Convert ANH_THE PDF sang JPG 3x4. Return (jpg_bytes, ok).
+    Uu tien pypdf (da co san) de trich anh nhung trong PDF."""
     try:
         from PIL import Image
         img = None
 
-        # Thu 1: PyMuPDF
+        # === Thu 1: pypdf - DA CO SAN, khong can cai them ===
+        # ANH_THE.pdf la anh duoc convert sang PDF -> trong PDF co 1 image nhung
         try:
-            import fitz
-            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-            page = doc[0]
-            mat = fitz.Matrix(3, 3)  # ~216 DPI
-            pix = page.get_pixmap(matrix=mat)
-            img = Image.open(io.BytesIO(pix.tobytes("png")))
-            doc.close()
-        except ImportError:
+            reader = PdfReader(io.BytesIO(pdf_bytes))
+            for page in reader.pages:
+                if hasattr(page, 'images') and page.images:
+                    for img_obj in page.images:
+                        img_data = img_obj.data
+                        img = Image.open(io.BytesIO(img_data))
+                        break
+                if img:
+                    break
+        except Exception:
             pass
 
-        # Thu 2: pdf2image
+        # === Thu 2: PyMuPDF (fitz) - neu co ===
+        if img is None:
+            try:
+                import fitz
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                page = doc[0]
+                mat = fitz.Matrix(3, 3)  # ~216 DPI
+                pix = page.get_pixmap(matrix=mat)
+                img = Image.open(io.BytesIO(pix.tobytes("png")))
+                doc.close()
+            except (ImportError, Exception):
+                pass
+
+        # === Thu 3: pdf2image (can poppler) ===
         if img is None:
             try:
                 from pdf2image import convert_from_bytes
                 images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=1)
                 if images:
                     img = images[0]
-            except ImportError:
+            except (ImportError, Exception):
                 pass
 
         if img is None:
@@ -381,7 +398,8 @@ def _convert_anh_the_pdf_to_jpg(pdf_bytes):
         buf = io.BytesIO()
         img.save(buf, 'JPEG', quality=95, optimize=True)
         return buf.getvalue(), True
-    except Exception:
+    except Exception as e:
+        print(f'[ANH_THE] Convert fail: {e}', flush=True)
         return None, False
 
 

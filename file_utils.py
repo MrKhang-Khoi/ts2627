@@ -156,34 +156,41 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
             pdf_bytes = file.read()
             img = None
 
-            # Thu 1: dung PyMuPDF (fitz) - nhanh va nhe
+            # Thu 1: dung pypdf (DA CO SAN - khong can cai them)
             try:
-                import fitz
-                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-                page = doc[0]
-                # Render page thanh anh voi DPI cao
-                mat = fitz.Matrix(3, 3)  # 3x zoom = ~216 DPI
-                pix = page.get_pixmap(matrix=mat)
-                img = Image.open(_io.BytesIO(pix.tobytes("png")))
-                doc.close()
-            except ImportError:
+                from pypdf import PdfReader
+                reader = PdfReader(_io.BytesIO(pdf_bytes))
+                for pg in reader.pages:
+                    if hasattr(pg, 'images') and pg.images:
+                        for img_obj in pg.images:
+                            img = Image.open(_io.BytesIO(img_obj.data))
+                            break
+                    if img:
+                        break
+            except Exception:
                 pass
 
-            # Thu 2: dung pdf2image (can poppler)
+            # Thu 2: dung PyMuPDF (fitz) - neu co
+            if img is None:
+                try:
+                    import fitz
+                    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                    page = doc[0]
+                    mat = fitz.Matrix(3, 3)
+                    pix = page.get_pixmap(matrix=mat)
+                    img = Image.open(_io.BytesIO(pix.tobytes("png")))
+                    doc.close()
+                except (ImportError, Exception):
+                    pass
+
+            # Thu 3: dung pdf2image (can poppler)
             if img is None:
                 try:
                     from pdf2image import convert_from_bytes
                     images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=1)
                     if images:
                         img = images[0]
-                except ImportError:
-                    pass
-
-            # Thu 3: dung Pillow doc truc tiep (gioi han)
-            if img is None:
-                try:
-                    img = Image.open(_io.BytesIO(pdf_bytes))
-                except Exception:
+                except (ImportError, Exception):
                     pass
 
             if img is not None:
