@@ -2264,7 +2264,8 @@ def view_file(student_id, doc_type):
     mimetype = mime_map.get(ext, 'application/pdf')
 
     # PDF: tu dong xoay landscape -> portrait on-the-fly
-    if ext == '.pdf':
+    # CCCD la tai lieu ngang ban chat -> KHONG xoay
+    if ext == '.pdf' and doc_type.upper() != 'CCCD':
         try:
             with open(fp, 'rb') as f_rd:
                 pdf_bytes = f_rd.read()

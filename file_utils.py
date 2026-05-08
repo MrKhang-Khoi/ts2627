@@ -223,32 +223,33 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
         except Exception as e:
             return None, f'Không thể xử lý ảnh thẻ từ PDF: {str(e)}'
     elif ext == 'pdf':
-        # PDF: tu dong xoay page ngang thanh doc
+        # PDF: tu dong xoay page ngang thanh doc (TRU CCCD - tai lieu ngang ban chat)
         file_bytes = file.read()
-        try:
-            from pypdf import PdfReader, PdfWriter
-            import io as _io
-            reader = PdfReader(_io.BytesIO(file_bytes))
-            needs_rotate = False
-            for page in reader.pages:
-                w = float(page.mediabox.width)
-                h = float(page.mediabox.height)
-                if w > h:  # Page ngang
-                    needs_rotate = True
-                    break
-            if needs_rotate:
-                writer = PdfWriter()
+        if doc_type.upper() != 'CCCD':
+            try:
+                from pypdf import PdfReader, PdfWriter
+                import io as _io
+                reader = PdfReader(_io.BytesIO(file_bytes))
+                needs_rotate = False
                 for page in reader.pages:
                     w = float(page.mediabox.width)
                     h = float(page.mediabox.height)
-                    if w > h:
-                        page.rotate(90)  # Xoay 90 do thanh doc
-                    writer.add_page(page)
-                out_buf = _io.BytesIO()
-                writer.write(out_buf)
-                file_bytes = out_buf.getvalue()
-        except Exception:
-            pass  # Neu loi thi giu nguyen PDF goc
+                    if w > h:  # Page ngang
+                        needs_rotate = True
+                        break
+                if needs_rotate:
+                    writer = PdfWriter()
+                    for page in reader.pages:
+                        w = float(page.mediabox.width)
+                        h = float(page.mediabox.height)
+                        if w > h:
+                            page.rotate(90)  # Xoay 90 do thanh doc
+                        writer.add_page(page)
+                    out_buf = _io.BytesIO()
+                    writer.write(out_buf)
+                    file_bytes = out_buf.getvalue()
+            except Exception:
+                pass  # Neu loi thi giu nguyen PDF goc
         save_ext = 'pdf'
     else:
         try:
@@ -259,10 +260,11 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
             img = ImageOps.exif_transpose(img)
             if img.mode != 'RGB':
                 img = img.convert('RGB')
-            # Auto-rotate: neu anh ngang (landscape) -> xoay thanh doc (portrait)
-            w, h = img.size
-            if w > h:
-                img = img.rotate(90, expand=True)
+            # Auto-rotate: neu anh ngang -> xoay thanh doc (TRU CCCD)
+            if doc_type.upper() != 'CCCD':
+                w, h = img.size
+                if w > h:
+                    img = img.rotate(90, expand=True)
             buf = _io.BytesIO()
             img.save(buf, 'PDF', resolution=150)
             file_bytes = buf.getvalue()

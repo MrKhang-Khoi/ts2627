@@ -449,10 +449,10 @@ def _auto_rotate_pdf_portrait(pdf_bytes):
         return pdf_bytes  # Loi thi giu nguyen
 
 
-def _add_to_zip(zf, file_path, arcname, is_anh_the=False):
+def _add_to_zip(zf, file_path, arcname, is_anh_the=False, skip_rotate=False):
     """Thêm file vào ZIP — hỗ trợ cả local và Drive.
     - ANH_THE PDF: convert sang JPG 3x4
-    - PDF khac: tu dong xoay landscape thanh portrait"""
+    - PDF khac: tu dong xoay landscape thanh portrait (tru CCCD)"""
     if not file_path:
         return
     b, err = _get_bytes(file_path)
@@ -468,8 +468,8 @@ def _add_to_zip(zf, file_path, arcname, is_anh_the=False):
             zf.writestr(arcname, jpg_bytes)
             return
 
-    # PDF: tu dong xoay landscape -> portrait
-    if b[:4] == b'%PDF':
+    # PDF: tu dong xoay landscape -> portrait (tru CCCD vi CCCD la tai lieu ngang)
+    if b[:4] == b'%PDF' and not skip_rotate:
         b = _auto_rotate_pdf_portrait(b)
 
     zf.writestr(arcname, b)
@@ -489,7 +489,8 @@ def create_student_zip(student, doc_map):
         ]
         for fp, fname in ordered:
             is_anh = ('AnhThe' in fname)
-            _add_to_zip(zf, fp, fname, is_anh_the=is_anh)
+            no_rotate = ('CCCD' in fname)
+            _add_to_zip(zf, fp, fname, is_anh_the=is_anh, skip_rotate=no_rotate)
     buf.seek(0)
     return buf
 
@@ -512,7 +513,8 @@ def create_class_zip(class_name, students_data):
             ]
             for fp, fname in ordered:
                 is_anh = ('AnhThe' in fname)
-                _add_to_zip(zf, fp, f"{class_name}/{folder_name}/{fname}", is_anh_the=is_anh)
+                no_rotate = ('CCCD' in fname)
+                _add_to_zip(zf, fp, f"{class_name}/{folder_name}/{fname}", is_anh_the=is_anh, skip_rotate=no_rotate)
     buf.seek(0)
     return buf
 
@@ -535,6 +537,7 @@ def create_all_zip(all_students):
             ]
             for fp, fname in ordered:
                 is_anh = ('AnhThe' in fname)
-                _add_to_zip(zf, fp, f"{s['lop']}/{folder_name}/{fname}", is_anh_the=is_anh)
+                no_rotate = ('CCCD' in fname)
+                _add_to_zip(zf, fp, f"{s['lop']}/{folder_name}/{fname}", is_anh_the=is_anh, skip_rotate=no_rotate)
     buf.seek(0)
     return buf
