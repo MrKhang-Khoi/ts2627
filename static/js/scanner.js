@@ -10,33 +10,144 @@
   var _cropImg = null, _cropCorners = [], _dragIdx = -1, _cropCanvas = null, _cropCtx = null;
   var _pendingFiles = [], _pendingFileIdx = 0;
 
+  // === Unsharp Mask helper (kỹ thuật gốc của các app scanner chuyên nghiệp) ===
+  // Formula: Sharpened = Original + (Original - Blurred) × Amount
+  function _unsharpMask(ctx, w, h, radius, amount) {
+    var src = ctx.getImageData(0, 0, w, h);
+    // Create blurred copy using box blur (fast approximation of Gaussian)
+    var blur = new Uint8ClampedArray(src.data);
+    var r = Math.max(1, Math.round(radius));
+    // Horizontal pass
+    var tmp = new Uint8ClampedArray(blur.length);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var rr = 0, gg = 0, bb = 0, cnt = 0;
+        for (var k = -r; k <= r; k++) {
+          var nx = Math.min(w - 1, Math.max(0, x + k));
+          var idx = (y * w + nx) * 4;
+          rr += blur[idx]; gg += blur[idx + 1]; bb += blur[idx + 2]; cnt++;
+        }
+        var pi = (y * w + x) * 4;
+        tmp[pi] = rr / cnt; tmp[pi + 1] = gg / cnt; tmp[pi + 2] = bb / cnt; tmp[pi + 3] = 255;
+      }
+    }
+    // Vertical pass
+    for (var x = 0; x < w; x++) {
+      for (var y = 0; y < h; y++) {
+        var rr = 0, gg = 0, bb = 0, cnt = 0;
+        for (var k = -r; k <= r; k++) {
+          var ny = Math.min(h - 1, Math.max(0, y + k));
+          var idx = (ny * w + x) * 4;
+          rr += tmp[idx]; gg += tmp[idx + 1]; bb += tmp[idx + 2]; cnt++;
+        }
+        var pi = (y * w + x) * 4;
+        blur[pi] = rr / cnt; blur[pi + 1] = gg / cnt; blur[pi + 2] = bb / cnt;
+      }
+    }
+    // Apply: sharpened = original + (original - blurred) * amount
+    var d = src.data;
+    for (var i = 0; i < d.length; i += 4) {
+      d[i]     = Math.min(255, Math.max(0, d[i]     + (d[i]     - blur[i])     * amount));
+      d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + (d[i + 1] - blur[i + 1]) * amount));
+      d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + (d[i + 2] - blur[i + 2]) * amount));
+    }
+    ctx.putImageData(src, 0, 0);
+  }
+
   var FILTERS = {
     original: { label: 'Gốc', apply: function(){} },
-    document: { label: 'Tài liệu', apply: function(ctx,w,h){
-      var id=ctx.getImageData(0,0,w,h),d=id.data;
-      for(var i=0;i<d.length;i+=4){var f=1.5;d[i]=Math.min(255,Math.max(0,f*(d[i]-128)+148));d[i+1]=Math.min(255,Math.max(0,f*(d[i+1]-128)+148));d[i+2]=Math.min(255,Math.max(0,f*(d[i+2]-128)+148));}
-      ctx.putImageData(id,0,0);
-    }},
-    bw: { label: 'Đen trắng', apply: function(ctx,w,h){
-      var id=ctx.getImageData(0,0,w,h),d=id.data;
-      for(var i=0;i<d.length;i+=4){var g=d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;var v=g>140?255:0;d[i]=d[i+1]=d[i+2]=v;}
-      ctx.putImageData(id,0,0);
-    }},
-    grayscale: { label: 'Xám', apply: function(ctx,w,h){
-      var id=ctx.getImageData(0,0,w,h),d=id.data;
-      for(var i=0;i<d.length;i+=4){var g=d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;d[i]=d[i+1]=d[i+2]=g;}
-      ctx.putImageData(id,0,0);
-    }},
-    bright: { label: 'Tăng sáng', apply: function(ctx,w,h){
-      var id=ctx.getImageData(0,0,w,h),d=id.data;
-      for(var i=0;i<d.length;i+=4){d[i]=Math.min(255,d[i]+40);d[i+1]=Math.min(255,d[i+1]+40);d[i+2]=Math.min(255,d[i+2]+40);}
-      ctx.putImageData(id,0,0);
-    }},
-    sharp: { label: 'Nét', apply: function(ctx,w,h){
-      var id=ctx.getImageData(0,0,w,h),d=id.data,f=1.3;
-      for(var i=0;i<d.length;i+=4){d[i]=Math.min(255,Math.max(0,f*(d[i]-128)+128));d[i+1]=Math.min(255,Math.max(0,f*(d[i+1]-128)+128));d[i+2]=Math.min(255,Math.max(0,f*(d[i+2]-128)+128));}
-      ctx.putImageData(id,0,0);
-    }}
+    document: {
+      label: 'Tài liệu',
+      apply: function(ctx, w, h) {
+        // Kỹ thuật scanner chuyên nghiệp: tăng contrast + làm trắng nền + sharpen nhẹ
+        var id = ctx.getImageData(0, 0, w, h), d = id.data;
+        for (var i = 0; i < d.length; i += 4) {
+          var gray = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+          // Adaptive: nền sáng → trắng hơn, chữ tối → đậm hơn
+          var factor = gray > 180 ? 1.8 : (gray > 100 ? 1.5 : 1.2);
+          var shift  = gray > 180 ? 40 : (gray > 100 ? 15 : 0);
+          d[i]     = Math.min(255, Math.max(0, factor * (d[i]     - 128) + 128 + shift));
+          d[i + 1] = Math.min(255, Math.max(0, factor * (d[i + 1] - 128) + 128 + shift));
+          d[i + 2] = Math.min(255, Math.max(0, factor * (d[i + 2] - 128) + 128 + shift));
+        }
+        ctx.putImageData(id, 0, 0);
+        // Unsharp mask nhẹ để chữ rõ nét
+        _unsharpMask(ctx, w, h, 1, 0.4);
+      }
+    },
+    bw: {
+      label: 'Đen trắng',
+      apply: function(ctx, w, h) {
+        // Adaptive thresholding: tính ngưỡng cục bộ thay vì ngưỡng toàn cục
+        var id = ctx.getImageData(0, 0, w, h), d = id.data;
+        var gray = new Float32Array(w * h);
+        for (var i = 0; i < gray.length; i++) {
+          gray[i] = d[i*4] * 0.299 + d[i*4+1] * 0.587 + d[i*4+2] * 0.114;
+        }
+        // Box blur for local average (radius=15)
+        var avg = new Float32Array(gray);
+        var br = Math.min(15, Math.floor(Math.min(w, h) / 20));
+        // Horizontal
+        var tmp = new Float32Array(gray.length);
+        for (var y = 0; y < h; y++) {
+          for (var x = 0; x < w; x++) {
+            var sum = 0, cnt = 0;
+            for (var k = -br; k <= br; k++) {
+              var nx = x + k; if (nx < 0 || nx >= w) continue;
+              sum += avg[y * w + nx]; cnt++;
+            }
+            tmp[y * w + x] = sum / cnt;
+          }
+        }
+        for (var x = 0; x < w; x++) {
+          for (var y = 0; y < h; y++) {
+            var sum = 0, cnt = 0;
+            for (var k = -br; k <= br; k++) {
+              var ny = y + k; if (ny < 0 || ny >= h) continue;
+              sum += tmp[ny * w + x]; cnt++;
+            }
+            avg[y * w + x] = sum / cnt;
+          }
+        }
+        // Threshold: pixel tối hơn local average → đen
+        for (var i = 0; i < gray.length; i++) {
+          var v = gray[i] < (avg[i] - 12) ? 0 : 255;
+          d[i*4] = d[i*4+1] = d[i*4+2] = v;
+        }
+        ctx.putImageData(id, 0, 0);
+      }
+    },
+    grayscale: {
+      label: 'Xám',
+      apply: function(ctx, w, h) {
+        var id = ctx.getImageData(0, 0, w, h), d = id.data;
+        for (var i = 0; i < d.length; i += 4) {
+          var g = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+          d[i] = d[i+1] = d[i+2] = g;
+        }
+        ctx.putImageData(id, 0, 0);
+      }
+    },
+    bright: {
+      label: 'Tăng sáng',
+      apply: function(ctx, w, h) {
+        var id = ctx.getImageData(0, 0, w, h), d = id.data;
+        for (var i = 0; i < d.length; i += 4) {
+          // Gamma correction (sáng tự nhiên hơn, không bị washout)
+          d[i]     = Math.min(255, Math.pow(d[i]     / 255, 0.8) * 255);
+          d[i + 1] = Math.min(255, Math.pow(d[i + 1] / 255, 0.8) * 255);
+          d[i + 2] = Math.min(255, Math.pow(d[i + 2] / 255, 0.8) * 255);
+        }
+        ctx.putImageData(id, 0, 0);
+      }
+    },
+    sharp: {
+      label: 'Nét',
+      apply: function(ctx, w, h) {
+        // Unsharp Mask thực sự (kỹ thuật chuẩn của Adobe/CamScanner)
+        _unsharpMask(ctx, w, h, 1, 0.8);
+      }
+    }
   };
 
   function _buildHTML() {
@@ -137,10 +248,13 @@
         reader.onload=function(ev){
           var img=new Image();
           img.onload=function(){
-            var maxD=2400, w=img.naturalWidth, h=img.naturalHeight;
+            var maxD=3600, w=img.naturalWidth, h=img.naturalHeight;
             if(w>maxD||h>maxD){var r=Math.min(maxD/w,maxD/h);w=Math.round(w*r);h=Math.round(h*r);}
             var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
-            cv.getContext('2d').drawImage(img,0,0,w,h);
+            var drawCtx=cv.getContext('2d');
+            drawCtx.imageSmoothingEnabled=true;
+            drawCtx.imageSmoothingQuality='high';
+            drawCtx.drawImage(img,0,0,w,h);
             _pendingFiles.push({img:img, canvas:cv});
             loaded++;
             if(loaded===total){ _hideProcessing(); _pendingFileIdx=0; _showCropForPending(); }
@@ -311,7 +425,7 @@
       ctx.drawImage(sc,0,0);
       if(page.filter&&page.filter!=='original'&&FILTERS[page.filter]) FILTERS[page.filter].apply(ctx,cw,ch);
     } else {
-      var w=page.img.naturalWidth, h=page.img.naturalHeight, maxD=2400;
+      var w=page.img.naturalWidth, h=page.img.naturalHeight, maxD=3600;
       if(w>maxD||h>maxD){var r=Math.min(maxD/w,maxD/h);w=Math.round(w*r);h=Math.round(h*r);}
       var rot=page.rotation||0, rotated=(rot===90||rot===270);
       var cw=rotated?h:w, ch=rotated?w:h;
@@ -379,7 +493,7 @@
           var doc=new jsPDFClass({orientation:'portrait',unit:'mm',format:'a4'});
           for(var i=0;i<_pages.length;i++){
             if(i>0)doc.addPage();
-            var cv=_pages[i].canvas, imgData=cv.toDataURL('image/jpeg',0.85);
+            var cv=_pages[i].canvas, imgData=cv.toDataURL('image/jpeg',0.95);
             var iw=cv.width,ih=cv.height,r=Math.min(210/iw,297/ih);
             var fw=iw*r,fh=ih*r;
             doc.addImage(imgData,'JPEG',(210-fw)/2,(297-fh)/2,fw,fh);
