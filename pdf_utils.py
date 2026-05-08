@@ -330,15 +330,79 @@ def _get_hocba_path(doc_map):
     return None, None
 
 
-def _add_to_zip(zf, file_path, arcname):
-    """Thêm file vào ZIP — hỗ trợ cả local và Drive."""
+def _convert_anh_the_pdf_to_jpg(pdf_bytes):
+    """Convert ANH_THE PDF sang JPG 3x4. Return (jpg_bytes, ok)."""
+    try:
+        from PIL import Image
+        img = None
+
+        # Thu 1: PyMuPDF
+        try:
+            import fitz
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            page = doc[0]
+            mat = fitz.Matrix(3, 3)  # ~216 DPI
+            pix = page.get_pixmap(matrix=mat)
+            img = Image.open(io.BytesIO(pix.tobytes("png")))
+            doc.close()
+        except ImportError:
+            pass
+
+        # Thu 2: pdf2image
+        if img is None:
+            try:
+                from pdf2image import convert_from_bytes
+                images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=1)
+                if images:
+                    img = images[0]
+            except ImportError:
+                pass
+
+        if img is None:
+            return None, False
+
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        # Crop 3x4 center
+        w, h = img.size
+        target_ratio = 3 / 4
+        current_ratio = w / h
+        if current_ratio > target_ratio:
+            new_w = int(h * target_ratio)
+            left = (w - new_w) // 2
+            img = img.crop((left, 0, left + new_w, h))
+        elif current_ratio < target_ratio:
+            new_h = int(w / target_ratio)
+            top = (h - new_h) // 2
+            img = img.crop((0, top, w, top + new_h))
+
+        img = img.resize((450, 600), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, 'JPEG', quality=95, optimize=True)
+        return buf.getvalue(), True
+    except Exception:
+        return None, False
+
+
+def _add_to_zip(zf, file_path, arcname, is_anh_the=False):
+    """Thêm file vào ZIP — hỗ trợ cả local và Drive.
+    Nếu is_anh_the=True và file là PDF: tự convert sang JPG 3x4."""
     if not file_path:
         return
     b, err = _get_bytes(file_path)
     if err or not b:
         return  # Bỏ qua file lỗi, không crash ZIP
-    zf.writestr(arcname, b)
 
+    if is_anh_the and file_path.lower().endswith('.pdf'):
+        jpg_bytes, ok = _convert_anh_the_pdf_to_jpg(b)
+        if ok:
+            # Đổi tên trong ZIP sang .jpg
+            arcname = arcname.rsplit('.', 1)[0] + '.jpg'
+            zf.writestr(arcname, jpg_bytes)
+            return
+
+    zf.writestr(arcname, b)
 
 def create_student_zip(student, doc_map):
     """Tạo ZIP hồ sơ của một học sinh với đúng thứ tự nộp."""
@@ -354,7 +418,8 @@ def create_student_zip(student, doc_map):
             (doc_map.get('UU_TIEN',      {}).get('file_path'), '06_UuTien.pdf'),
         ]
         for fp, fname in ordered:
-            _add_to_zip(zf, fp, fname)
+            is_anh = ('AnhThe' in fname)
+            _add_to_zip(zf, fp, fname, is_anh_the=is_anh)
     buf.seek(0)
     return buf
 
@@ -376,7 +441,8 @@ def create_class_zip(class_name, students_data):
                 (docs.get('UU_TIEN',      {}).get('file_path'), '06_UuTien.pdf'),
             ]
             for fp, fname in ordered:
-                _add_to_zip(zf, fp, f"{class_name}/{folder_name}/{fname}")
+                is_anh = ('AnhThe' in fname)
+                _add_to_zip(zf, fp, f"{class_name}/{folder_name}/{fname}", is_anh_the=is_anh)
     buf.seek(0)
     return buf
 
@@ -398,6 +464,7 @@ def create_all_zip(all_students):
                 (docs.get('UU_TIEN',      {}).get('file_path'), '06_UuTien.pdf'),
             ]
             for fp, fname in ordered:
-                _add_to_zip(zf, fp, f"{s['lop']}/{folder_name}/{fname}")
+                is_anh = ('AnhThe' in fname)
+                _add_to_zip(zf, fp, f"{s['lop']}/{folder_name}/{fname}", is_anh_the=is_anh)
     buf.seek(0)
     return buf

@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from functools import wraps
 
+import io
 import os, io, shutil, openpyxl, threading, time as _time_mod
 
 from datetime import datetime
@@ -2239,6 +2240,23 @@ def view_file(student_id, doc_type):
 
     # Detect mimetype tu extension thuc te (ANH_THE co the la .jpg)
     ext = os.path.splitext(fp)[1].lower()
+
+    # ANH_THE dang PDF: tu dong convert sang JPG 3x4 de HS tai ve dung dinh dang TSDC
+    if doc_type.upper() == 'ANH_THE' and ext == '.pdf':
+        try:
+            from pdf_utils import _convert_anh_the_pdf_to_jpg
+            with open(fp, 'rb') as f_pdf:
+                jpg_bytes, ok = _convert_anh_the_pdf_to_jpg(f_pdf.read())
+            if ok:
+                return send_file(
+                    io.BytesIO(jpg_bytes),
+                    mimetype='image/jpeg',
+                    as_attachment=True,
+                    download_name='ANH_THE_3x4.jpg'
+                )
+        except Exception:
+            pass  # Fallback: tra PDF nguyen
+
     mime_map = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.pdf': 'application/pdf'}
     mimetype = mime_map.get(ext, 'application/pdf')
 
