@@ -412,10 +412,11 @@ def _add_to_zip(zf, file_path, arcname, is_anh_the=False):
     if err or not b:
         return  # Bỏ qua file lỗi, không crash ZIP
 
-    if is_anh_the and file_path.lower().endswith('.pdf'):
+    if is_anh_the and b[:4] == b'%PDF':
+        # File la PDF (bat ke la local hay Drive) -> convert sang JPG 3x4
         jpg_bytes, ok = _convert_anh_the_pdf_to_jpg(b)
         if ok:
-            # Đổi tên trong ZIP sang .jpg
+            # Doi ten trong ZIP sang .jpg
             arcname = arcname.rsplit('.', 1)[0] + '.jpg'
             zf.writestr(arcname, jpg_bytes)
             return

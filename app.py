@@ -2238,25 +2238,28 @@ def view_file(student_id, doc_type):
 
         return '<p style="font-family:sans-serif;padding:20px">Ã¢ÂÅ’ File khÃƒÂ´ng tÃ¡Â»â€œn tÃ¡ÂºÂ¡i. Vui lÃƒÂ²ng nÃ¡Â»â„¢p lÃ¡ÂºÂ¡i.</p>', 404
 
-    # Detect mimetype tu extension thuc te (ANH_THE co the la .jpg)
-    ext = os.path.splitext(fp)[1].lower()
-
-    # ANH_THE dang PDF: tu dong convert sang JPG 3x4 de HS tai ve dung dinh dang TSDC
-    if doc_type.upper() == 'ANH_THE' and ext == '.pdf':
+    # ANH_THE: tu dong convert PDF -> JPG 3x4 de HS tai ve dung dinh dang TSDC
+    # Kiem tra content (khong dua vao extension vi Drive path khong co .pdf)
+    if doc_type.upper() == 'ANH_THE':
         try:
-            from pdf_utils import _convert_anh_the_pdf_to_jpg
-            with open(fp, 'rb') as f_pdf:
-                jpg_bytes, ok = _convert_anh_the_pdf_to_jpg(f_pdf.read())
-            if ok:
-                return send_file(
-                    io.BytesIO(jpg_bytes),
-                    mimetype='image/jpeg',
-                    as_attachment=True,
-                    download_name='ANH_THE_3x4.jpg'
-                )
+            # Doc bytes cua file (local hoac Drive)
+            with open(fp, 'rb') as f_rd:
+                file_bytes = f_rd.read()
+            if file_bytes[:4] == b'%PDF':
+                from pdf_utils import _convert_anh_the_pdf_to_jpg
+                jpg_bytes, ok = _convert_anh_the_pdf_to_jpg(file_bytes)
+                if ok:
+                    return send_file(
+                        io.BytesIO(jpg_bytes),
+                        mimetype='image/jpeg',
+                        as_attachment=True,
+                        download_name='ANH_THE_3x4.jpg'
+                    )
         except Exception:
-            pass  # Fallback: tra PDF nguyen
+            pass  # Fallback: tra file nguyen
 
+    # Detect mimetype tu extension thuc te
+    ext = os.path.splitext(fp)[1].lower()
     mime_map = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.pdf': 'application/pdf'}
     mimetype = mime_map.get(ext, 'application/pdf')
 
