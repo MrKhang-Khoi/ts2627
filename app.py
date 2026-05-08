@@ -2263,6 +2263,18 @@ def view_file(student_id, doc_type):
     mime_map = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.pdf': 'application/pdf'}
     mimetype = mime_map.get(ext, 'application/pdf')
 
+    # PDF: tu dong xoay landscape -> portrait on-the-fly
+    if ext == '.pdf':
+        try:
+            with open(fp, 'rb') as f_rd:
+                pdf_bytes = f_rd.read()
+            from pdf_utils import _auto_rotate_pdf_portrait
+            rotated = _auto_rotate_pdf_portrait(pdf_bytes)
+            if rotated != pdf_bytes:
+                return send_file(io.BytesIO(rotated), mimetype='application/pdf')
+        except Exception:
+            pass  # Fallback: tra file nguyen
+
     return send_file(fp, mimetype=mimetype)
 
 

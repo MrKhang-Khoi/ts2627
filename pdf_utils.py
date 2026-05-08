@@ -405,10 +405,54 @@ def _convert_anh_the_pdf_to_jpg(pdf_bytes):
         print(f'[ANH_THE] Convert fail: {e}', flush=True)
         return None, False
 
+def _auto_rotate_pdf_portrait(pdf_bytes):
+    """Xoay tat ca page landscape thanh portrait trong PDF.
+    Dung cho file da upload truoc do bi ngang.
+    Returns pdf_bytes da xoay (hoac nguyen neu khong can xoay)."""
+    try:
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        needs_rotate = False
+        for page in reader.pages:
+            w = float(page.mediabox.width)
+            h = float(page.mediabox.height)
+            # Tinh rotation hien tai
+            rot = int(page.get('/Rotate') or 0) % 360
+            # Sau rotation, kich thuoc hien thi thuc te
+            if rot in (90, 270):
+                eff_w, eff_h = h, w
+            else:
+                eff_w, eff_h = w, h
+            if eff_w > eff_h:
+                needs_rotate = True
+                break
+
+        if not needs_rotate:
+            return pdf_bytes  # Da dung huong, giu nguyen
+
+        writer = PdfWriter()
+        for page in reader.pages:
+            w = float(page.mediabox.width)
+            h = float(page.mediabox.height)
+            rot = int(page.get('/Rotate') or 0) % 360
+            if rot in (90, 270):
+                eff_w, eff_h = h, w
+            else:
+                eff_w, eff_h = w, h
+            if eff_w > eff_h:
+                page.rotate(90)
+            writer.add_page(page)
+
+        buf = io.BytesIO()
+        writer.write(buf)
+        return buf.getvalue()
+    except Exception:
+        return pdf_bytes  # Loi thi giu nguyen
+
 
 def _add_to_zip(zf, file_path, arcname, is_anh_the=False):
     """Thêm file vào ZIP — hỗ trợ cả local và Drive.
-    Nếu is_anh_the=True và file là PDF: tự convert sang JPG 3x4."""
+    - ANH_THE PDF: convert sang JPG 3x4
+    - PDF khac: tu dong xoay landscape thanh portrait"""
     if not file_path:
         return
     b, err = _get_bytes(file_path)
@@ -423,6 +467,10 @@ def _add_to_zip(zf, file_path, arcname, is_anh_the=False):
             arcname = arcname.rsplit('.', 1)[0] + '.jpg'
             zf.writestr(arcname, jpg_bytes)
             return
+
+    # PDF: tu dong xoay landscape -> portrait
+    if b[:4] == b'%PDF':
+        b = _auto_rotate_pdf_portrait(b)
 
     zf.writestr(arcname, b)
 
