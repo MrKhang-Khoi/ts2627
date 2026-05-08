@@ -137,12 +137,12 @@
     {% endif %}
   </div>
   {% else %}
-  {# HS chua dang ky TSDC => hien thi card canh bao #}
-  <div class="tsdc-warn-block">
+  {# HS chua co TSDC trong DB => check LIVE tu GSheets #}
+  <div class="tsdc-warn-block" id="tsdc-live-block">
     <span class="tsdc-warn-icon">&#128203;</span>
     <div>
-      <div class="tsdc-warn-title">Chưa nộp hồ sơ ĐKTS lớp 10</div>
-      <div class="tsdc-warn-sub">Năm học 2026&#x2013;2027 &middot; Hệ thống qlts.tsdc.edu.vn</div>
+      <div class="tsdc-warn-title" id="tsdc-live-title">Đang kiểm tra TSDC...</div>
+      <div class="tsdc-warn-sub" id="tsdc-live-sub">Năm học 2026&#x2013;2027 &middot; Hệ thống qlts.tsdc.edu.vn</div>
     </div>
   </div>
   {% endif %}
@@ -464,6 +464,55 @@ function submitMulti(dt, sid) {
       else{showToast(d.error||'Lỗi.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';}
     }).catch(()=>{showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';});
 }
+// ===== LIVE TSDC CHECK: cap nhat trang thai TSDC real-time =====
+(function(){
+  var block = document.getElementById('tsdc-live-block');
+  if (!block) return; // DB da co data, khong can check live
+  var _AU='https://script.google.com/macros/s/AKfycbzIxSlNum5oRdASLpAKRgnt_GYefUx2uwtCmu9OzKmtpKr0Zi3AnYyKOhaDSunvhsxC/exec';
+  var studentName = '{{ student.ho_ten|e }}';
+  var studentClass = '{{ student.lop|e }}';
+  function _nrm(s){
+    if(!s)return'';
+    var r=s.toLowerCase().normalize('NFD');
+    r=r.replace(/[\u0300-\u036f]/g,'').replace(/[\u0111\u0110]/g,'d');
+    return r.replace(/\s+/g,' ').trim();
+  }
+  var nameKey = _nrm(studentName);
+  fetch(_AU+'?action=all')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.students) throw 'no data';
+      var found = null;
+      d.students.forEach(function(s){
+        if((s.lop||'').trim() !== studentClass) return;
+        if(_nrm(s.hoTen) === nameKey) found = s;
+      });
+      var title = document.getElementById('tsdc-live-title');
+      var sub = document.getElementById('tsdc-live-sub');
+      if(found && found.trangThai){
+        block.style.background='#e8f5e9';
+        block.style.borderColor='#a5d6a7';
+        block.querySelector('.tsdc-warn-icon').innerHTML='&#10003;';
+        title.innerHTML = '&#128202; Đã đăng ký ĐKTS lớp 10';
+        title.style.color='#2e7d32';
+        var info = '<strong>Trạng thái: '+found.trangThai+'</strong>';
+        if(found.nv1) info += '<br>NV1: '+found.nv1;
+        if(found.nv2) info += '<br>NV2: '+found.nv2;
+        if(found.nv3) info += '<br>NV3: '+found.nv3;
+        sub.innerHTML = info;
+        sub.style.color='#333';
+        // Trigger backend sync de cap nhat DB
+        fetch('/api/tsdc-fetch-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).catch(function(){});
+      } else {
+        title.textContent = 'Chưa nộp hồ sơ ĐKTS lớp 10';
+        sub.innerHTML = 'Năm học 2026\u20132027 \u00b7 Hệ thống qlts.tsdc.edu.vn';
+      }
+    })
+    .catch(function(){
+      var title = document.getElementById('tsdc-live-title');
+      if(title) title.textContent = 'Chưa nộp hồ sơ ĐKTS lớp 10';
+    });
+})();
 </script>
 {% endblock %}
 
