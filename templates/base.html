@@ -6,6 +6,7 @@
 <title>{% block title %}Hồ Sơ Tuyển Sinh Lớp 10 - Trường THCS Chu Văn An{% endblock %}</title>
 <meta name="description" content="Hệ thống nộp hồ sơ tuyển sinh lớp 10 - Trường THCS Chu Văn An - Đăk Hà">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/scanner.css') }}">
 {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -61,6 +62,8 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js" defer></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

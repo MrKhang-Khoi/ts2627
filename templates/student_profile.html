@@ -227,6 +227,9 @@
             <label for="file-{{ dt }}" class="sp-btn-upload">
               📤 {% if has_file %}Thêm trang{% else %}Tải lên{% endif %}
             </label>
+            <button class="sp-btn-scan" onclick="DocScanner.open({{ student.id }},'{{ dt }}','{{ DOC_LABELS.get(dt) }}')">
+              <span class="scan-icon">📸</span> Quét
+            </button>
             <input type="file" id="file-{{ dt }}" class="file-input-hidden" accept=".pdf,image/*" multiple
                    onchange="handleHbSelect({{ student.id }}, this)">
             <div id="hb-area" class="sp-pending-area hidden">
@@ -242,6 +245,9 @@
             <label for="file-{{ dt }}" class="sp-btn-upload">
               📤 {% if has_file %}Thay thế{% else %}Tải lên (2 mặt){% endif %}
             </label>
+            <button class="sp-btn-scan" onclick="DocScanner.open({{ student.id }},'{{ dt }}','{{ DOC_LABELS.get(dt) }}')">
+              <span class="scan-icon">📸</span> Quét
+            </button>
             <input type="file" id="file-{{ dt }}" class="file-input-hidden" accept="image/*,.pdf" multiple
                    onchange="handleMultiSelect('{{ dt }}',{{ student.id }},this)">
             <div id="multi-area-{{ dt }}" class="sp-pending-area hidden">
@@ -255,6 +261,9 @@
             <label for="file-{{ dt }}" class="sp-btn-upload">
               📤 {% if has_file %}Thay thế{% else %}Tải lên{% endif %}
             </label>
+            <button class="sp-btn-scan" onclick="DocScanner.open({{ student.id }},'{{ dt }}','{{ DOC_LABELS.get(dt) }}')">
+              <span class="scan-icon">📸</span> Quét
+            </button>
             <input type="file" id="file-{{ dt }}" class="file-input-hidden" accept=".pdf,image/*"
                    onchange="handleDocSelect('{{ dt }}',{{ student.id }},this)">
             <div id="doc-area-{{ dt }}" class="sp-pending-area hidden">

@@ -24,6 +24,15 @@ TSDC_USERNAME = 'qni_thcs_chuvanan1'
 TSDC_PASSWORD = 'QuangNgai@06'
 
 # ============================================================
+# DOT TUYEN SINH — mapping tu so nguoi dung nhap sang keyword tim trong dropdown
+# ============================================================
+DOT_MODE_MAP = {
+    1: {'keyword': 'CHÍNH THỨC',  'label': 'Đợt Thi Thật (CHÍNH THỨC)'},
+    2: {'keyword': 'THỬ',         'label': 'Đợt Thi Thử (THỬ)'},
+    3: {'keyword': 'Tập huấn',    'label': 'Đợt Tập huấn'},
+}
+
+# ============================================================
 # JS PARSER — lay y nguyen tu tsdc_monitor.py (dang chay dung)
 # ============================================================
 _JS_EXTRACT = r"""
@@ -164,6 +173,48 @@ async def select_option(page, option_text):
     return False
 
 
+async def select_option_nth(page, nth_index, option_text):
+    """Chon option trong el-select thu nth_index (0-based) - tranh click nham dropdown khac.
+    Uu tien khop chinh xac truoc, fallback substring 8 ky tu.
+    """
+    all_selects = await page.query_selector_all('.el-select')
+    if nth_index >= len(all_selects):
+        print(f'[PUSH]   Khong tim thay el-select index {nth_index} (chi co {len(all_selects)})', flush=True)
+        return False
+    sel = all_selects[nth_index]
+    try:
+        await sel.click()
+        await asyncio.sleep(1.0)
+        opts = page.locator('.el-select-dropdown:not([style*="display: none"]) .el-select-dropdown__item')
+        cnt = await opts.count()
+        if cnt == 0:
+            print(f'[PUSH]   el-select[{nth_index}]: khong co option nao mo', flush=True)
+            await page.keyboard.press('Escape')
+            return False
+        # Uu tien khop chinh xac (case-insensitive)
+        for j in range(cnt):
+            txt = await opts.nth(j).inner_text()
+            if option_text.lower() in txt.lower():
+                await opts.nth(j).click()
+                print(f'[PUSH]   el-select[{nth_index}] chon: {txt.strip()[:60]}', flush=True)
+                return True
+        # Fallback: khop 8 ky tu dau
+        for j in range(cnt):
+            txt = await opts.nth(j).inner_text()
+            if option_text.lower()[:8] in txt.lower():
+                await opts.nth(j).click()
+                print(f'[PUSH]   el-select[{nth_index}] chon (fallback): {txt.strip()[:60]}', flush=True)
+                return True
+        # Debug: in tat ca option tim thay
+        all_opts = [await opts.nth(j).inner_text() for j in range(cnt)]
+        print(f'[PUSH]   el-select[{nth_index}]: khong khop "{option_text}". Options: {all_opts}', flush=True)
+        await page.keyboard.press('Escape')
+    except Exception as e:
+        print(f'[PUSH]   el-select[{nth_index}] loi: {e}', flush=True)
+        await page.keyboard.press('Escape')
+    return False
+
+
 async def extract_page(page):
     """Extract hoc sinh tu bang hien tai (1 trang)"""
     raw = await page.evaluate(_JS_EXTRACT)
@@ -173,7 +224,7 @@ async def extract_page(page):
     return students
 
 
-async def scrape_tsdc():
+async def scrape_tsdc(dot_mode=1):
     from playwright.async_api import async_playwright
     print('[PUSH] Bat dau scrape TSDC...', flush=True)
     async with async_playwright() as pw:
@@ -209,14 +260,25 @@ async def scrape_tsdc():
         except: pass
 
         # 4. Chon Cap 3
-        print('[PUSH] Chon Cap 3...', flush=True)
-        await select_option(page, 'C\u1ea5p 3')
+        # DEBUG xac nhan: el-select[0]=Don vi, [1]=component con Don vi (khong mo duoc),
+        #                 [2]=Cap hoc, [3]=Dot tuyen sinh
+        print('[PUSH] Chon Cap 3 (el-select[2])...', flush=True)
+        await select_option_nth(page, 2, 'C\u1ea5p 3')
         await asyncio.sleep(0.5)
         await page.keyboard.press('Escape'); await asyncio.sleep(0.2)
 
-        # 5. Chon Dot THU
-        print('[PUSH] Chon Dot THU...', flush=True)
-        await select_option(page, 'TH\u1EED')
+        # 5. Chon Dot tuyen sinh — el-select index 3
+        # Cho phep nguoi dung chon qua tham so --dot (1=Chinh thuc, 2=Thu, 3=Tap huan)
+        dot_info = DOT_MODE_MAP.get(dot_mode, DOT_MODE_MAP[1])
+        dot_keyword = dot_info['keyword']
+        dot_label   = dot_info['label']
+        print(f'[PUSH] Chon Dot: {dot_label} (keyword="{dot_keyword}", el-select[3])...', flush=True)
+        if not await select_option_nth(page, 3, dot_keyword):
+            print(f'[PUSH] Khong tim thay "{dot_keyword}" trong dropdown!', flush=True)
+            # Fallback: thu chon CHINH THUC neu dang chon dot khac
+            if dot_mode != 1:
+                print('[PUSH] Fallback: thu chon CHINH THUC...', flush=True)
+                await select_option_nth(page, 3, 'CHÍNH THỨC')
         await asyncio.sleep(0.5)
 
         # 6. Dong modal neu co
@@ -381,11 +443,11 @@ def push_to_sheets(data):
     return False
 
 
-def run_once(base_url):
+def run_once(base_url, dot_mode=1):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        students = loop.run_until_complete(scrape_tsdc())
+        students = loop.run_until_complete(scrape_tsdc(dot_mode=dot_mode))
     finally:
         loop.close()
     data = build_stats(students)
@@ -399,24 +461,28 @@ def main():
     parser = argparse.ArgumentParser(description='TSDC Push - Scrape va push len PythonAnywhere')
     parser.add_argument('--loop', action='store_true', help=f'Lap lai moi {PUSH_INTERVAL_MIN} phut')
     parser.add_argument('--url', default=PYTHONANYWHERE_URL, help='URL PythonAnywhere')
+    parser.add_argument('--dot', type=int, default=1, choices=[1, 2, 3],
+                        help='Chon dot tuyen sinh: 1=Thi That (CHINH THUC), 2=Thi Thu, 3=Tap huan')
     args = parser.parse_args()
 
+    dot_info = DOT_MODE_MAP.get(args.dot, DOT_MODE_MAP[1])
     print('='*55, flush=True)
     print('  TSDC PUSH TOOL — THCS Chu Van An', flush=True)
     print(f'  Target: {args.url}', flush=True)
+    print(f'  Dot thi: {dot_info["label"]}', flush=True)
     print(f'  Mode: {"Tu dong moi " + str(PUSH_INTERVAL_MIN) + " phut" if args.loop else "Chay 1 lan"}', flush=True)
     print('='*55, flush=True)
 
     if args.loop:
         while True:
             try:
-                run_once(args.url)
+                run_once(args.url, dot_mode=args.dot)
             except Exception as e:
                 print(f'[PUSH] Loi: {e}', flush=True)
             print(f'[PUSH] Cho {PUSH_INTERVAL_MIN} phut roi push lai...', flush=True)
             time.sleep(PUSH_INTERVAL_MIN * 60)
     else:
-        ok = run_once(args.url)
+        ok = run_once(args.url, dot_mode=args.dot)
         sys.exit(0 if ok else 1)
 
 

@@ -1,0 +1,272 @@
+/* ============================================================
+   SCANNER CSS — Quét tài liệu PDF trên mobile
+   ============================================================ */
+
+/* === Nút quét bên cạnh nút Tải lên === */
+.sp-btn-scan {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px;
+  background: linear-gradient(135deg, #7B1FA2, #9C27B0);
+  color: white; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s; box-shadow: 0 2px 8px rgba(123,31,162,0.3);
+  font-family: inherit;
+}
+.sp-btn-scan:hover { background: linear-gradient(135deg, #6A1B9A, #8E24AA); transform: translateY(-1px); }
+.sp-btn-scan:active { transform: scale(0.97); }
+.sp-btn-scan .scan-icon { font-size: 16px; }
+
+/* === Fullscreen Scanner Overlay === */
+.scanner-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: #0a0a0f;
+  display: flex; flex-direction: column;
+  animation: scannerFadeIn 0.25s ease;
+}
+.scanner-overlay.hidden { display: none !important; }
+@keyframes scannerFadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+
+/* --- Header Bar --- */
+.scanner-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+}
+.scanner-title {
+  color: white; font-size: 16px; font-weight: 700;
+  display: flex; align-items: center; gap: 8px;
+}
+.scanner-title .scan-badge {
+  background: rgba(255,255,255,0.15); padding: 2px 10px;
+  border-radius: 12px; font-size: 12px; font-weight: 600;
+}
+.scanner-close {
+  background: rgba(255,255,255,0.15); border: none; color: white;
+  width: 36px; height: 36px; border-radius: 50%;
+  font-size: 18px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+.scanner-close:hover { background: rgba(255,255,255,0.3); }
+
+/* === STEP 1: Camera/File Input === */
+.scanner-capture {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 80px 24px 24px; gap: 20px;
+}
+.scanner-capture-icon {
+  font-size: 72px; opacity: 0.9;
+  animation: scanPulse 2s infinite;
+}
+@keyframes scanPulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+.scanner-capture-text {
+  color: rgba(255,255,255,0.8); font-size: 15px;
+  text-align: center; line-height: 1.6; max-width: 300px;
+}
+.scanner-capture-text strong { color: white; }
+
+.scanner-capture-btns {
+  display: flex; flex-direction: column; gap: 12px;
+  width: 100%; max-width: 320px;
+}
+.scanner-btn-camera {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #7B1FA2, #9C27B0);
+  color: white; border: none; border-radius: 14px;
+  font-size: 16px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(123,31,162,0.4);
+  transition: all 0.2s; font-family: inherit;
+}
+.scanner-btn-camera:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(123,31,162,0.5); }
+.scanner-btn-camera:active { transform: scale(0.97); }
+
+.scanner-btn-gallery {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 14px 24px;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.2);
+  color: white; border-radius: 14px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s; font-family: inherit;
+}
+.scanner-btn-gallery:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); }
+
+.scanner-input-hidden { display: none !important; }
+
+/* === STEP 2: Image Editor/Preview === */
+.scanner-editor {
+  flex: 1; display: flex; flex-direction: column;
+  padding-top: 60px;
+}
+.scanner-editor.hidden { display: none !important; }
+
+/* Canvas area */
+.scanner-canvas-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: #111; overflow: hidden; position: relative;
+  padding: 8px;
+}
+.scanner-canvas-wrap canvas {
+  max-width: 100%; max-height: 100%;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* Filter toolbar */
+.scanner-filters {
+  display: flex; gap: 6px; padding: 12px 16px;
+  background: #1a1a2e; overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scanner-filters::-webkit-scrollbar { display: none; }
+.scanner-filter-btn {
+  flex-shrink: 0; padding: 8px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.75); border-radius: 20px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap; font-family: inherit;
+}
+.scanner-filter-btn:hover { background: rgba(255,255,255,0.12); }
+.scanner-filter-btn.active {
+  background: rgba(123,31,162,0.3);
+  border-color: #9C27B0; color: #CE93D8;
+}
+
+/* Action toolbar */
+.scanner-toolbar {
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 12px 8px;
+  background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, #1a1a2e 100%);
+}
+.scanner-tool-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: none; border: none; color: rgba(255,255,255,0.7);
+  font-size: 10px; font-weight: 600; cursor: pointer;
+  padding: 8px; border-radius: 8px; transition: all 0.2s;
+  min-width: 56px; font-family: inherit;
+}
+.scanner-tool-btn:hover { color: white; background: rgba(255,255,255,0.08); }
+.scanner-tool-btn .tool-icon { font-size: 22px; }
+
+/* === STEP 3: Pages Manager (bottom sheet) === */
+.scanner-pages {
+  background: #1a1a2e; border-top: 1px solid rgba(255,255,255,0.1);
+  padding: 12px 16px 16px;
+}
+.scanner-pages.hidden { display: none !important; }
+.scanner-pages-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.scanner-pages-title {
+  color: rgba(255,255,255,0.8); font-size: 13px; font-weight: 700;
+}
+.scanner-pages-count {
+  background: #7B1FA2; color: white; font-size: 11px;
+  font-weight: 800; padding: 2px 10px; border-radius: 12px;
+}
+.scanner-page-list {
+  display: flex; gap: 10px; overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.scanner-page-list::-webkit-scrollbar { height: 3px; }
+.scanner-page-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
+.scanner-page-thumb {
+  flex-shrink: 0; width: 64px; height: 80px;
+  border-radius: 6px; overflow: hidden; position: relative;
+  border: 2px solid transparent; cursor: pointer;
+  transition: all 0.2s; background: #222;
+}
+.scanner-page-thumb.active { border-color: #9C27B0; box-shadow: 0 0 0 2px rgba(156,39,176,0.4); }
+.scanner-page-thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.scanner-page-num {
+  position: absolute; bottom: 2px; right: 2px;
+  background: rgba(0,0,0,0.7); color: white;
+  font-size: 9px; font-weight: 700; padding: 1px 5px;
+  border-radius: 4px;
+}
+.scanner-page-rm {
+  position: absolute; top: 2px; right: 2px;
+  background: rgba(229,57,53,0.85); color: white;
+  border: none; width: 18px; height: 18px;
+  border-radius: 50%; font-size: 10px; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.scanner-page-thumb:hover .scanner-page-rm,
+.scanner-page-thumb:active .scanner-page-rm { display: flex; }
+
+/* === Bottom Action Bar (Create PDF / Add Page) === */
+.scanner-bottom-bar {
+  display: flex; gap: 10px; padding: 12px 16px 20px;
+  background: #0a0a0f;
+}
+.scanner-bottom-bar.hidden { display: none !important; }
+.scanner-btn-addpage {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 2px dashed rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.7); border-radius: 12px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s; font-family: inherit;
+}
+.scanner-btn-addpage:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.4); }
+
+.scanner-btn-create-pdf {
+  flex: 2; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px;
+  background: linear-gradient(135deg, #2E7D32, #43A047);
+  color: white; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(46,125,50,0.4);
+  transition: all 0.2s; font-family: inherit;
+}
+.scanner-btn-create-pdf:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(46,125,50,0.5); }
+.scanner-btn-create-pdf:disabled {
+  opacity: 0.5; cursor: not-allowed; transform: none;
+  box-shadow: none;
+}
+
+/* === Processing Overlay === */
+.scanner-processing {
+  position: absolute; inset: 0; z-index: 20;
+  background: rgba(10,10,15,0.92);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+}
+.scanner-processing.hidden { display: none !important; }
+.scanner-spinner {
+  width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.1);
+  border-top-color: #9C27B0; border-radius: 50%;
+  animation: scanSpin 0.8s linear infinite;
+}
+@keyframes scanSpin { to { transform: rotate(360deg); } }
+.scanner-processing-text {
+  color: rgba(255,255,255,0.8); font-size: 15px; font-weight: 600;
+}
+
+/* === Responsive === */
+@media (min-width: 640px) {
+  .scanner-capture-btns { flex-direction: row; max-width: 400px; }
+  .scanner-btn-camera, .scanner-btn-gallery { flex: 1; }
+}
+
+/* === Safe area for iOS notch === */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .scanner-header { padding-top: calc(12px + env(safe-area-inset-top)); }
+  .scanner-bottom-bar { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+}
