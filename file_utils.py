@@ -140,15 +140,10 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
                 new_h = int(w / target_ratio)
                 top = (h - new_h) // 2
                 img = img.crop((0, top, w, top + new_h))
-            # Giu nguyen resolution goc - KHONG ep nho 450x600
-            # Chi resize neu anh qua lon (> 2000px) de giam dung luong
-            w_crop, h_crop = img.size
-            MAX_W = 2000
-            if w_crop > MAX_W:
-                scale = MAX_W / w_crop
-                img = img.resize((MAX_W, int(h_crop * scale)), Image.LANCZOS)
+            # Resize ve dung chuan anh the 3x4 VN: 354x472px, 300 DPI
+            img = img.resize((354, 472), Image.LANCZOS)
             buf = _io.BytesIO()
-            img.save(buf, 'JPEG', quality=95, optimize=True)
+            img.save(buf, 'JPEG', quality=95, optimize=True, dpi=(300, 300))
             file_bytes = buf.getvalue()
             save_ext = 'jpg'
         except Exception as e:
@@ -213,14 +208,10 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
                     new_h = int(w / target_ratio)
                     top = (h - new_h) // 2
                     img = img.crop((0, top, w, top + new_h))
-                # Giu nguyen resolution goc - KHONG ep nho
-                w_crop, h_crop = img.size
-                MAX_W = 2000
-                if w_crop > MAX_W:
-                    scale = MAX_W / w_crop
-                    img = img.resize((MAX_W, int(h_crop * scale)), Image.LANCZOS)
+                # Resize ve dung chuan anh the 3x4 VN: 354x472px, 300 DPI
+                img = img.resize((354, 472), Image.LANCZOS)
                 buf = _io.BytesIO()
-                img.save(buf, 'JPEG', quality=95, optimize=True)
+                img.save(buf, 'JPEG', quality=95, optimize=True, dpi=(300, 300))
                 file_bytes = buf.getvalue()
                 save_ext = 'jpg'
             else:

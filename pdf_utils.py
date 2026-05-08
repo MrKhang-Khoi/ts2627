@@ -394,16 +394,15 @@ def _convert_anh_the_pdf_to_jpg(pdf_bytes):
             top = (h - new_h) // 2
             img = img.crop((0, top, w, top + new_h))
 
-        # Giu nguyen resolution goc sau khi crop - KHONG ep nho 450x600
-        # Chi resize neu anh qua lon (> 2000px chieu rong) de giam dung luong
-        w_crop, h_crop = img.size
-        MAX_WIDTH = 2000
-        if w_crop > MAX_WIDTH:
-            scale = MAX_WIDTH / w_crop
-            img = img.resize((MAX_WIDTH, int(h_crop * scale)), Image.LANCZOS)
+        # Resize ve dung chuan anh the 3x4 Viet Nam:
+        # 3cm x 4cm o 300 DPI = 354 x 472 pixel (chuan IIG/TSDC)
+        STANDARD_W = 354
+        STANDARD_H = 472
+        img = img.resize((STANDARD_W, STANDARD_H), Image.LANCZOS)
 
         buf = io.BytesIO()
-        img.save(buf, 'JPEG', quality=95, optimize=True)
+        # Luu JPG voi DPI=300 (metadata chuan cho in an va upload)
+        img.save(buf, 'JPEG', quality=95, optimize=True, dpi=(300, 300))
         return buf.getvalue(), True
     except Exception as e:
         print(f'[ANH_THE] Convert fail: {e}', flush=True)
