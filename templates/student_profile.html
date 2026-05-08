@@ -160,7 +160,7 @@
 
   {# === THIẾU HỒ SƠ === #}
   {% set missing = [] %}
-  {% for dt in ['GIAYKHAISINH','CNTN_THCS','HOCBA_6_8','CCCD','ANH_THE'] %}
+  {% for dt in ['GIAYKHAISINH','CNTN_THCS','HOCBA_6_9','CCCD','ANH_THE'] %}
     {% if not doc_map.get(dt) or doc_map.get(dt,{}).get('status') == 'CHUA_NOP' %}{% set _ = missing.append(DOC_LABELS.get(dt)) %}{% endif %}
   {% endfor %}
   {% if missing %}
@@ -178,7 +178,7 @@
       {% set has_file = doc.get('file_path') %}
       {% set is_active = dt in active_docs %}
       {% set can_upload = is_active and (status in ['CHUA_NOP','DA_NOP_CHO_KIEM_TRA','FILE_MO','SAI_FILE','THIEU_TRANG','CAN_NOP_LAI'] or (status == 'DAT' and not locked)) %}
-      {% set is_hb = (dt == 'HOCBA_6_8') %}
+      {% set is_hb = (dt == 'HOCBA_6_9') %}
 
       <div class="sp-doc-card sp-doc-{{ status }}">
         {# --- Tên tài liệu + badge --- #}

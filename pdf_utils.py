@@ -203,14 +203,14 @@ def append_to_existing_pdf(existing_path, new_file_objects, dest_path, backup_di
 
 def merge_transcripts(student_folder, ma_hoso, doc_map):
     """
-    Nối học bạ 6-8 và học bạ 9 thành học bạ hoàn chỉnh.
+    Nối học bạ 6-9 và học bạ 9 thành học bạ hoàn chỉnh.
     Hỗ trợ cả local path và Drive file.
     """
-    path_6_8 = doc_map.get('HOCBA_6_8', {}).get('file_path')
+    path_6_8 = doc_map.get('HOCBA_6_9', {}).get('file_path')
     path_9   = doc_map.get('HOCBA_9',   {}).get('file_path')
 
     errors = []
-    bytes_6_8, err = _get_bytes(path_6_8) if path_6_8 else (None, 'Thiếu file HOCBA_6_8')
+    bytes_6_8, err = _get_bytes(path_6_8) if path_6_8 else (None, 'Thiếu file HOCBA_6_9')
     if err: errors.append(err)
     bytes_9, err   = _get_bytes(path_9)   if path_9   else (None, 'Thiếu file HOCBA_9')
     if err: errors.append(err)
@@ -271,7 +271,7 @@ def export_excel(students_data, class_name=None):
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
     headers = ['STT', 'Lớp', 'Họ tên', 'Ngày sinh', 'Giấy khai sinh',
-               'CCCD', 'Học bạ 6-8', 'Học bạ 9', 'Học bạ HT', 'CN Tốt nghiệp', 'Trạng thái', 'Ghi chú', 'Cập nhật lần cuối']
+               'CCCD', 'Học bạ 6-9', 'Học bạ 9', 'Học bạ HT', 'CN Tốt nghiệp', 'Trạng thái', 'Ghi chú', 'Cập nhật lần cuối']
     ws.append(headers)
     for col, cell in enumerate(ws[1], 1):
         cell.fill = header_fill
@@ -288,7 +288,7 @@ def export_excel(students_data, class_name=None):
         'CHUA_NOP': 'Chưa nộp', 'TAM_DU_GIAI_DOAN_1': 'Tạm đủ GĐ1',
         'CHUA_DU': 'Chưa đủ', 'CAN_SUA': 'Cần sửa', 'DU_HO_SO_CHINH_THUC': 'Đủ hồ sơ',
     }
-    doc_keys = ['GIAYKHAISINH', 'CCCD', 'HOCBA_6_8', 'HOCBA_9', 'HOCBA', 'CNTN_THCS']
+    doc_keys = ['GIAYKHAISINH', 'CCCD', 'HOCBA_6_9', 'HOCBA_9', 'HOCBA', 'CNTN_THCS']
 
     for i, s in enumerate(students_data, 1):
         docs = s.get('docs', {})
@@ -320,13 +320,13 @@ def export_excel(students_data, class_name=None):
 # ===== ZIP CREATION (hỗ trợ cả Drive và local) =====
 
 def _get_hocba_path(doc_map):
-    """Lấy đường dẫn học bạ: ưu tiên HOCBA hoàn chỉnh, fallback HOCBA_6_8."""
+    """Lấy đường dẫn học bạ: ưu tiên HOCBA hoàn chỉnh, fallback HOCBA_6_9."""
     fp = doc_map.get('HOCBA', {}).get('file_path')
     if fp:
         return fp, 'HOCBA'
-    fp = doc_map.get('HOCBA_6_8', {}).get('file_path')
+    fp = doc_map.get('HOCBA_6_9', {}).get('file_path')
     if fp:
-        return fp, 'HOCBA_6_8'
+        return fp, 'HOCBA_6_9'
     return None, None
 
 

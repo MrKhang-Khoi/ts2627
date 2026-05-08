@@ -527,7 +527,7 @@
 
   function _uploadPDF(blob,cb) {
     var fd=new FormData(), fn=_docType+'_scan_'+Date.now()+'.pdf';
-    if(_docType==='HOCBA_6_8'){fd.append('files',blob,fn);fetch('/api/append-hocba/'+_studentId,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){cb(d.success,d.message||d.error);}).catch(function(e){cb(false,'Lỗi: '+e.message);});}
+    if(_docType==='HOCBA_6_9'){fd.append('files',blob,fn);fetch('/api/append-hocba/'+_studentId,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){cb(d.success,d.message||d.error);}).catch(function(e){cb(false,'Lỗi: '+e.message);});}
     else if(_docType==='CCCD'){fd.append('files',blob,fn);fetch('/api/upload-multi/'+_studentId+'/'+_docType,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){cb(d.success,d.message||d.error);}).catch(function(e){cb(false,'Lỗi: '+e.message);});}
     else{fd.append('student_id',_studentId);fd.append('doc_type',_docType);fd.append('file',blob,fn);fetch('/api/upload',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){cb(d.success,d.message||d.error);}).catch(function(e){cb(false,'Lỗi: '+e.message);});}
   }

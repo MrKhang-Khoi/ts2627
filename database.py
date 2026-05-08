@@ -139,7 +139,7 @@ def compute_overall_status(student_id):
     doc_map = {d['doc_type']: d['status'] for d in docs}
 
     required_all = ['GIAYKHAISINH', 'CCCD', 'HOCBA', 'CNTN_THCS']
-    required_phase1 = ['GIAYKHAISINH', 'CCCD', 'HOCBA_6_8']
+    required_phase1 = ['GIAYKHAISINH', 'CCCD', 'HOCBA_6_9']
     bad_statuses = {'FILE_MO', 'SAI_FILE', 'THIEU_TRANG', 'CAN_NOP_LAI'}
 
     if not doc_map:
@@ -157,7 +157,7 @@ def compute_overall_status(student_id):
 
     # Tạm đủ giai đoạn 1
     phase1_ok = all(doc_map.get(d) in ('DAT', 'DA_NOP_CHO_KIEM_TRA') for d in required_phase1)
-    if phase1_ok and doc_map.get('HOCBA_6_8'):
+    if phase1_ok and doc_map.get('HOCBA_6_9'):
         return 'TAM_DU_GIAI_DOAN_1'
 
     submitted_any = any(s != 'CHUA_NOP' for s in doc_map.values())

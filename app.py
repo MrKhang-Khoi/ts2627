@@ -736,7 +736,7 @@ def api_append_hocba(student_id):
 
             return jsonify({'error': 'KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y hÃ¡Â»Âc sinh.'}), 404
 
-        existing = doc_map.get('HOCBA_6_8', {})
+        existing = doc_map.get('HOCBA_6_9', {})
 
         if existing.get('locked') and existing.get('status') == 'DAT':
 
@@ -796,7 +796,7 @@ def api_append_hocba(student_id):
 
         if drive_utils.DRIVE_MODE:
 
-            dest_path, err = drive_utils.upload(pdf_bytes, dict(student), 'HOCBA_6_8')
+            dest_path, err = drive_utils.upload(pdf_bytes, dict(student), 'HOCBA_6_9')
 
             if err:
 
@@ -806,7 +806,7 @@ def api_append_hocba(student_id):
 
             folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
 
-            dest_path = os.path.join(folder, 'HOCBA_6_8.pdf')
+            dest_path = os.path.join(folder, 'HOCBA_6_9.pdf')
 
             bk_dir = os.path.join(os.environ.get('DATA_DIR', os.path.dirname(__file__)), 'backups', student['ma_hoso'])
 
@@ -816,7 +816,7 @@ def api_append_hocba(student_id):
 
                 ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
 
-                shutil.copy2(existing_path, os.path.join(bk_dir, f'backup_HOCBA_6_8_{ts}.pdf'))
+                shutil.copy2(existing_path, os.path.join(bk_dir, f'backup_HOCBA_6_9_{ts}.pdf'))
 
             with open(dest_path, 'wb') as f:
 
@@ -828,13 +828,13 @@ def api_append_hocba(student_id):
 
         now = datetime.now().isoformat()
 
-        conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type='HOCBA_6_8'", (student_id,))
+        conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type='HOCBA_6_9'", (student_id,))
 
         conn.execute("""INSERT INTO documents (student_id,doc_type,file_name,file_path,status,uploaded_at,note)
 
                         VALUES (?,?,?,?,?,?,?)""",
 
-                     (student_id, 'HOCBA_6_8', 'HOCBA_6_8.pdf', dest_path,
+                     (student_id, 'HOCBA_6_9', 'HOCBA_6_9.pdf', dest_path,
 
                       'DA_NOP_CHO_KIEM_TRA', now, f'{page_count} trang'))
 
@@ -846,7 +846,7 @@ def api_append_hocba(student_id):
 
         action = 'APPEND_HOCBA' if existing_path else 'UPLOAD_HOCBA'
 
-        add_log(session.get('user_id'), action, student_id, 'HOCBA_6_8',
+        add_log(session.get('user_id'), action, student_id, 'HOCBA_6_9',
 
                 f"{'ThÃƒÂªm' if existing_path else 'TÃ¡ÂºÂ¡o'} hÃ¡Â»Âc bÃ¡ÂºÂ¡: {page_count} trang")
 
@@ -1100,7 +1100,7 @@ def api_unlock_file():
 
 def api_merge_hocba_parts(student_id):
 
-    """NÃ¡Â»â€˜i nhiÃ¡Â»Âu file PDF thÃƒÂ nh HOCBA_6_8 Ã¢â‚¬â€ hÃ¡Â»Âc sinh cÃƒÂ³ thÃ¡Â»Æ’ tÃ¡Â»Â± thÃ¡Â»Â±c hiÃ¡Â»â€¡n"""
+    """NÃ¡Â»â€˜i nhiÃ¡Â»Âu file PDF thÃƒÂ nh HOCBA_6_9 Ã¢â‚¬â€ hÃ¡Â»Âc sinh cÃƒÂ³ thÃ¡Â»Æ’ tÃ¡Â»Â± thÃ¡Â»Â±c hiÃ¡Â»â€¡n"""
 
     try:
 
@@ -1122,11 +1122,11 @@ def api_merge_hocba_parts(student_id):
 
         folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
 
-        dest = os.path.join(folder, 'HOCBA_6_8.pdf')
+        dest = os.path.join(folder, 'HOCBA_6_9.pdf')
 
         bk_dir = os.path.join(os.environ.get('DATA_DIR', os.path.dirname(__file__)), 'backups', student['ma_hoso'])
 
-        dest_path, err = merge_multiple_pdfs(files, dest, bk_dir, 'HOCBA_6_8', max_mb)
+        dest_path, err = merge_multiple_pdfs(files, dest, bk_dir, 'HOCBA_6_9', max_mb)
 
         if err:
 
@@ -1136,11 +1136,11 @@ def api_merge_hocba_parts(student_id):
 
         now = datetime.now().isoformat()
 
-        conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type='HOCBA_6_8'", (student_id,))
+        conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type='HOCBA_6_9'", (student_id,))
 
         conn.execute("INSERT INTO documents (student_id,doc_type,file_name,file_path,status,uploaded_at) VALUES (?,?,?,?,?,?)",
 
-                     (student_id, 'HOCBA_6_8', 'HOCBA_6_8.pdf', dest_path, 'DA_NOP_CHO_KIEM_TRA', now))
+                     (student_id, 'HOCBA_6_9', 'HOCBA_6_9.pdf', dest_path, 'DA_NOP_CHO_KIEM_TRA', now))
 
         conn.commit()
 
@@ -1148,9 +1148,9 @@ def api_merge_hocba_parts(student_id):
 
         update_overall_status(student_id)
 
-        add_log(None, 'UPLOAD_MERGE', student_id, 'HOCBA_6_8', f"NÃ¡Â»â€˜i {len(files)} file thÃƒÂ nh HOCBA_6_8")
+        add_log(None, 'UPLOAD_MERGE', student_id, 'HOCBA_6_9', f"NÃ¡Â»â€˜i {len(files)} file thÃƒÂ nh HOCBA_6_9")
 
-        return jsonify({'success': True, 'message': f'Ã„ÂÃƒÂ£ nÃ¡Â»â€˜i {len(files)} file thÃƒÂ nh HÃ¡Â»Âc bÃ¡ÂºÂ¡ 6-8 thÃƒÂ nh cÃƒÂ´ng!'})
+        return jsonify({'success': True, 'message': f'Ã„ÂÃƒÂ£ nÃ¡Â»â€˜i {len(files)} file thÃƒÂ nh HÃ¡Â»Âc bÃ¡ÂºÂ¡ 6-9 thÃƒÂ nh cÃƒÂ´ng!'})
 
     except Exception as e:
 

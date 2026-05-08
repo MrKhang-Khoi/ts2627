@@ -72,7 +72,7 @@ Các loại file chấp nhận: **PDF, JPG, JPEG, PNG** (tối đa 20MB)
 4. Xem file, đánh dấu Đạt / File mờ / Sai file / Thiếu trang / Cần nộp lại
 
 ### Nối học bạ
-**Yêu cầu:** Học sinh đã nộp đủ HOCBA_6_8.pdf và HOCBA_9.pdf
+**Yêu cầu:** Học sinh đã nộp đủ HOCBA_6_9.pdf và HOCBA_9.pdf
 
 - Nối 1 học sinh: Bảng giáo viên > Kiểm tra > Nối học bạ
 - Nối cả lớp: Bấm nút "Nối học bạ cả lớp"

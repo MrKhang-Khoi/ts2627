@@ -11,10 +11,10 @@ BACKUP_FOLDER = os.path.join(_BASE, 'backups')
 ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
 MAX_FILE_SIZE_MB = 20
 
-DOC_TYPES = ['GIAYKHAISINH', 'CCCD', 'HOCBA_6_8', 'HOCBA_9', 'HOCBA', 'CNTN_THCS', 'ANH_THE', 'UU_TIEN']
+DOC_TYPES = ['GIAYKHAISINH', 'CCCD', 'HOCBA_6_9', 'HOCBA_9', 'HOCBA', 'CNTN_THCS', 'ANH_THE', 'UU_TIEN']
 
 # Thứ tự hiển thị và nộp theo hệ thống chính thức
-DISPLAY_ORDER = ['GIAYKHAISINH', 'CNTN_THCS', 'HOCBA_6_8', 'CCCD', 'ANH_THE', 'UU_TIEN']
+DISPLAY_ORDER = ['GIAYKHAISINH', 'CNTN_THCS', 'HOCBA_6_9', 'CCCD', 'ANH_THE', 'UU_TIEN']
 # Tài liệu không bắt buộc (không có dấu *)
 OPTIONAL_DOCS = {'UU_TIEN'}
 # Tài liệu cho phép chọn nhiều file (gộp lại thành 1 PDF) — không cộng dồn, thay thế toàn bộ
@@ -24,7 +24,7 @@ ZIP_ORDER = [
     ('GIAYKHAISINH', '01_GiayKhaiSinh'),
     ('CNTN_THCS',    '02_ChungNhanTotNghiep'),
     ('HOCBA',        '03_HocBa'),
-    ('HOCBA_6_8',    '03_HocBa'),
+    ('HOCBA_6_9',    '03_HocBa'),
     ('CCCD',         '04_CCCD'),
     ('ANH_THE',      '05_AnhThe'),
     ('UU_TIEN',      '06_UuTien'),
@@ -32,7 +32,7 @@ ZIP_ORDER = [
 DOC_LABELS = {
     'GIAYKHAISINH': 'Bản sao Giấy khai sinh',
     'CCCD': 'CCCD / Mã định danh',
-    'HOCBA_6_8': 'Học bạ (lớp 6-9)',
+    'HOCBA_6_9': 'Học bạ (lớp 6-9)',
     'HOCBA_9': 'Học bạ lớp 9',
     'HOCBA': 'Học bạ hoàn chỉnh',
     'CNTN_THCS': 'Chứng nhận tốt nghiệp THCS',
