@@ -61,6 +61,15 @@
   </div>
 </div>
 
+{# === LOADING OVERLAY === #}
+<div id="loading-overlay" class="loading-overlay hidden">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loading-text">Đang xử lý...</div>
+    <div class="loading-sub">Vui lòng không đóng trình duyệt</div>
+  </div>
+</div>
+
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script src="{{ url_for('static', filename='js/jspdf.umd.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>

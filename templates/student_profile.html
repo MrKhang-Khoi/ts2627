@@ -357,13 +357,15 @@ function submitHb(sid) {
   if (!_hbFiles.length) { showToast('Vui lòng chọn file trước.','error'); return; }
   const btn = document.querySelector('#hb-area .sp-btn-confirm');
   btn.disabled=true; btn.textContent='⏳ Đang xử lý...';
+  showLoading('Đang tải học bạ lên...');
   const fd = new FormData();
   _hbFiles.forEach(f => fd.append('files', f));
   fetch('/api/append-hocba/'+sid,{method:'POST',body:fd})
     .then(r=>r.json()).then(d=>{
+      hideLoading();
       if(d.success){showToast(d.message,'success');setTimeout(()=>location.reload(),1200);}
       else{showToast(d.error||'Lỗi.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';}
-    }).catch(()=>{showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';});
+    }).catch(()=>{hideLoading();showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';});
 }
 
 // ===== TÀI LIỆU THÔNG THƯỜNG =====
@@ -386,23 +388,27 @@ function submitDoc(dt, sid) {
   if (!f) { showToast('Vui lòng chọn file.','error'); return; }
   const btn = document.querySelector('#doc-area-'+dt+' .sp-btn-confirm');
   btn.disabled=true; btn.textContent='⏳ Đang tải...';
+  showLoading('Đang tải file lên...');
   const fd = new FormData();
   fd.append('student_id',sid); fd.append('doc_type',dt); fd.append('file',f,f.name);
   fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{
+    hideLoading();
     if(d.success){showToast(d.message,'success');setTimeout(()=>location.reload(),1200);}
     else{showToast(d.error||'Lỗi tải lên.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';}
-  }).catch(()=>{showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';});
+  }).catch(()=>{hideLoading();showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';});
 }
 
 // ===== XÓA FILE =====
 function confirmDelete(sid, dt, label) {
   showModal('Xóa file "'+label+'"?\nCó thể nộp lại sau khi xóa.',()=>{
+    showLoading('Đang xóa file...');
     fetch('/api/delete-file',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({student_id:sid,doc_type:dt})})
     .then(r=>r.json()).then(d=>{
+      hideLoading();
       if(d.success){showToast('Đã xóa.','success');setTimeout(()=>location.reload(),1000);}
       else showToast(d.error||'Không xóa được.','error');
-    }).catch(e=>showToast('Lỗi: '+e.message,'error'));
+    }).catch(e=>{hideLoading();showToast('Lỗi: '+e.message,'error');});
   });
 }
 
@@ -456,13 +462,15 @@ function submitMulti(dt, sid) {
   if (!arr.length) { showToast('Vui lòng chọn file.','error'); return; }
   const btn = document.querySelector('#multi-area-'+dt+' .sp-btn-confirm');
   btn.disabled=true; btn.textContent='⏳ Đang xử lý...';
+  showLoading('Đang tải file lên...');
   const fd = new FormData();
   arr.forEach(f => fd.append('files', f));
   fetch('/api/upload-multi/'+sid+'/'+dt,{method:'POST',body:fd})
     .then(r=>r.json()).then(d=>{
+      hideLoading();
       if(d.success){showToast(d.message,'success');setTimeout(()=>location.reload(),1200);}
       else{showToast(d.error||'Lỗi.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';}
-    }).catch(()=>{showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';});
+    }).catch(()=>{hideLoading();showToast('Lỗi kết nối.','error');btn.disabled=false;btn.textContent='⬆ Tải lên';});
 }
 // ===== LIVE TSDC CHECK: cap nhat trang thai TSDC real-time =====
 (function(){

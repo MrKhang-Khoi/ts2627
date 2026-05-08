@@ -681,6 +681,7 @@
   function _createAndUpload() {
     if(!_pages.length){if(typeof showToast==='function')showToast('Chưa có trang nào.','error');return;}
     var btn=document.getElementById('scanner-btn-pdf'); btn.disabled=true;
+    if(typeof showLoading==='function')showLoading('Đang tạo PDF và tải lên...');
     _showProcessing('Đang tải thư viện PDF...');
     _ensureJsPDF(function(jsPDFClass){
       if(!jsPDFClass){
@@ -703,10 +704,11 @@
           _showProcessing('Đang tải lên...');
           _uploadPDF(blob,function(ok,msg){
             _hideProcessing(); btn.disabled=false;
+            if(typeof hideLoading==='function')hideLoading();
             if(ok){if(typeof showToast==='function')showToast(msg||'Thành công!','success');close();setTimeout(function(){location.reload();},1200);}
             else{if(typeof showToast==='function')showToast(msg||'Lỗi tải lên.','error');}
           });
-        }catch(e){_hideProcessing();btn.disabled=false;if(typeof showToast==='function')showToast('Lỗi: '+e.message,'error');}
+        }catch(e){_hideProcessing();btn.disabled=false;if(typeof hideLoading==='function')hideLoading();if(typeof showToast==='function')showToast('Lỗi: '+e.message,'error');}
       },100);
     });
   }

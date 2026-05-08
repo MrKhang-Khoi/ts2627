@@ -29,3 +29,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ===== LOADING OVERLAY =====
+let _isLoading = false;
+function showLoading(text) {
+  _isLoading = true;
+  const el = document.getElementById('loading-overlay');
+  const txt = document.getElementById('loading-text');
+  if (txt) txt.textContent = text || 'Đang xử lý...';
+  if (el) el.classList.remove('hidden');
+}
+function hideLoading() {
+  _isLoading = false;
+  const el = document.getElementById('loading-overlay');
+  if (el) el.classList.add('hidden');
+}
+// Canh bao khi user co dong tab/trinh duyet trong luc dang xu ly
+window.addEventListener('beforeunload', function(e) {
+  if (_isLoading) {
+    e.preventDefault();
+    e.returnValue = 'Đang xử lý file, vui lòng chờ...';
+    return e.returnValue;
+  }
+});
