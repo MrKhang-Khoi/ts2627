@@ -394,10 +394,9 @@ def _convert_anh_the_pdf_to_jpg(pdf_bytes):
             top = (h - new_h) // 2
             img = img.crop((0, top, w, top + new_h))
 
-        # Resize ve dung chuan anh the 3x4 Viet Nam:
-        # 3cm x 4cm o 300 DPI = 354 x 472 pixel (chuan IIG/TSDC)
-        STANDARD_W = 354
-        STANDARD_H = 472
+        # Resize ve dung chuan TSDC: 113x151 pixel
+        STANDARD_W = 113
+        STANDARD_H = 151
         img = img.resize((STANDARD_W, STANDARD_H), Image.LANCZOS)
 
         buf = io.BytesIO()

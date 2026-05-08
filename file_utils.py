@@ -141,7 +141,7 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
                 top = (h - new_h) // 2
                 img = img.crop((0, top, w, top + new_h))
             # Resize ve dung chuan anh the 3x4 VN: 354x472px, 300 DPI
-            img = img.resize((354, 472), Image.LANCZOS)
+            img = img.resize((113, 151), Image.LANCZOS)
             buf = _io.BytesIO()
             img.save(buf, 'JPEG', quality=95, optimize=True, dpi=(300, 300))
             file_bytes = buf.getvalue()
@@ -209,7 +209,7 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
                     top = (h - new_h) // 2
                     img = img.crop((0, top, w, top + new_h))
                 # Resize ve dung chuan anh the 3x4 VN: 354x472px, 300 DPI
-                img = img.resize((354, 472), Image.LANCZOS)
+                img = img.resize((113, 151), Image.LANCZOS)
                 buf = _io.BytesIO()
                 img.save(buf, 'JPEG', quality=95, optimize=True, dpi=(300, 300))
                 file_bytes = buf.getvalue()
