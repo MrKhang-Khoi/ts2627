@@ -154,7 +154,23 @@
     return '<div id="scanner-overlay" class="scanner-overlay hidden">' +
       '<div id="scanner-processing" class="scanner-processing hidden"><div class="scanner-spinner"></div><div class="scanner-processing-text" id="scanner-proc-text">Đang xử lý...</div></div>' +
       '<div class="scanner-header"><div class="scanner-title">📸 Quét tài liệu <span class="scan-badge" id="scanner-doc-label"></span></div><button class="scanner-close" onclick="DocScanner.close()" title="Đóng">✕</button></div>' +
-      // STEP 1: Capture
+      // STEP 0: Live Camera Viewfinder
+      '<div id="scanner-step-viewfinder" class="scanner-viewfinder-step hidden">' +
+        '<div class="scanner-vf-container">' +
+          '<video id="scanner-vf-video" autoplay playsinline muted></video>' +
+          '<div class="scanner-vf-guide">' +
+            '<div class="scanner-vf-corner tl"></div><div class="scanner-vf-corner tr"></div>' +
+            '<div class="scanner-vf-corner bl"></div><div class="scanner-vf-corner br"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="scanner-vf-controls">' +
+          '<button class="scanner-vf-btn" id="scanner-vf-flash" onclick="DocScanner._toggleFlash()" title="Đèn flash">🔦</button>' +
+          '<button class="scanner-vf-capture" id="scanner-vf-capture" onclick="DocScanner._capturePhoto()">📸</button>' +
+          '<button class="scanner-vf-btn" id="scanner-vf-close" onclick="DocScanner._closeCamera()">✕</button>' +
+        '</div>' +
+        '<div class="scanner-vf-zoom" id="scanner-vf-zoom"></div>' +
+      '</div>' +
+      // STEP 1: Capture (chọn camera hoặc gallery)
       '<div id="scanner-step-capture" class="scanner-capture">' +
         '<div class="scanner-capture-icon">📄</div>' +
         '<div class="scanner-capture-text"><strong>Chụp hoặc chọn ảnh tài liệu</strong><br>Đặt tài liệu trên nền phẳng, chụp rõ nét</div>' +
@@ -233,8 +249,176 @@
     _pages=[]; _activeIdx=-1; _pendingFiles=[]; _pendingFileIdx=0;
   }
 
-  function _triggerCamera(){ document.getElementById('scanner-camera-input').click(); }
+  // ===== CAMERA STATE =====
+  var _cameraStream = null, _cameraTrack = null, _torchOn = false;
+  var _zoomMin = 1, _zoomMax = 1, _zoomCur = 1;
+
+  function _triggerCamera(){
+    // Thử mở live viewfinder trước, fallback về native camera
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      _openLiveCamera();
+    } else {
+      document.getElementById('scanner-camera-input').click();
+    }
+  }
   function _triggerGallery(){ document.getElementById('scanner-gallery-input').click(); }
+
+  function _openLiveCamera() {
+    var constraints = {
+      video: {
+        facingMode: { ideal: 'environment' },
+        width:  { ideal: 3840 },
+        height: { ideal: 2160 },
+        focusMode: { ideal: 'continuous' }
+      },
+      audio: false
+    };
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(function(stream) {
+        _cameraStream = stream;
+        _cameraTrack = stream.getVideoTracks()[0];
+        var video = document.getElementById('scanner-vf-video');
+        video.srcObject = stream;
+        video.play();
+
+        // Show viewfinder step
+        _showStep('viewfinder');
+
+        // Apply zoom wide-angle (min zoom = widest view)
+        setTimeout(function() {
+          _setupCameraControls();
+        }, 500);
+      })
+      .catch(function(err) {
+        console.warn('getUserMedia failed, fallback to native:', err);
+        document.getElementById('scanner-camera-input').click();
+      });
+  }
+
+  function _setupCameraControls() {
+    if (!_cameraTrack) return;
+    var caps = {};
+    try { caps = _cameraTrack.getCapabilities() || {}; } catch(e) {}
+
+    // Zoom control
+    var zoomWrap = document.getElementById('scanner-vf-zoom');
+    zoomWrap.innerHTML = '';
+    if (caps.zoom) {
+      _zoomMin = caps.zoom.min || 1;
+      _zoomMax = caps.zoom.max || 1;
+      // Set minimum zoom (widest angle)
+      _zoomCur = _zoomMin;
+      _cameraTrack.applyConstraints({ advanced: [{ zoom: _zoomMin }] }).catch(function(){});
+
+      // Create zoom buttons
+      var zoomLevels = [_zoomMin];
+      if (_zoomMax >= 2) zoomLevels.push(1); // 1x if available
+      if (_zoomMax >= 2) zoomLevels.push(2);
+      // Remove duplicates and sort
+      zoomLevels = zoomLevels.filter(function(v, i, a) { return a.indexOf(v) === i && v <= _zoomMax; }).sort();
+
+      zoomLevels.forEach(function(z) {
+        var btn = document.createElement('button');
+        btn.className = 'scanner-vf-zoom-btn' + (z === _zoomCur ? ' active' : '');
+        btn.textContent = (z === _zoomMin && z < 1) ? z.toFixed(1) + 'x' : z + 'x';
+        btn.setAttribute('data-zoom', z);
+        btn.onclick = function() { _setZoom(z); };
+        zoomWrap.appendChild(btn);
+      });
+    }
+
+    // Flash availability
+    var flashBtn = document.getElementById('scanner-vf-flash');
+    if (caps.torch) {
+      flashBtn.style.display = '';
+      flashBtn.classList.remove('active');
+      _torchOn = false;
+    } else {
+      flashBtn.style.display = 'none';
+    }
+  }
+
+  function _setZoom(level) {
+    if (!_cameraTrack) return;
+    _zoomCur = level;
+    _cameraTrack.applyConstraints({ advanced: [{ zoom: level }] }).catch(function(){});
+    // Update active button
+    var btns = document.querySelectorAll('.scanner-vf-zoom-btn');
+    btns.forEach(function(b) {
+      b.classList.toggle('active', parseFloat(b.getAttribute('data-zoom')) === level);
+    });
+  }
+
+  function _toggleFlash() {
+    if (!_cameraTrack) return;
+    _torchOn = !_torchOn;
+    _cameraTrack.applyConstraints({ advanced: [{ torch: _torchOn }] }).catch(function(){});
+    document.getElementById('scanner-vf-flash').classList.toggle('active', _torchOn);
+  }
+
+  function _capturePhoto() {
+    if (!_cameraTrack) return;
+    var video = document.getElementById('scanner-vf-video');
+
+    // Try ImageCapture API first (highest quality)
+    if (typeof ImageCapture !== 'undefined') {
+      var imgCapture = new ImageCapture(_cameraTrack);
+      imgCapture.takePhoto()
+        .then(function(blob) {
+          _closeCamera();
+          _processCapturedBlob(blob);
+        })
+        .catch(function() {
+          // Fallback: capture from video element
+          _captureFromVideo(video);
+        });
+    } else {
+      _captureFromVideo(video);
+    }
+  }
+
+  function _captureFromVideo(video) {
+    var w = video.videoWidth, h = video.videoHeight;
+    var cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    var ctx = cv.getContext('2d');
+    ctx.drawImage(video, 0, 0, w, h);
+    _closeCamera();
+    cv.toBlob(function(blob) {
+      _processCapturedBlob(blob);
+    }, 'image/jpeg', 0.95);
+  }
+
+  function _processCapturedBlob(blob) {
+    var url = URL.createObjectURL(blob);
+    var img = new Image();
+    img.onload = function() {
+      var maxD = 3600, w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxD || h > maxD) { var r = Math.min(maxD/w, maxD/h); w = Math.round(w*r); h = Math.round(h*r); }
+      var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      var drawCtx = cv.getContext('2d');
+      drawCtx.imageSmoothingEnabled = true;
+      drawCtx.imageSmoothingQuality = 'high';
+      drawCtx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      _pendingFiles = [{img: img, canvas: cv}];
+      _pendingFileIdx = 0;
+      _showCropForPending();
+    };
+    img.src = url;
+  }
+
+  function _closeCamera() {
+    if (_cameraStream) {
+      _cameraStream.getTracks().forEach(function(t) { t.stop(); });
+      _cameraStream = null;
+      _cameraTrack = null;
+    }
+    _torchOn = false;
+    var video = document.getElementById('scanner-vf-video');
+    if (video) video.srcObject = null;
+    _showStep('capture');
+  }
 
   // ===== HANDLE FILES → go to crop step =====
   function _handleFiles(fileList) {
@@ -287,14 +471,16 @@
   }
 
   function _showStep(step) {
+    var vf=document.getElementById('scanner-step-viewfinder');
     var cap=document.getElementById('scanner-step-capture');
     var crop=document.getElementById('scanner-step-crop');
     var ed=document.getElementById('scanner-step-editor');
+    vf.classList.toggle('hidden', step!=='viewfinder');
     cap.style.display = step==='capture'?'':'none';
     crop.classList.toggle('hidden', step!=='crop');
     ed.classList.toggle('hidden', step!=='editor');
-    // Hide/show bottom bar and pages for crop step
-    if(step==='crop'){
+    // Hide/show bottom bar and pages for crop/viewfinder step
+    if(step==='crop' || step==='viewfinder'){
       document.getElementById('scanner-pages').classList.add('hidden');
       document.getElementById('scanner-bottom-bar').classList.add('hidden');
     }
@@ -536,6 +722,7 @@
     open:open, close:close, _triggerCamera:_triggerCamera, _triggerGallery:_triggerGallery,
     _rotateCW:_rotateCW, _rotateCCW:_rotateCCW, _removePage:_removePage, _removePageAt:_removePageAt,
     _selectPage:_selectPage, _addMore:_addMore, _createAndUpload:_createAndUpload, _applyFilter:_applyFilter,
-    _cropConfirm:_cropConfirm, _cropRetake:_cropRetake
+    _cropConfirm:_cropConfirm, _cropRetake:_cropRetake,
+    _toggleFlash:_toggleFlash, _capturePhoto:_capturePhoto, _closeCamera:_closeCamera
   };
 })();
