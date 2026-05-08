@@ -394,7 +394,14 @@ def _convert_anh_the_pdf_to_jpg(pdf_bytes):
             top = (h - new_h) // 2
             img = img.crop((0, top, w, top + new_h))
 
-        img = img.resize((450, 600), Image.LANCZOS)
+        # Giu nguyen resolution goc sau khi crop - KHONG ep nho 450x600
+        # Chi resize neu anh qua lon (> 2000px chieu rong) de giam dung luong
+        w_crop, h_crop = img.size
+        MAX_WIDTH = 2000
+        if w_crop > MAX_WIDTH:
+            scale = MAX_WIDTH / w_crop
+            img = img.resize((MAX_WIDTH, int(h_crop * scale)), Image.LANCZOS)
+
         buf = io.BytesIO()
         img.save(buf, 'JPEG', quality=95, optimize=True)
         return buf.getvalue(), True

@@ -140,8 +140,13 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
                 new_h = int(w / target_ratio)
                 top = (h - new_h) // 2
                 img = img.crop((0, top, w, top + new_h))
-            # Resize ve 450x600 (chat luong tot cho in an va upload TSDC)
-            img = img.resize((450, 600), Image.LANCZOS)
+            # Giu nguyen resolution goc - KHONG ep nho 450x600
+            # Chi resize neu anh qua lon (> 2000px) de giam dung luong
+            w_crop, h_crop = img.size
+            MAX_W = 2000
+            if w_crop > MAX_W:
+                scale = MAX_W / w_crop
+                img = img.resize((MAX_W, int(h_crop * scale)), Image.LANCZOS)
             buf = _io.BytesIO()
             img.save(buf, 'JPEG', quality=95, optimize=True)
             file_bytes = buf.getvalue()
@@ -208,7 +213,12 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
                     new_h = int(w / target_ratio)
                     top = (h - new_h) // 2
                     img = img.crop((0, top, w, top + new_h))
-                img = img.resize((450, 600), Image.LANCZOS)
+                # Giu nguyen resolution goc - KHONG ep nho
+                w_crop, h_crop = img.size
+                MAX_W = 2000
+                if w_crop > MAX_W:
+                    scale = MAX_W / w_crop
+                    img = img.resize((MAX_W, int(h_crop * scale)), Image.LANCZOS)
                 buf = _io.BytesIO()
                 img.save(buf, 'JPEG', quality=95, optimize=True)
                 file_bytes = buf.getvalue()
