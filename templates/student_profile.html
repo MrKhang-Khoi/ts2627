@@ -85,6 +85,15 @@
     </div>
   </div>
 
+  {# === LUON HIEN SO CCCD (khong phu thuoc TSDC) === #}
+  {% set cccd_val = student.cccd or student.ma_hoso or '' %}
+  {% if cccd_val and cccd_val|length >= 9 %}
+  <div style="background:#f0f4ff;border:1px solid #c5cae9;border-radius:10px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+    <span style="font-size:1.3rem">&#129426;</span>
+    <span style="font-size:.95rem;color:#333">Số CCCD: <strong style="letter-spacing:1px;font-size:1.05rem;color:#1a237e">{{ '%012d'|format(cccd_val|int) if cccd_val.isdigit() else cccd_val }}</strong></span>
+  </div>
+  {% endif %}
+
   {% if student.tsdc_nv1 or student.tsdc_nv2 or student.tsdc_nv3 or student.tsdc_trang_thai or student.tsdc_ma_hoso or student.tsdc_updated_at %}
   <div class="tsdc-block">
     <div class="tsdc-block-head">
@@ -116,12 +125,8 @@
       <p style="color:#aaa;font-size:.85rem;margin:4px 0">Chưa có nguyện vọng đăng ký.</p>
       {% endif %}
     </div>
-    {% set cccd_display = student.cccd or student.ma_hoso %}
-    {% if cccd_display or student.ma_dinh_danh_gd or student.tsdc_updated_at %}
+    {% if student.ma_dinh_danh_gd or student.tsdc_updated_at %}
     <div class="tsdc-block-foot">
-      {% if cccd_display %}
-      <span>&#129426; Số CCCD: <strong>{{ cccd_display }}</strong></span>
-      {% endif %}
       {% if student.ma_dinh_danh_gd %}
       <span>&#127979; Mã GD: <strong>{{ student.ma_dinh_danh_gd }}</strong></span>
       {% endif %}
