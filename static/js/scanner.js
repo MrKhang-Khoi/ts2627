@@ -306,19 +306,33 @@
     if(!_cropImg) return;
     var ww=wrap.clientWidth, wh=wrap.clientHeight;
     if(ww<1||wh<1) return;
-    cv.width=ww; cv.height=wh;
+
+    // === DPR fix: render at device pixel resolution for sharp display ===
+    var dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(ww * dpr);
+    cv.height = Math.round(wh * dpr);
+    cv.style.width = ww + 'px';
+    cv.style.height = wh + 'px';
     _cropCanvas=cv; _cropCtx=cv.getContext('2d');
+    var ctx = _cropCtx;
+    ctx.scale(dpr, dpr);
+    // All coordinates below are in CSS pixels (auto-scaled by ctx.scale)
+
     var iw=_cropImg.width, ih=_cropImg.height;
     var scale=Math.min(ww/iw, wh/ih);
     var dw=iw*scale, dh=ih*scale;
     var ox=(ww-dw)/2, oy=(wh-dh)/2;
-    var ctx=_cropCtx;
-    // Draw image
-    ctx.clearRect(0,0,ww,wh);
+
+    // Draw image (high quality)
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.clearRect(0, 0, ww, wh);
     ctx.drawImage(_cropImg, ox, oy, dw, dh);
+
     // Dark overlay outside crop area
     ctx.fillStyle='rgba(0,0,0,0.55)';
-    ctx.fillRect(0,0,ww,wh);
+    ctx.fillRect(0, 0, ww, wh);
+
     // Clear crop area (draw image only inside polygon)
     ctx.save();
     ctx.beginPath();
@@ -328,25 +342,26 @@
     ctx.closePath(); ctx.clip();
     ctx.drawImage(_cropImg, ox, oy, dw, dh);
     ctx.restore();
+
     // Yellow border
-    ctx.strokeStyle='#FFD54F'; ctx.lineWidth=3; ctx.setLineDash([]);
+    ctx.strokeStyle='#FFD54F'; ctx.lineWidth=2.5; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
     for(var i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
     ctx.closePath(); ctx.stroke();
-    // Corner handles
+
+    // Corner handles (crisp circles)
     for(var i=0;i<pts.length;i++){
-      ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 14, 0, Math.PI*2);
+      ctx.beginPath(); ctx.arc(Math.round(pts[i].x), Math.round(pts[i].y), 12, 0, Math.PI*2);
       ctx.fillStyle='#FFD54F'; ctx.fill();
-      ctx.strokeStyle='#F9A825'; ctx.lineWidth=3; ctx.stroke();
-      // Inner dot
-      ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 5, 0, Math.PI*2);
+      ctx.strokeStyle='#F9A825'; ctx.lineWidth=2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(Math.round(pts[i].x), Math.round(pts[i].y), 4, 0, Math.PI*2);
       ctx.fillStyle='#1a1a2e'; ctx.fill();
     }
     // Edge midpoint handles
     for(var i=0;i<pts.length;i++){
       var j=(i+1)%pts.length;
-      var mx=(pts[i].x+pts[j].x)/2, my=(pts[i].y+pts[j].y)/2;
-      ctx.beginPath(); ctx.arc(mx,my,6,0,Math.PI*2);
+      var mx=Math.round((pts[i].x+pts[j].x)/2), my=Math.round((pts[i].y+pts[j].y)/2);
+      ctx.beginPath(); ctx.arc(mx,my,5,0,Math.PI*2);
       ctx.fillStyle='rgba(255,213,79,0.6)'; ctx.fill();
     }
   }
