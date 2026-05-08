@@ -357,7 +357,7 @@
     if(cls){ cb(cls); return; }
     // Try loading dynamically
     var s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
+    s.src = '/static/js/jspdf.umd.min.js';
     s.onload = function(){ cb((window.jspdf&&window.jspdf.jsPDF)||window.jsPDF); };
     s.onerror = function(){ cb(null); };
     document.head.appendChild(s);
