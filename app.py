@@ -1006,17 +1006,30 @@ def api_delete_file():
 
         delete_file_to_backup(doc.get('file_path'), student['ma_hoso'], doc_type)
 
-        conn = get_db()
+        # Retry pattern: SQLite co the bi lock boi background sync thread
+        import sqlite3 as _sq3
+        for _attempt in range(3):
+            try:
+                conn = get_db()
+                conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type=?", (student_id, doc_type))
+                conn.commit()
+                conn.close()
+                break
+            except _sq3.OperationalError as db_err:
+                if 'locked' in str(db_err) and _attempt < 2:
+                    import time as _t; _t.sleep(1 + _attempt)
+                    continue
+                raise
 
-        conn.execute("DELETE FROM documents WHERE student_id=? AND doc_type=?", (student_id, doc_type))
+        try:
+            update_overall_status(student_id)
+        except Exception:
+            pass  # Non-critical: se tu cap nhat lan sau
 
-        conn.commit()
-
-        conn.close()
-
-        update_overall_status(student_id)
-
-        add_log(session.get('user_id'), 'DELETE', student_id, doc_type, f"XÃƒÂ³a file {doc_type}")
+        try:
+            add_log(session.get('user_id'), 'DELETE', student_id, doc_type, f"Xóa file {doc_type}")
+        except Exception:
+            pass  # Non-critical
 
         return jsonify({'success': True})
 
@@ -2940,6 +2953,13 @@ def _tsdc_sync_students(tsdc_students):
 
             updated += 1
 
+            # Batch commit moi 50 HS de giam thoi gian lock DB
+            if updated % 50 == 0:
+                try:
+                    conn.commit()
+                except Exception:
+                    pass
+
             print(f'[TSDC-SYNC] [{match_by}] {name} ({dob}) NV1={nv1[:30] if nv1 else "N/A"}', flush=True)
 
         else:
@@ -2948,9 +2968,12 @@ def _tsdc_sync_students(tsdc_students):
 
 
 
-    conn.commit()
-
-    conn.close()
+    try:
+        conn.commit()
+    except Exception as ce:
+        print(f'[TSDC-SYNC] Commit error: {ce}', flush=True)
+    finally:
+        conn.close()
 
     print(f'[TSDC-SYNC] Xong: {updated}/{len(tsdc_students)} hoc sinh cap nhat.', flush=True)
 
