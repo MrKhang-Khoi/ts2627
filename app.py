@@ -15,7 +15,7 @@ from file_utils import (to_ascii, get_student_folder, save_uploaded_file, delete
 
                         DOC_TYPES, DOC_LABELS, STATUS_LABELS, OVERALL_LABELS, UPLOAD_FOLDER,
 
-                        DISPLAY_ORDER, OPTIONAL_DOCS, MULTI_FILE_DOCS)
+                        DISPLAY_ORDER, OPTIONAL_DOCS, MULTI_FILE_DOCS, get_doc_filename)
 
 from pdf_utils import (merge_transcripts, export_excel, create_student_zip,
 
@@ -713,7 +713,7 @@ def api_upload():
 
                     VALUES (?,?,?,?,?,?)""",
 
-                 (student_id, doc_type, os.path.basename(file_path) if file_path else f"{doc_type}.pdf", file_path, 'DA_NOP_CHO_KIEM_TRA', now))
+                 (student_id, doc_type, get_doc_filename(doc_type), file_path, 'DA_NOP_CHO_KIEM_TRA', now))
 
     conn.commit()
 
@@ -841,7 +841,7 @@ def api_append_hocba(student_id):
 
                         VALUES (?,?,?,?,?,?,?)""",
 
-                     (student_id, 'HOCBA_6_9', 'HOCBA_6_9.pdf', dest_path,
+                     (student_id, 'HOCBA_6_9', get_doc_filename('HOCBA_6_9'), dest_path,
 
                       'DA_NOP_CHO_KIEM_TRA', now, f'{page_count} trang'))
 
@@ -955,7 +955,7 @@ def api_upload_multi(student_id, doc_type):
 
                     VALUES (?,?,?,?,?,?,?)""",
 
-                 (student_id, doc_type, f'{doc_type}.pdf', dest_path,
+                 (student_id, doc_type, get_doc_filename(doc_type), dest_path,
 
                   'DA_NOP_CHO_KIEM_TRA', now, f'{page_count} trang'))
 

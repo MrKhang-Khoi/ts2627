@@ -29,6 +29,21 @@ ZIP_ORDER = [
     ('ANH_THE',      '05_AnhThe'),
     ('UU_TIEN',      '06_UuTien'),
 ]
+# Tên file hiển thị chuẩn cho từng loại tài liệu
+DOC_FILE_NAMES = {
+    'GIAYKHAISINH': 'GIAYKHAISINH',
+    'CNTN_THCS':    'CNHT_Lop_9',
+    'HOCBA':        'HOCBA',
+    'HOCBA_6_9':    'HOCBA_6_9',
+    'CCCD':         'CCCD',
+    'ANH_THE':      'ANH_THE',
+    'UU_TIEN':      'UU_TIEN',
+}
+
+def get_doc_filename(doc_type, ext='pdf'):
+    """Trả về tên file hiển thị chuẩn cho loại tài liệu."""
+    base = DOC_FILE_NAMES.get(doc_type, doc_type)
+    return f'{base}.{ext}'
 DOC_LABELS = {
     'GIAYKHAISINH': 'Bản sao Giấy khai sinh',
     'CCCD': 'CCCD / Mã định danh',
