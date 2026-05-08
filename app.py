@@ -712,7 +712,7 @@ def api_upload():
 
                     VALUES (?,?,?,?,?,?)""",
 
-                 (student_id, doc_type, f"{doc_type}.pdf", file_path, 'DA_NOP_CHO_KIEM_TRA', now))
+                 (student_id, doc_type, os.path.basename(file_path) if file_path else f"{doc_type}.pdf", file_path, 'DA_NOP_CHO_KIEM_TRA', now))
 
     conn.commit()
 
@@ -2237,7 +2237,12 @@ def view_file(student_id, doc_type):
 
         return '<p style="font-family:sans-serif;padding:20px">Ã¢ÂÅ’ File khÃƒÂ´ng tÃ¡Â»â€œn tÃ¡ÂºÂ¡i. Vui lÃƒÂ²ng nÃ¡Â»â„¢p lÃ¡ÂºÂ¡i.</p>', 404
 
-    return send_file(fp, mimetype='application/pdf')
+    # Detect mimetype tu extension thuc te (ANH_THE co the la .jpg)
+    ext = os.path.splitext(fp)[1].lower()
+    mime_map = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.pdf': 'application/pdf'}
+    mimetype = mime_map.get(ext, 'application/pdf')
+
+    return send_file(fp, mimetype=mimetype)
 
 
 

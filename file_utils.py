@@ -117,9 +117,40 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
 
     ext = file.filename.rsplit('.', 1)[1].lower()
 
-    # Đổi thành PDF bytes trong bộ nhớ
-    if ext == 'pdf':
+    # === ANH_THE: luu anh goc (TSDC chi nhan .jpg/.png, KHONG nhan PDF) ===
+    if doc_type == 'ANH_THE' and ext in ('jpg', 'jpeg', 'png'):
+        try:
+            from PIL import Image
+            import io as _io
+            img = Image.open(file)
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            # Resize ve ti le 3x4 (chieu rong 300px, cao 400px) - chuan TSDC
+            # Giu nguyen aspect ratio, crop center
+            w, h = img.size
+            target_ratio = 3 / 4  # 3x4
+            current_ratio = w / h
+            if current_ratio > target_ratio:
+                # Anh rong hon -> crop 2 ben
+                new_w = int(h * target_ratio)
+                left = (w - new_w) // 2
+                img = img.crop((left, 0, left + new_w, h))
+            elif current_ratio < target_ratio:
+                # Anh cao hon -> crop tren duoi
+                new_h = int(w / target_ratio)
+                top = (h - new_h) // 2
+                img = img.crop((0, top, w, top + new_h))
+            # Resize ve 450x600 (chat luong tot cho in an va upload TSDC)
+            img = img.resize((450, 600), Image.LANCZOS)
+            buf = _io.BytesIO()
+            img.save(buf, 'JPEG', quality=95, optimize=True)
+            file_bytes = buf.getvalue()
+            save_ext = 'jpg'
+        except Exception as e:
+            return None, f'Không thể xử lý ảnh thẻ: {str(e)}'
+    elif ext == 'pdf':
         file_bytes = file.read()
+        save_ext = 'pdf'
     else:
         try:
             from PIL import Image
@@ -130,6 +161,7 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
             buf = _io.BytesIO()
             img.save(buf, 'PDF', resolution=150)
             file_bytes = buf.getvalue()
+            save_ext = 'pdf'
         except Exception as e:
             return None, f'Không thể chuyển ảnh sang PDF: {str(e)}'
 
@@ -139,14 +171,18 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
 
     # === LOCAL MODE ===
     folder = get_student_folder(student['lop'], student['ma_hoso'], student['ho_ten_khong_dau'])
-    dest_path = os.path.join(folder, f'{doc_type}.pdf')
+    dest_path = os.path.join(folder, f'{doc_type}.{save_ext}')
 
-    # Backup file cũ nếu tồn tại
-    if os.path.exists(dest_path):
-        ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
-        bk_dir = os.path.join(BACKUP_FOLDER, student['ma_hoso'])
-        os.makedirs(bk_dir, exist_ok=True)
-        shutil.copy2(dest_path, os.path.join(bk_dir, f'backup_{doc_type}_{ts}.pdf'))
+    # Backup file cu neu ton tai (kiem tra ca .pdf va .jpg)
+    for old_ext in ('pdf', 'jpg', 'jpeg', 'png'):
+        old_path = os.path.join(folder, f'{doc_type}.{old_ext}')
+        if os.path.exists(old_path):
+            ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+            bk_dir = os.path.join(BACKUP_FOLDER, student['ma_hoso'])
+            os.makedirs(bk_dir, exist_ok=True)
+            shutil.copy2(old_path, os.path.join(bk_dir, f'backup_{doc_type}_{ts}.{old_ext}'))
+            if old_path != dest_path:
+                os.remove(old_path)  # Xoa file cu neu khac dinh dang
 
     with open(dest_path, 'wb') as f:
         f.write(file_bytes)

@@ -208,7 +208,7 @@
           <div class="sp-file-icon">📄</div>
           <div class="sp-file-details">
             <div class="sp-file-name">
-              {{ dt }}.pdf
+              {{ doc.get('file_name', dt ~ '.pdf') }}
               {% if is_hb and doc.get('note') and 'trang' in doc.get('note','') %}
               <span class="sp-file-pages">({{ doc.get('note') }})</span>
               {% endif %}
