@@ -156,8 +156,12 @@
   function _showCropForPending() {
     if(_pendingFileIdx >= _pendingFiles.length) {
       // All files cropped, go to editor
-      if(_pages.length>0){ _activeIdx=_pages.length-1; _showStep('editor'); _renderEditor(); _renderPages(); }
-      else { _showStep('capture'); }
+      if(_pages.length>0){
+        _activeIdx=_pages.length-1;
+        _showStep('editor');
+        // Delay rendering to let DOM layout update after hiding crop step
+        setTimeout(function(){ _renderEditor(); _renderPages(); }, 100);
+      } else { _showStep('capture'); }
       return;
     }
     var pf = _pendingFiles[_pendingFileIdx];
@@ -347,31 +351,49 @@
   function _addMore(){_showStep('capture');}
 
   // ===== PDF + UPLOAD =====
+  // Load jsPDF dynamically if not available
+  function _ensureJsPDF(cb) {
+    var cls = (window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
+    if(cls){ cb(cls); return; }
+    // Try loading dynamically
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
+    s.onload = function(){ cb((window.jspdf&&window.jspdf.jsPDF)||window.jsPDF); };
+    s.onerror = function(){ cb(null); };
+    document.head.appendChild(s);
+  }
+
   function _createAndUpload() {
     if(!_pages.length){if(typeof showToast==='function')showToast('Chưa có trang nào.','error');return;}
     var btn=document.getElementById('scanner-btn-pdf'); btn.disabled=true;
-    _showProcessing('Đang tạo PDF ('+_pages.length+' trang)...');
-    setTimeout(function(){
-      try{
-        var jsPDFClass=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
-        if(!jsPDFClass) throw new Error('jsPDF chưa tải');
-        var doc=new jsPDFClass({orientation:'portrait',unit:'mm',format:'a4'});
-        for(var i=0;i<_pages.length;i++){
-          if(i>0)doc.addPage();
-          var cv=_pages[i].canvas, imgData=cv.toDataURL('image/jpeg',0.85);
-          var iw=cv.width,ih=cv.height,r=Math.min(210/iw,297/ih);
-          var fw=iw*r,fh=ih*r;
-          doc.addImage(imgData,'JPEG',(210-fw)/2,(297-fh)/2,fw,fh);
-        }
-        var blob=doc.output('blob');
-        _showProcessing('Đang tải lên...');
-        _uploadPDF(blob,function(ok,msg){
-          _hideProcessing(); btn.disabled=false;
-          if(ok){if(typeof showToast==='function')showToast(msg||'Thành công!','success');close();setTimeout(function(){location.reload();},1200);}
-          else{if(typeof showToast==='function')showToast(msg||'Lỗi tải lên.','error');}
-        });
-      }catch(e){_hideProcessing();btn.disabled=false;if(typeof showToast==='function')showToast('Lỗi: '+e.message,'error');}
-    },100);
+    _showProcessing('Đang tải thư viện PDF...');
+    _ensureJsPDF(function(jsPDFClass){
+      if(!jsPDFClass){
+        _hideProcessing(); btn.disabled=false;
+        if(typeof showToast==='function')showToast('Không thể tải thư viện PDF. Kiểm tra kết nối mạng.','error');
+        return;
+      }
+      _showProcessing('Đang tạo PDF ('+_pages.length+' trang)...');
+      setTimeout(function(){
+        try{
+          var doc=new jsPDFClass({orientation:'portrait',unit:'mm',format:'a4'});
+          for(var i=0;i<_pages.length;i++){
+            if(i>0)doc.addPage();
+            var cv=_pages[i].canvas, imgData=cv.toDataURL('image/jpeg',0.85);
+            var iw=cv.width,ih=cv.height,r=Math.min(210/iw,297/ih);
+            var fw=iw*r,fh=ih*r;
+            doc.addImage(imgData,'JPEG',(210-fw)/2,(297-fh)/2,fw,fh);
+          }
+          var blob=doc.output('blob');
+          _showProcessing('Đang tải lên...');
+          _uploadPDF(blob,function(ok,msg){
+            _hideProcessing(); btn.disabled=false;
+            if(ok){if(typeof showToast==='function')showToast(msg||'Thành công!','success');close();setTimeout(function(){location.reload();},1200);}
+            else{if(typeof showToast==='function')showToast(msg||'Lỗi tải lên.','error');}
+          });
+        }catch(e){_hideProcessing();btn.disabled=false;if(typeof showToast==='function')showToast('Lỗi: '+e.message,'error');}
+      },100);
+    });
   }
 
   function _uploadPDF(blob,cb) {
