@@ -116,10 +116,11 @@
       <p style="color:#aaa;font-size:.85rem;margin:4px 0">Chưa có nguyện vọng đăng ký.</p>
       {% endif %}
     </div>
-    {% if student.cccd or student.ma_dinh_danh_gd or student.tsdc_updated_at %}
+    {% set cccd_display = student.cccd or student.ma_hoso %}
+    {% if cccd_display or student.ma_dinh_danh_gd or student.tsdc_updated_at %}
     <div class="tsdc-block-foot">
-      {% if student.cccd %}
-      <span>&#129426; CCCD: <strong>{{ student.cccd }}</strong></span>
+      {% if cccd_display %}
+      <span>&#129426; Số CCCD: <strong>{{ cccd_display }}</strong></span>
       {% endif %}
       {% if student.ma_dinh_danh_gd %}
       <span>&#127979; Mã GD: <strong>{{ student.ma_dinh_danh_gd }}</strong></span>
