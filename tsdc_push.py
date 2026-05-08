@@ -116,15 +116,38 @@ _JS_EXTRACT = r"""
             else if (afterLop && isNVSchool(t)) { nvs.push(t.substring(0,80)); }
         });
 
-        /* Tim ho ten */
+        /* Tim ho ten - Cach 1: exclusion-based (bo cac loai da biet) */
         for (var j=0; j<cells.length; j++) {
             var t=cells[j];
-            if (t&&t.length>2&&!t.startsWith('HS')&&!isDate(t)&&!isIdOrCCCD(t)&&
+            if (t&&t.length>1&&!t.startsWith('HS')&&!t.startsWith('HSO')&&!isDate(t)&&!isIdOrCCCD(t)&&
                 t!=='Nam'&&t!=='\u0110\u1ea1'&&t!=='N\u1eef'&&t.indexOf('@')===-1&&
-                t.indexOf('Tr\u01b0\u1eddng')===-1&&t.indexOf('THPT')===-1&&t.indexOf('PTDT')===-1&&
-                !isLop(t)&&!allDigits(t)&&
-                t.indexOf('duy\u1ec7t')===-1&&t.indexOf('nh\u1eadn')===-1&&t.indexOf('Thao')===-1) {
-                if (!s.hoTen) s.hoTen=t;
+                !isPhone(t)&&!isLop(t)&&!allDigits(t)&&
+                !isNVSchool(t)&&
+                t.indexOf('Ch\u1edd')===-1&&t.indexOf('x\u00e9t duy\u1ec7t')===-1&&t.indexOf('ti\u1ebfp nh\u1eadn')===-1&&
+                t.indexOf('Tr\u01b0\u1eddng THCS')===-1&&t.indexOf('Tr\u01b0\u1eddng THPT')===-1) {
+                /* Ten hop le: chua ky tu chu cai (khong phai chi so/ky hieu) */
+                var hasLetter = false;
+                for (var k=0; k<t.length; k++) {
+                    var cc = t.charCodeAt(k);
+                    if ((cc>=65&&cc<=90)||(cc>=97&&cc<=122)||cc>127) { hasLetter=true; break; }
+                }
+                if (hasLetter && !s.hoTen) { s.hoTen=t; break; }
+            }
+        }
+
+        /* Fallback - Cach 2: lay cell ngay sau STT (vi tri co dinh) */
+        if (!s.hoTen && cells.length > 2) {
+            /* Cell[0] thuong la STT (so), cell[1] la ho ten */
+            for (var j=1; j<=2; j++) {
+                var t = cells[j] || '';
+                if (t && t.length > 1 && !isMaHS(t) && !allDigits(t) && !isDate(t)) {
+                    var hasLetter = false;
+                    for (var k=0; k<t.length; k++) {
+                        var cc = t.charCodeAt(k);
+                        if ((cc>=65&&cc<=90)||(cc>=97&&cc<=122)||cc>127) { hasLetter=true; break; }
+                    }
+                    if (hasLetter) { s.hoTen = t; break; }
+                }
             }
         }
 
