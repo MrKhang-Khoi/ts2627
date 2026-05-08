@@ -292,11 +292,13 @@ def student_list(class_name):
 
     is_teacher = session.get('role') in ('teacher', 'admin')
 
+    require_cccd = get_setting('require_cccd_verify', '1') == '1'
+
     return render_template('student_list.html', students=students, class_name=class_name,
 
                            DOC_LABELS=DOC_LABELS, STATUS_LABELS=STATUS_LABELS, OVERALL_LABELS=OVERALL_LABELS,
 
-                           tsdc_stats=tsdc_stats, is_teacher=is_teacher)
+                           tsdc_stats=tsdc_stats, is_teacher=is_teacher, require_cccd=require_cccd)
 
 
 
@@ -308,21 +310,25 @@ def student_profile(student_id):
 
     if not student:
 
-        flash('KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y hÃ¡Â»Âc sinh.', 'error')
+        flash('KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y hÃ¡Â»Â c sinh.', 'error')
 
         return redirect(url_for('index'))
 
-    # BÃ¡ÂºÂ£o mÃ¡ÂºÂ­t: hÃ¡Â»Âc sinh phÃ¡ÂºÂ£i xÃƒÂ¡c minh mÃƒÂ£ CCCD trÃ†Â°Ã¡Â»â€ºc khi xem hÃ¡Â»â€œ sÃ†Â¡
+    # BÃ¡ÂºÂ£o mÃ¡ÂºÂ­t: hÃ¡Â»Â c sinh phÃ¡ÂºÂ£i xÃƒÂ¡c minh mÃƒÂ£ CCCD trÃ†Â°Ã¡Â»â€ºc khi xem hÃ¡Â»â€œ sÃ†Â¡
 
     if session.get('role') not in ('teacher', 'admin'):
 
-        verified = session.get('verified_students', [])
+        require_cccd = get_setting('require_cccd_verify', '1') == '1'
 
-        if student_id not in verified:
+        if require_cccd:
 
-            # Redirect vÃ¡Â»Â trang lÃ¡Â»â€ºp, front-end sÃ¡ÂºÂ½ mÃ¡Â»Å¸ modal xÃƒÂ¡c minh
+            verified = session.get('verified_students', [])
 
-            return redirect(url_for('student_list', class_name=student['lop']) + f'?verify={student_id}')
+            if student_id not in verified:
+
+                # Redirect vÃ¡Â»Â trang lÃ¡Â»â€ºp, front-end sÃ¡ÂºÂ½ mÃ¡Â»Å¸ modal xÃƒÂ¡c minh
+
+                return redirect(url_for('student_list', class_name=student['lop']) + f'?verify={student_id}')
 
     phase = get_setting('phase', '1')
 
@@ -1834,7 +1840,7 @@ def api_settings():
 
     data = request.get_json()
 
-    for key in ['phase', 'max_file_size_mb']:
+    for key in ['phase', 'max_file_size_mb', 'require_cccd_verify']:
 
         if key in data:
 
@@ -1916,9 +1922,13 @@ def admin_settings():
 
         pass
 
+    require_cccd = get_setting('require_cccd_verify', '1')
+
     return render_template('admin_settings.html', phase=phase, max_mb=max_mb,
 
-                           teachers=teachers, classes=classes, disk_info=disk_info)
+                           teachers=teachers, classes=classes, disk_info=disk_info,
+
+                           require_cccd=require_cccd)
 
 
 

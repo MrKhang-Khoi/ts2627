@@ -185,9 +185,15 @@
           Xem hồ sơ →
         </a>
         {% else %}
+        {% if require_cccd %}
         <button class="btn-view-profile" onclick="openVerify({{ s.id }}, '{{ s.ho_ten|e }}')">
           Xem hồ sơ →
         </button>
+        {% else %}
+        <a href="{{ url_for('student_profile', student_id=s.id) }}" class="btn-view-profile">
+          Xem hồ sơ →
+        </a>
+        {% endif %}
         {% endif %}
       </div>
     </div>

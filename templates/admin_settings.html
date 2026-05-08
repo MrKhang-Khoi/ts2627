@@ -1,5 +1,24 @@
 {% extends "base.html" %}
 {% block title %}Cài Đặt Hệ Thống{% endblock %}
+{% block head_extra %}
+<style>
+/* Toggle Switch */
+.toggle-switch { position: relative; display: inline-block; width: 56px; height: 30px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background: #ccc; border-radius: 30px; transition: .3s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute;
+  height: 22px; width: 22px; left: 4px; bottom: 4px;
+  background: #fff; border-radius: 50%; transition: .3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: linear-gradient(135deg,#1565C0,#1976D2); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(26px); }
+</style>
+{% endblock %}
 {% block content %}
 <div class="container">
   <div class="page-header">
@@ -25,6 +44,22 @@
         <label>Dung lượng tối đa mỗi file (MB)</label>
         <input type="number" id="max-mb" class="form-control" value="{{ max_mb }}" min="1" max="100">
         <button class="btn btn-primary" onclick="setMaxMb()">Lưu</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔐 Xác thực CCCD học sinh</h2>
+      <p>Khi <strong>BẬT</strong>: Học sinh phải nhập đúng 12 số CCCD mới được xem hồ sơ.</p>
+      <p>Khi <strong>TẮT</strong>: Học sinh bấm vào là xem được hồ sơ ngay, không cần nhập CCCD.</p>
+      <div style="display:flex;align-items:center;gap:14px;margin-top:12px;">
+        <label class="toggle-switch">
+          <input type="checkbox" id="cccd-toggle" {{ 'checked' if require_cccd == '1' else '' }}
+                 onchange="toggleCccdVerify(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+        <span id="cccd-status" style="font-weight:700;font-size:15px;">
+          {{ '🔒 Đang BẬT' if require_cccd == '1' else '🔓 Đang TẮT' }}
+        </span>
       </div>
     </div>
 
@@ -149,6 +184,18 @@ function fixData() {
         showToast(d.message, 'success');
       } else showToast(d.error || 'Lỗi.', 'error');
     }).catch(() => { btn.disabled = false; btn.textContent = '🔧 Chạy dọn dữ liệu'; showToast('Lỗi kết nối.', 'error'); });
+}
+function toggleCccdVerify(on) {
+  const val = on ? '1' : '0';
+  fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({require_cccd_verify: val})})
+    .then(r => r.json()).then(d => {
+      if (d.success) {
+        const st = document.getElementById('cccd-status');
+        st.textContent = on ? '🔒 Đang BẬT' : '🔓 Đang TẮT';
+        showToast(on ? 'Đã BẬT xác thực CCCD. Học sinh phải nhập CCCD.' : 'Đã TẮT xác thực CCCD. Học sinh vào thẳng hồ sơ.', 'success');
+      }
+    });
 }
 </script>
 {% endblock %}
