@@ -411,6 +411,7 @@ def build_stats(students):
                       'maDinhDanh':s.get('maDinhDanh',''),
                       'maHocSinh':s.get('maHocSinh',''),
                       'maHoSo':s.get('maHoSo',''),
+                      'danToc':s.get('danToc',''),
                       'nv1':s.get('nv1',''),'nv2':s.get('nv2',''),'nv3':s.get('nv3','')}
                      for s in students],
         'updated_at': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
@@ -466,6 +467,25 @@ def push_to_sheets(data):
     return False
 
 
+def fetch_ethnicity_map(base_url):
+    """Lay ban do CCCD -> dan_toc tu DB PythonAnywhere"""
+    url = base_url.rstrip('/') + '/api/student-ethnicity'
+    payload = json.dumps({'token': TSDC_PUSH_TOKEN}).encode('utf-8')
+    req = urllib.request.Request(url, data=payload,
+                                  headers={'Content-Type': 'application/json; charset=utf-8'},
+                                  method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+            if result.get('success'):
+                dm = result.get('data', {})
+                print(f'[PUSH] Dan toc: {result.get("count",0)} HS co dan toc trong DB', flush=True)
+                return dm
+    except Exception as e:
+        print(f'[PUSH] Khong lay duoc dan toc tu DB: {e}', flush=True)
+    return {}
+
+
 def run_once(base_url, dot_mode=1):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -473,6 +493,21 @@ def run_once(base_url, dot_mode=1):
         students = loop.run_until_complete(scrape_tsdc(dot_mode=dot_mode))
     finally:
         loop.close()
+
+    # Lay dan toc tu DB PythonAnywhere va merge vao data TSDC
+    dt_map = fetch_ethnicity_map(base_url)
+    if dt_map:
+        matched = 0
+        for s in students:
+            cccd = (s.get('soCCCD') or '').strip()
+            if cccd:
+                # Thu match CCCD nguyen goc, roi match khong so 0 dau
+                dan_toc = dt_map.get(cccd) or dt_map.get(cccd.lstrip('0')) or ''
+                if dan_toc:
+                    s['danToc'] = dan_toc
+                    matched += 1
+        print(f'[PUSH] Dan toc: map duoc {matched}/{len(students)} HS', flush=True)
+
     data = build_stats(students)
     # Push len ca hai noi song song
     ok_pa     = push_to_pythonanywhere(data, base_url)

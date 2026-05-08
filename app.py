@@ -1634,17 +1634,19 @@ def api_import_students():
 
         ho_ten_khong_dau = to_ascii(ho_ten)
 
+        dan_toc = r.get('dan_toc', '').strip()
+
         now = datetime.now().isoformat()
 
         try:
 
             conn.execute("""INSERT OR REPLACE INTO students
 
-                            (ma_hoso,lop,stt,ho_ten,ho_ten_khong_dau,ngay_sinh,status_overall,created_at,updated_at)
+                            (ma_hoso,lop,stt,ho_ten,ho_ten_khong_dau,ngay_sinh,dan_toc,status_overall,created_at,updated_at)
 
-                            VALUES (?,?,?,?,?,?,?,?,?)""",
+                            VALUES (?,?,?,?,?,?,?,?,?,?)""",
 
-                         (ma_hoso, lop, stt, ho_ten, ho_ten_khong_dau, ngay_sinh, 'CHUA_NOP', now, now))
+                         (ma_hoso, lop, stt, ho_ten, ho_ten_khong_dau, ngay_sinh, dan_toc, 'CHUA_NOP', now, now))
 
             count += 1
 
@@ -3047,6 +3049,37 @@ def api_tsdc_sync_students():
 
 
 
+
+@app.route('/api/student-ethnicity', methods=['POST'])
+def api_student_ethnicity():
+    """Tra cuu dan toc tu DB, map theo CCCD/ma_hoso.
+    Input: {"token":"...", "cccd_list":["062311004744",...]}
+    Output: {"062311004744":"Kinh", ...}
+    """
+    body = request.get_json(force=True, silent=True) or {}
+    if body.get('token', '') != _TSDC_PUSH_TOKEN:
+        return jsonify({'error': 'Token khong hop le'}), 403
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT ma_hoso, cccd, dan_toc FROM students WHERE dan_toc IS NOT NULL AND TRIM(dan_toc) != ''"
+    ).fetchall()
+    conn.close()
+    result = {}
+    for r in rows:
+        dt = r['dan_toc']
+        # Map theo CCCD (co so 0 dau)
+        if r['cccd']:
+            cccd_clean = r['cccd'].strip()
+            result[cccd_clean] = dt
+            # Them ban khong co so 0 dau de match
+            result[cccd_clean.lstrip('0')] = dt
+        # Map theo ma_hoso (fallback)
+        if r['ma_hoso']:
+            mh = r['ma_hoso'].strip()
+            result[mh] = dt
+            if mh.isdigit():
+                result[mh.lstrip('0')] = dt
+    return jsonify({'success': True, 'data': result, 'count': len(rows)})
 
 
 

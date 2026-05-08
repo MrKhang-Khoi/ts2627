@@ -104,6 +104,7 @@ def migrate_db():
         ("tsdc_nv2",          "TEXT"),
         ("tsdc_nv3",          "TEXT"),
         ("tsdc_updated_at",   "TEXT"),
+        ("dan_toc",           "TEXT"),
     ]
     for col, typ in migrations:
         if col not in existing:
