@@ -303,15 +303,30 @@ function handleUpload(data) {
 
   const fileName = doc_type + '.pdf';
 
-  // Xóa file cũ cùng tên
-  const oldFiles = stuFolder.getFilesByName(fileName);
-  while (oldFiles.hasNext()) {
-    oldFiles.next().setTrashed(true);
+  // Xóa file cũ cùng tên (cả .pdf và .jpg)
+  var existingFiles = stuFolder.getFiles();
+  while (existingFiles.hasNext()) {
+    var ef = existingFiles.next();
+    var efName = ef.getName().replace(/\.[^.]+$/, ''); // bỏ extension
+    if (efName === doc_type) ef.setTrashed(true);
   }
 
-  // Tạo file PDF mới từ base64
+  // Detect MIME type thật từ header bytes (không hardcode)
   const bytes = Utilities.base64Decode(content_b64);
-  const blob  = Utilities.newBlob(bytes, 'application/pdf', fileName);
+  var mime = 'application/pdf';
+  var ext = 'pdf';
+  if (bytes.length > 3) {
+    // JPG: bắt đầu bằng FF D8 FF
+    if (bytes[0] === -1 && bytes[1] === -40 && bytes[2] === -1) {
+      mime = 'image/jpeg'; ext = 'jpg';
+    }
+    // PNG: bắt đầu bằng 89 50 4E 47
+    else if (bytes[0] === -119 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) {
+      mime = 'image/png'; ext = 'png';
+    }
+  }
+  var actualFileName = doc_type + '.' + ext;
+  const blob  = Utilities.newBlob(bytes, mime, actualFileName);
   const file  = stuFolder.createFile(blob);
 
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
