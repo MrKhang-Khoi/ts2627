@@ -66,11 +66,12 @@ function doGet(e) {
     var action = (e && e.parameter && e.parameter.action) || 'status';
 
     switch (action) {
-      case 'classes':  return handleListClasses_();
-      case 'students': return handleListStudents_(e.parameter['class'] || '');
-      case 'zip':      return handleZip_(e.parameter);
-      case 'file':     return handleFile_(e.parameter.id);
-      case 'refresh':  return handleRefresh_();
+      case 'classes':     return handleListClasses_();
+      case 'students':    return handleListStudents_(e.parameter['class'] || '');
+      case 'zip':         return handleZip_(e.parameter);
+      case 'file':        return handleFile_(e.parameter.id);
+      case 'delete_file': return handleDeleteFile_(e.parameter.id, e.parameter['class']);
+      case 'refresh':     return handleRefresh_();
       default:
         return json({ status: 'running', root: ROOT_FOLDER_NAME, version: '2.0' });
     }
@@ -222,6 +223,18 @@ function handleFile_(fileId) {
     });
   } catch (e) {
     return json({ error: 'Không tìm thấy file: ' + e.message });
+  }
+}
+
+// ===== API: XÓA FILE TỪ TRANG TẢI =====
+function handleDeleteFile_(fileId, className) {
+  if (!fileId) return json({ error: 'Thiếu file ID' });
+  try {
+    DriveApp.getFileById(fileId).setTrashed(true);
+    clearCache_(className);
+    return json({ success: true, message: 'Đã xóa file thành công' });
+  } catch (e) {
+    return json({ error: 'Không xóa được: ' + e.message });
   }
 }
 
