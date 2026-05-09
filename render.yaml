@@ -1,15 +1,28 @@
+# render.yaml — Cấu hình deploy Render.com
+# Auto-deploy từ GitHub: push code → Render tự build & deploy
+#
+# LƯU Ý: Render Free Tier KHÔNG hỗ trợ Persistent Disk
+# → Nếu dùng Free plan: database.db sẽ bị reset khi re-deploy
+# → Nếu cần giữ data: dùng Starter plan ($7/tháng) + disk
+#
+# GIẢI PHÁP FREE: App chạy ở chế độ DRIVE_MODE
+# → Tất cả file hồ sơ lưu trên Google Drive (không mất)
+# → Chỉ metadata (danh sách HS, trạng thái) trong SQLite
+# → Khi re-deploy: chạy lại import Excel để tái tạo metadata
+
 services:
   - type: web
     name: hoso-lop10
     runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --workers 2 --timeout 120
+    startCommand: gunicorn app:app --workers 2 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT
     envVars:
       - key: SECRET_KEY
-        generateValue: true   # Render tự tạo key ngẫu nhiên, bảo mật
-      - key: DATA_DIR
-        value: /var/data       # Đường dẫn Persistent Disk
-    disk:
-      name: hoso-data
-      mountPath: /var/data
-      sizeGB: 1               # 1GB = $0.25/tháng
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.11.6"
+      - key: APPS_SCRIPT_URL
+        sync: false
+      - key: APPS_SCRIPT_SECRET
+        sync: false
