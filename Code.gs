@@ -316,6 +316,9 @@ function handleUpload(data) {
 
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
+  // XÓA CACHE để trang tải thấy file mới ngay
+  clearCache_(lop);
+
   const fileId = file.getId();
   return json({
     success:      true,
@@ -325,11 +328,14 @@ function handleUpload(data) {
   });
 }
 
-// ===== XÓA FILE =====
+// ===== XÓA FILE (từ PythonAnywhere) =====
 function handleDelete(data) {
   if (!data.file_id) return json({ error: 'Thiếu file_id' });
   try {
     DriveApp.getFileById(data.file_id).setTrashed(true);
+    // XÓA CACHE để trang tải cập nhật ngay
+    if (data.lop) clearCache_(data.lop);
+    else clearCache_();
     return json({ success: true });
   } catch (e) {
     return json({ success: true, warning: 'File không tồn tại: ' + e.message });
