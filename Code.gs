@@ -380,7 +380,18 @@ function getOrCreate(parent, name) {
 function clearCache_(className) {
   var cache = CacheService.getScriptCache();
   cache.remove('hoso_classes');
-  if (className) cache.remove('hoso_class_' + className);
+  if (className) {
+    cache.remove('hoso_class_' + className);
+  } else {
+    // Xóa cache TẤT CẢ các lớp
+    var root = getRootFolder_();
+    if (root) {
+      var folders = root.getFolders();
+      while (folders.hasNext()) {
+        cache.remove('hoso_class_' + folders.next().getName());
+      }
+    }
+  }
 }
 
 function json(obj) {
