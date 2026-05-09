@@ -138,12 +138,26 @@ function handleListStudents_(className) {
 
   while (stuFolders.hasNext()) {
     var stuFolder = stuFolders.next();
-    var folderName = stuFolder.getName(); // VD: "9A1_001_Huỳnh Mai Kiều My"
+    var folderName = stuFolder.getName(); // VD: "9A1_001_Tên" hoặc "62211005976_TenKhongDau"
 
-    // Parse tên: {class}_{stt}_{ho_ten}
+    // Parse tên thông minh theo format thư mục
     var parts = folderName.split('_');
-    var stt = parts.length >= 2 ? parts[1] : '0';
-    var hoTen = parts.length >= 3 ? parts.slice(2).join(' ') : folderName;
+    var stt = '';
+    var hoTen = folderName;
+    var maHoso = '';
+
+    if (/^9[ABab]\d+$/i.test(parts[0]) && parts.length >= 3) {
+      // Format: 9A1_001_Tên Học Sinh
+      maHoso = parts[0] + '_' + parts[1];
+      stt = parts[1].replace(/^0+/, '') || '0';
+      hoTen = parts.slice(2).join(' ');
+    } else if (parts.length >= 2) {
+      // Format: 62211005976_TenKhongDau hoặc format khác
+      maHoso = parts[0];
+      hoTen = parts.slice(1).join(' ');
+      // Thêm khoảng trắng vào camelCase: DoNguyenTrungKien → Do Nguyen Trung Kien
+      hoTen = hoTen.replace(/([a-zàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ])([A-ZÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴĐ])/g, '$1 $2');
+    }
 
     // Đọc file trong thư mục HS
     var docs = {};
