@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Hồ Sơ - {{ student.ho_ten }}{% endblock %}
 {% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/scanner.css') }}">
 <style>
 /* TSDC Card — Student Profile */
 .sp-badges-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
@@ -329,6 +330,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/jspdf.umd.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}" defer></script>
 <script>
 const STUDENT_ID = {{ student.id }};
 function formatSize(b){return b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1)+' MB';}
@@ -486,39 +489,61 @@ function submitMulti(dt, sid) {
     return r.replace(/\s+/g,' ').trim();
   }
   var nameKey = _nrm(studentName);
+
+  // === Client-side cache: tranh goi Apps Script lien tuc ===
+  var CACHE_KEY = 'tsdc_all_cache';
+  var CACHE_TTL = 300000; // 5 phut
+  function _processData(d) {
+    if(!d.students) return;
+    var found = null;
+    d.students.forEach(function(s){
+      if((s.lop||'').trim() !== studentClass) return;
+      if(_nrm(s.hoTen) === nameKey) found = s;
+    });
+    var title = document.getElementById('tsdc-live-title');
+    var sub = document.getElementById('tsdc-live-sub');
+    if(found && found.trangThai){
+      block.style.background='#e8f5e9';
+      block.style.borderColor='#a5d6a7';
+      block.querySelector('.tsdc-warn-icon').innerHTML='&#10003;';
+      title.innerHTML = '&#128202; \u0110\u00e3 \u0111\u0103ng k\u00fd \u0110KTS l\u1edbp 10';
+      title.style.color='#2e7d32';
+      var info = '<strong>Tr\u1ea1ng th\u00e1i: '+found.trangThai+'</strong>';
+      if(found.nv1) info += '<br>NV1: '+found.nv1;
+      if(found.nv2) info += '<br>NV2: '+found.nv2;
+      if(found.nv3) info += '<br>NV3: '+found.nv3;
+      sub.innerHTML = info;
+      sub.style.color='#333';
+      fetch('/api/tsdc-fetch-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).catch(function(){});
+    } else {
+      title.textContent = 'Ch\u01b0a n\u1ed9p h\u1ed3 s\u01a1 \u0110KTS l\u1edbp 10';
+      sub.innerHTML = 'N\u0103m h\u1ecdc 2026\u20132027 \u00b7 H\u1ec7 th\u1ed1ng qlts.tsdc.edu.vn';
+    }
+  }
+
+  // Thu doc tu cache truoc
+  try {
+    var cached = sessionStorage.getItem(CACHE_KEY);
+    if (cached) {
+      var c = JSON.parse(cached);
+      if (Date.now() - c.ts < CACHE_TTL) {
+        _processData(c.data);
+        return; // Dung cache, khong can fetch
+      }
+    }
+  } catch(e) {}
+
+  // Fetch moi tu Apps Script
   fetch(_AU+'?action=all')
     .then(function(r){return r.json();})
     .then(function(d){
-      if(!d.students) throw 'no data';
-      var found = null;
-      d.students.forEach(function(s){
-        if((s.lop||'').trim() !== studentClass) return;
-        if(_nrm(s.hoTen) === nameKey) found = s;
-      });
-      var title = document.getElementById('tsdc-live-title');
-      var sub = document.getElementById('tsdc-live-sub');
-      if(found && found.trangThai){
-        block.style.background='#e8f5e9';
-        block.style.borderColor='#a5d6a7';
-        block.querySelector('.tsdc-warn-icon').innerHTML='&#10003;';
-        title.innerHTML = '&#128202; Đã đăng ký ĐKTS lớp 10';
-        title.style.color='#2e7d32';
-        var info = '<strong>Trạng thái: '+found.trangThai+'</strong>';
-        if(found.nv1) info += '<br>NV1: '+found.nv1;
-        if(found.nv2) info += '<br>NV2: '+found.nv2;
-        if(found.nv3) info += '<br>NV3: '+found.nv3;
-        sub.innerHTML = info;
-        sub.style.color='#333';
-        // Trigger backend sync de cap nhat DB
-        fetch('/api/tsdc-fetch-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).catch(function(){});
-      } else {
-        title.textContent = 'Chưa nộp hồ sơ ĐKTS lớp 10';
-        sub.innerHTML = 'Năm học 2026\u20132027 \u00b7 Hệ thống qlts.tsdc.edu.vn';
-      }
+      // Luu cache
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ts:Date.now(),data:d})); } catch(e){}
+      _processData(d);
     })
     .catch(function(){
       var title = document.getElementById('tsdc-live-title');
-      if(title) title.textContent = 'Chưa nộp hồ sơ ĐKTS lớp 10';
+      if(title) title.textContent = 'Ch\u01b0a n\u1ed9p h\u1ed3 s\u01a1 \u0110KTS l\u1edbp 10';
     });
 })();
 </script>

@@ -102,29 +102,37 @@ def get_student_with_docs(student_id):
 
 
 def enrich_students(students):
+    """Thêm docs và doc_count cho mỗi học sinh.
+    Tối ưu: 1 query batch thay vì N queries riêng lẻ."""
+    if not students:
+        return []
 
-    """ThÃƒÂªm docs vÃƒÂ  doc_count cho mÃ¡Â»â€”i hÃ¡Â»Âc sinh."""
+    # Batch query: lấy TẤT CẢ documents của danh sách HS trong 1 query duy nhất
+    ids = [s['id'] for s in students]
+    conn = get_db()
+    placeholders = ','.join('?' * len(ids))
+    all_docs = conn.execute(
+        f"SELECT * FROM documents WHERE student_id IN ({placeholders})", ids
+    ).fetchall()
+    conn.close()
+
+    # Group documents theo student_id
+    doc_by_sid = {}
+    for d in all_docs:
+        sid = d['student_id']
+        if sid not in doc_by_sid:
+            doc_by_sid[sid] = {}
+        doc_by_sid[sid][d['doc_type']] = dict(d)
 
     result = []
-
     for s in students:
-
         sd = dict(s)
-
-        docs = get_student_docs(s['id'])
-
+        docs = doc_by_sid.get(s['id'], {})
         sd['docs'] = docs
-
-        # Ã„ÂÃ¡ÂºÂ¿m sÃ¡Â»â€˜ tÃƒÂ i liÃ¡Â»â€¡u Ã„â€˜ÃƒÂ£ nÃ¡Â»â„¢p (cÃƒÂ³ file, khÃƒÂ´ng tÃƒÂ­nh CHUA_NOP)
-
         sd['doc_count'] = sum(1 for d in docs.values() if d.get('file_path'))
-
-        sd['doc_total'] = len(DISPLAY_ORDER)  # tÃ¡Â»â€¢ng sÃ¡Â»â€˜ mÃ¡Â»Â¥c
-
+        sd['doc_total'] = len(DISPLAY_ORDER)
         result.append(sd)
-
     return result
-
 
 
 @app.route('/')
