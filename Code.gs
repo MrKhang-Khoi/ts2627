@@ -262,8 +262,17 @@ function handleZip_(params) {
   while (files.hasNext()) {
     var f = files.next();
     var blob = f.getBlob();
-    // Đổi tên file: TenHS_Lop_TenFile.pdf
-    if (prefix) blob.setName(prefix + '_' + f.getName());
+    var fileName = f.getName();
+    var mime = blob.getContentType();
+
+    // Sửa extension cho file ảnh bị lưu sai thành .pdf
+    // VD: ANH_THE.pdf thực chất là image/jpeg → đổi thành ANH_THE.jpg
+    if (mime && mime.indexOf('image') >= 0 && /\.pdf$/i.test(fileName)) {
+      var ext = (mime.indexOf('png') >= 0) ? '.png' : '.jpg';
+      fileName = fileName.replace(/\.pdf$/i, ext);
+    }
+
+    blob.setName(prefix ? (prefix + '_' + fileName) : fileName);
     blobs.push(blob);
   }
 
