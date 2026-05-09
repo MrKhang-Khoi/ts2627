@@ -69,6 +69,7 @@ function doGet(e) {
       case 'classes':  return handleListClasses_();
       case 'students': return handleListStudents_(e.parameter['class'] || '');
       case 'zip':      return handleZip_(e.parameter);
+      case 'file':     return handleFile_(e.parameter.id);
       case 'refresh':  return handleRefresh_();
       default:
         return json({ status: 'running', root: ROOT_FOLDER_NAME, version: '2.0' });
@@ -205,6 +206,23 @@ function handleListStudents_(className) {
 function handleRefresh_() {
   clearCache_();
   return json({ success: true, message: 'Cache đã được xóa. Lần truy cập tiếp theo sẽ đọc dữ liệu mới.' });
+}
+
+// ===== API: TẢI NỘI DUNG FILE (dùng cho PDF→Image) =====
+function handleFile_(fileId) {
+  if (!fileId) return json({ error: 'Thiếu file ID' });
+  try {
+    var file = DriveApp.getFileById(fileId);
+    var blob = file.getBlob();
+    return json({
+      success: true,
+      content: Utilities.base64Encode(blob.getBytes()),
+      name: file.getName(),
+      mime: blob.getContentType()
+    });
+  } catch (e) {
+    return json({ error: 'Không tìm thấy file: ' + e.message });
+  }
 }
 
 // ===== API: TẢI ZIP HỒ SƠ =====
