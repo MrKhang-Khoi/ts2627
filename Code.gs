@@ -68,6 +68,7 @@ function doGet(e) {
     switch (action) {
       case 'classes':  return handleListClasses_();
       case 'students': return handleListStudents_(e.parameter['class'] || '');
+      case 'zip':      return handleZip_(e.parameter);
       case 'refresh':  return handleRefresh_();
       default:
         return json({ status: 'running', root: ROOT_FOLDER_NAME, version: '2.0' });
@@ -179,6 +180,7 @@ function handleListStudents_(className) {
     students.push({
       stt: stt,
       ho_ten: hoTen,
+      folder_name: folderName,
       doc_count: docCount,
       docs: docs
     });
@@ -203,6 +205,47 @@ function handleListStudents_(className) {
 function handleRefresh_() {
   clearCache_();
   return json({ success: true, message: 'Cache đã được xóa. Lần truy cập tiếp theo sẽ đọc dữ liệu mới.' });
+}
+
+// ===== API: TẢI ZIP HỒ SƠ =====
+function handleZip_(params) {
+  var className = params['class'];
+  var folder = params['folder'];
+  var prefix = params['prefix'] || '';
+
+  if (!className || !folder) return json({ error: 'Thiếu tham số class và folder' });
+
+  var root = getRootFolder_();
+  if (!root) return json({ error: 'Không tìm thấy thư mục gốc' });
+
+  var classFolders = root.getFoldersByName(className);
+  if (!classFolders.hasNext()) return json({ error: 'Không tìm thấy lớp ' + className });
+  var classFolder = classFolders.next();
+
+  var stuFolders = classFolder.getFoldersByName(folder);
+  if (!stuFolders.hasNext()) return json({ error: 'Không tìm thấy thư mục HS' });
+  var stuFolder = stuFolders.next();
+
+  var blobs = [];
+  var files = stuFolder.getFiles();
+  while (files.hasNext()) {
+    var f = files.next();
+    var blob = f.getBlob();
+    // Đổi tên file: TenHS_Lop_TenFile.pdf
+    if (prefix) blob.setName(prefix + '_' + f.getName());
+    blobs.push(blob);
+  }
+
+  if (!blobs.length) return json({ error: 'Thư mục trống, chưa có file nào' });
+
+  var zipName = 'HoSo_' + (prefix || folder) + '.zip';
+  var zip = Utilities.zip(blobs, zipName);
+
+  return json({
+    success: true,
+    content: Utilities.base64Encode(zip.getBytes()),
+    name: zipName
+  });
 }
 
 // ===== UPLOAD FILE =====
