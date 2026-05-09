@@ -132,7 +132,7 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
 
     ext = file.filename.rsplit('.', 1)[1].lower()
 
-    # === ANH_THE: luu anh goc (TSDC chi nhan .jpg/.png, KHONG nhan PDF) ===
+    # === ANH_THE: crop 3x4, luu thanh PDF de dong bo voi Drive ===
     if doc_type == 'ANH_THE' and ext in ('jpg', 'jpeg', 'png'):
         try:
             from PIL import Image, ImageOps
@@ -160,13 +160,13 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
             # Resize ve dung chuan anh the 3x4 VN: 354x472px, 300 DPI
             img = img.resize((354, 472), Image.LANCZOS)
             buf = _io.BytesIO()
-            img.save(buf, 'JPEG', quality=95, optimize=True, dpi=(300, 300))
+            img.save(buf, 'PDF', resolution=300)
             file_bytes = buf.getvalue()
-            save_ext = 'jpg'
+            save_ext = 'pdf'
         except Exception as e:
             return None, f'Không thể xử lý ảnh thẻ: {str(e)}'
     elif doc_type == 'ANH_THE' and ext == 'pdf':
-        # ANH_THE upload dang PDF: trich anh tu PDF -> crop 3x4 -> luu JPG
+        # ANH_THE upload dang PDF: trich anh tu PDF -> crop 3x4 -> luu PDF
         try:
             from PIL import Image
             import io as _io
@@ -228,9 +228,9 @@ def save_uploaded_file(file, student, doc_type, max_mb=None):
                 # Resize ve dung chuan anh the 3x4 VN: 354x472px, 300 DPI
                 img = img.resize((354, 472), Image.LANCZOS)
                 buf = _io.BytesIO()
-                img.save(buf, 'JPEG', quality=95, optimize=True, dpi=(300, 300))
+                img.save(buf, 'PDF', resolution=300)
                 file_bytes = buf.getvalue()
-                save_ext = 'jpg'
+                save_ext = 'pdf'
             else:
                 # Fallback: khong trich duoc anh -> luu PDF nguyen
                 file_bytes = pdf_bytes
